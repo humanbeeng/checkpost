@@ -1,8 +1,9 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
+	import * as Card from '$lib/components/ui/card';
 </script>
 
-<header class="sticky top-0 border-b border-black/10 w-full bg-gray-100/10 backdrop-blur-md">
+<header class="antialiased top-0 border-b border-black/10 w-full bg-gray-100/10 backdrop-blur-3xl">
 	<div class="container flex h-12 max-w-screen-2xl items-center justify-between">
 		<a href="/" class="font-medium">Checkpost</a>
 		<nav class="flex items-center gap-6 text-sm">
@@ -12,7 +13,7 @@
 		</nav>
 	</div>
 </header>
-<div class=" w-full min-h-full">
+<div class=" w-full min-h-full antialiased">
 	<svg
 		xmlns="http://www.w3.org/2000/svg"
 		version="1.1"
@@ -237,7 +238,7 @@
 	<div class=" grid grid-cols-1 mx-10 min-h-screen md:grid-cols-2 md:max-w-7xl lg:mx-auto">
 		<div class="w-auto flex my-32 flex-col md:justify-center">
 			<h1
-				class="text-4xl font-bold leading-tight select-none tracking-tighter bg-gradient-to-r text-left lg:text-6xl lg:text-left lg:leading-[1.1]"
+				class="text-4xl antialiased font-bold leading-tight select-none tracking-tighter bg-gradient-to-r text-left lg:text-6xl lg:text-left lg:leading-[1.1]"
 			>
 				Inspect incoming HTTP requests in realtime
 			</h1>
@@ -256,6 +257,265 @@
 
 			<Button class="w-full h-11 bg-foreground my-4 lg:w-1/2">Coming soon.</Button>
 		</div>
+		<!--Dashboard image-->
 		<div class="hidden md:w-auto md:block"></div>
 	</div>
+
+	<section class=" h-auto border-t">
+		<svg
+			xmlns="http://www.w3.org/2000/svg"
+			class="absolute w-full h-full -z-10 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]"
+			><rect fill="#ffffff" /><defs
+				><rect stroke="#ffffff" stroke-width="0.5" width="1" height="1" id="s" /><pattern
+					id="a"
+					width="3"
+					height="3"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><use fill="#fcfcfc" href="#s" y="2" /><use fill="#fcfcfc" href="#s" x="1" y="2" /><use
+						fill="#fafafa"
+						href="#s"
+						x="2"
+						y="2"
+					/><use fill="#fafafa" href="#s" /><use fill="#f7f7f7" href="#s" x="2" /><use
+						fill="#f7f7f7"
+						href="#s"
+						x="1"
+						y="1"
+					/></pattern
+				><pattern
+					id="b"
+					width="7"
+					height="11"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#f5f5f5"
+						><use href="#s" /><use href="#s" y="5" /><use href="#s" x="1" y="10" /><use
+							href="#s"
+							x="2"
+							y="1"
+						/><use href="#s" x="2" y="4" /><use href="#s" x="3" y="8" /><use
+							href="#s"
+							x="4"
+							y="3"
+						/><use href="#s" x="4" y="7" /><use href="#s" x="5" y="2" /><use
+							href="#s"
+							x="5"
+							y="6"
+						/><use href="#s" x="6" y="9" /></g
+					></pattern
+				><pattern
+					id="h"
+					width="5"
+					height="13"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#f5f5f5"
+						><use href="#s" y="5" /><use href="#s" y="8" /><use href="#s" x="1" y="1" /><use
+							href="#s"
+							x="1"
+							y="9"
+						/><use href="#s" x="1" y="12" /><use href="#s" x="2" /><use href="#s" x="2" y="4" /><use
+							href="#s"
+							x="3"
+							y="2"
+						/><use href="#s" x="3" y="6" /><use href="#s" x="3" y="11" /><use
+							href="#s"
+							x="4"
+							y="3"
+						/><use href="#s" x="4" y="7" /><use href="#s" x="4" y="10" /></g
+					></pattern
+				><pattern
+					id="c"
+					width="17"
+					height="13"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#f2f2f2"
+						><use href="#s" y="11" /><use href="#s" x="2" y="9" /><use href="#s" x="5" y="12" /><use
+							href="#s"
+							x="9"
+							y="4"
+						/><use href="#s" x="12" y="1" /><use href="#s" x="16" y="6" /></g
+					></pattern
+				><pattern
+					id="d"
+					width="19"
+					height="17"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#ffffff"
+						><use href="#s" y="9" /><use href="#s" x="16" y="5" /><use href="#s" x="14" y="2" /><use
+							href="#s"
+							x="11"
+							y="11"
+						/><use href="#s" x="6" y="14" /></g
+					><g fill="#efefef"
+						><use href="#s" x="3" y="13" /><use href="#s" x="9" y="7" /><use
+							href="#s"
+							x="13"
+							y="10"
+						/><use href="#s" x="15" y="4" /><use href="#s" x="18" y="1" /></g
+					></pattern
+				><pattern
+					id="e"
+					width="47"
+					height="53"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#FFFFFF"
+						><use href="#s" x="2" y="5" /><use href="#s" x="16" y="38" /><use
+							href="#s"
+							x="46"
+							y="42"
+						/><use href="#s" x="29" y="20" /></g
+					></pattern
+				><pattern
+					id="f"
+					width="59"
+					height="71"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#FFFFFF"
+						><use href="#s" x="33" y="13" /><use href="#s" x="27" y="54" /><use
+							href="#s"
+							x="55"
+							y="55"
+						/></g
+					></pattern
+				><pattern
+					id="g"
+					width="139"
+					height="97"
+					patternUnits="userSpaceOnUse"
+					patternTransform="scale(7.25) translate(-862.07 -646.55)"
+					><g fill="#FFFFFF"
+						><use href="#s" x="11" y="8" /><use href="#s" x="51" y="13" /><use
+							href="#s"
+							x="17"
+							y="73"
+						/><use href="#s" x="99" y="57" /></g
+					></pattern
+				></defs
+			><rect fill="url(#a)" width="100%" height="100%" /><rect
+				fill="url(#b)"
+				width="100%"
+				height="100%"
+			/><rect fill="url(#h)" width="100%" height="100%" /><rect
+				fill="url(#c)"
+				width="100%"
+				height="100%"
+			/><rect fill="url(#d)" width="100%" height="100%" /><rect
+				fill="url(#e)"
+				width="100%"
+				height="100%"
+			/><rect fill="url(#f)" width="100%" height="100%" /><rect
+				fill="url(#g)"
+				width="100%"
+				height="100%"
+			/></svg
+		>
+		<h1 class="text-3xl font-bold tracking-tight text-center py-10 md:py-12">Plans</h1>
+		<div class="w-full px-32 grid grid-cols-1 gap-6 md:grid-cols-3">
+			<!-- Guest -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title tag="h1" class="text-xl">Guest</Card.Title>
+					<Card.Description>Non signed in users</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<ul class="list-disc mx-5">
+						<li>One endpoint.</li>
+						<li>Expires in 1 hour.</li>
+						<li>All paths allowed.</li>
+						<li>Request history is locally stored.</li>
+						<li>Request payload limit 32Kb.</li>
+						<li>Rate limit 2 rps.</li>
+					</ul>
+				</Card.Content>
+			</Card.Root>
+
+			<!-- Free -->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title tag="h1" class="text-xl">Free</Card.Title>
+					<Card.Description>Signed in users</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<ul class="list-disc mx-5">
+						<li>One endpoint.</li>
+						<li>Expires in 4h.</li>
+						<li>All paths allowed.</li>
+						<li>Request history retained for 2 days.</li>
+						<li>Request payload limit 32Kb.</li>
+						<li>Rate limit: 10 rps.</li>
+						<li>Discord Access.</li>
+					</ul>
+				</Card.Content>
+				<!-- <Card.Footer> -->
+				<!-- 	<Button class="w-full">Generate endpoint</Button> -->
+				<!-- </Card.Footer> -->
+			</Card.Root>
+
+			<!--Pro-->
+			<Card.Root>
+				<Card.Header>
+					<Card.Title tag="h1" class="underline text-xl">Pro</Card.Title>
+					<Card.Description>$8/month | $90/year</Card.Description>
+				</Card.Header>
+				<Card.Content>
+					<ul class="list-disc mx-5">
+						<li>Request history is stored upto 180 days.</li>
+						<li>Web CRON.</li>
+						<li>Request payload limit 510Kb.</li>
+						<li>Password protected endpoints.</li>
+						<li>1 middleware.</li>
+						<li>Rate limit: 30 rps.</li>
+						<li>Discord Access - Private Channel</li>
+					</ul>
+				</Card.Content>
+				<Card.Footer>
+					<Button class="w-full bg-black underline">Upgrade</Button>
+				</Card.Footer>
+			</Card.Root>
+
+			<!--Enterprise-->
+			<!-- <Card.Root> -->
+			<!-- 	<Card.Header> -->
+			<!-- 		<Card.Title tag="h1" class="text-xl">Enterprise (Coming soon)</Card.Title> -->
+			<!-- 		<Card.Description>Enterprise (Coming soon)</Card.Description> -->
+			<!-- 	</Card.Header> -->
+			<!-- <Card.Content> -->
+			<!-- 	<ul class="list-disc mx-5"> -->
+			<!-- 		<li>Inspect incoming HTTP requests.</li> -->
+			<!-- 		<li>1 endpoint</li> -->
+			<!-- 		<li>Request history retained for 2 days</li> -->
+			<!-- 		<li>Expires in 4h.</li> -->
+			<!-- 		<li>Request payload limit 32Kb.</li> -->
+			<!-- 		<li>Rate limit: 10 rps.</li> -->
+			<!-- 		<li>Discord Access</li> -->
+			<!-- 	</ul> -->
+			<!-- </Card.Content> -->
+			<!-- <Card.Footer> -->
+			<!-- 	<Button class="w-full">Generate endpoint</Button> -->
+			<!-- </Card.Footer> -->
+			<!-- </Card.Root> -->
+		</div>
+	</section>
+
+	<footer class="py-4 md:px-8 md:py-0">
+		<div class="container flex flex-col items-center justify-between gap-4 md:h-24 md:flex-row">
+			<div class="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
+				<p class="text-center text-sm leading-loose text-muted-foreground md:text-left">
+					Built by <a
+						href="https://twitter.com/nithinrajx"
+						target="_blank"
+						rel="noreferrer"
+						class="font-medium underline underline-offset-4"
+						data-svelte-h="svelte-18aekvv">Nithin Raj</a
+					>.
+				</p>
+			</div>
+		</div>
+	</footer>
 </div>
