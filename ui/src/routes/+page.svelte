@@ -3,7 +3,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 </script>
 
-<header class="sticky border-b border-black/10 w-full bg-[#D9D9D9]">
+<header class="sticky top-0 border-b border-black/10 w-full bg-[#D9D9D9]">
 	<div class="container flex h-12 max-w-screen-2xl items-center justify-between">
 		<a href="/" class="font-medium">Checkpost</a>
 		<nav class="flex items-center gap-6 text-sm">
@@ -13,7 +13,7 @@
 		</nav>
 	</div>
 </header>
-<div style="background-image: url({background});" class="bg-cover w-full min-h-screen">
+<div style="background-image: url({background});" class="bg-cover w-full min-h-full">
 	<div class=" grid grid-cols-1 mx-10 min-h-screen md:grid-cols-2 md:max-w-7xl lg:mx-auto">
 		<div class="w-auto flex my-32 flex-col md:justify-center">
 			<h1
