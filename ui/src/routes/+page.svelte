@@ -237,7 +237,8 @@
 			<use xlink:href="#SvgjsPath1029" x="690" y="690" stroke="rgba(217, 217, 217, 1)"></use>
 		</symbol>
 	</svg>
-	<div class=" grid grid-cols-1 mx-10 min-h-screen md:grid-cols-2 md:max-w-7xl lg:mx-auto">
+
+	<div class=" grid grid-cols-1 mx-10 md:min-h-screen md:grid-cols-2 md:max-w-7xl lg:mx-auto">
 		<div class="w-auto flex my-32 flex-col md:justify-center">
 			<h1
 				class="text-4xl antialiased font-bold leading-tight select-none tracking-tighter bg-gradient-to-r text-left lg:text-6xl lg:text-left lg:leading-[1.1]"
