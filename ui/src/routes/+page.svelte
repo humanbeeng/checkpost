@@ -3,7 +3,9 @@
 	import * as Card from '$lib/components/ui/card';
 </script>
 
-<header class="antialiased top-0 border-b border-black/10 w-full bg-gray-100/10 backdrop-blur-3xl">
+<header
+	class="antialiased sticky top-0 border-b border-black/10 w-full bg-gray-100/10 backdrop-blur-3xl"
+>
 	<div class="container flex h-12 max-w-screen-2xl items-center justify-between">
 		<a href="/" class="font-medium">Checkpost</a>
 		<nav class="flex items-center gap-6 text-sm">
@@ -416,7 +418,7 @@
 			/></svg
 		>
 		<h1 class="text-3xl font-bold tracking-tight text-center py-10 md:py-12">Plans</h1>
-		<div class="w-full px-32 grid grid-cols-1 gap-6 md:grid-cols-3">
+		<div class="w-full px-6 lg:px-32 grid grid-cols-1 gap-6 md:grid-cols-3">
 			<!-- Guest -->
 			<Card.Root>
 				<Card.Header>
