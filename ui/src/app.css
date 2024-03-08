@@ -1,3 +1,32 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+::-webkit-scrollbar {
+	width: 10px;
+	height: 12px;
+}
+
+::-webkit-scrollbar-track {
+	background: #f5f5f5;
+	border-radius: 6px;
+}
+
+::-webkit-scrollbar-thumb {
+	border-radius: 6px;
+	background: #ccc;
+}
+
+::-webkit-scrollbar-thumb:hover {
+	background: #999;
+}
+
+@layer base {
+	@font-face {
+		font-family: 'Inter';
+		font-style: normal;
+		font-weight: 400;
+		font-display: swap;
+		src: url(lib/assets/fonts/Inter-Regular.woff2) format('woff2');
+	}
+}
