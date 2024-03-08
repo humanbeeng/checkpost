@@ -17,10 +17,7 @@
 		xmlns="http://www.w3.org/2000/svg"
 		version="1.1"
 		xmlns:xlink="http://www.w3.org/1999/xlink"
-		width="1920"
-		height="1080"
 		preserveAspectRatio="none"
-		viewBox="0 0 1920 1080"
 		class="absolute inset-0 -z-10 h-full w-full stroke-gray-200 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]"
 	>
 		<g mask="url(&quot;#SvgjsMask1028&quot;)" fill="none">
