@@ -267,8 +267,8 @@
 	<section class=" h-auto border-t">
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
-			class="absolute w-full h-full -z-10 [mask-image:radial-gradient(100%_100%_at_top_right,white,transparent)]"
-			><rect fill="#ffffff" /><defs
+			class="absolute w-full h-full -z-10 [mask-image:radial-gradient(100%_100%_at_top,white,transparent)]"
+			><rect fill="#d9d9d9" /><defs
 				><rect stroke="#ffffff" stroke-width="0.5" width="1" height="1" id="s" /><pattern
 					id="a"
 					width="3"
