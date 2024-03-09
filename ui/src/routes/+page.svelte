@@ -264,7 +264,7 @@
 		<div class="hidden md:w-auto md:block"></div>
 	</div>
 
-	<section class=" h-auto border-t">
+	<section class=" h-screen border-t">
 		<svg
 			xmlns="http://www.w3.org/2000/svg"
 			class="absolute w-full h-full -z-10 [mask-image:radial-gradient(100%_100%_at_top,white,transparent)]"
