@@ -10,7 +10,8 @@ import (
 func main() {
 	app := fiber.New()
 	app.Get("/", func(c *fiber.Ctx) error {
-		return c.SendString("Hello, World!")
+		msg := fmt.Sprintf("From: %v", c.Subdomains())
+		return c.SendString(msg)
 	})
 
 	app.Get("/v1/auth/google", func(c *fiber.Ctx) error {
@@ -36,6 +37,7 @@ func main() {
 		}
 
 		msg := fmt.Sprintf("Path: %v \nBody: %v", c.Path(), string(str))
+		fmt.Println(msg)
 
 		return c.SendString(msg)
 	})
