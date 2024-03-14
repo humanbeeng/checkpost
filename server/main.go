@@ -18,7 +18,7 @@ func main() {
 		return c.SendString("Profile")
 	})
 
-	app.All("/url/:path", func(c *fiber.Ctx) error {
+	app.All("/url/*", func(c *fiber.Ctx) error {
 		var req any
 
 		_ = c.BodyParser(&req)
