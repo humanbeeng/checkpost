@@ -24,9 +24,9 @@ func main() {
 		_ = c.BodyParser(&req)
 
 		str, _ := json.Marshal(req)
+		source := c.Query("ip", "unknown")
 
-		msg := fmt.Sprintf("Path: %v \nBody: %v", c.Path(), string(str))
-		fmt.Println(msg)
+		msg := fmt.Sprintf("Path: %v \nBody: %v\nSource IP: %v", c.Path(), string(str), source)
 
 		return c.SendString(msg)
 	})
