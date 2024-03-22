@@ -1,0 +1,12 @@
+version: '3.9'
+
+services:
+  db:
+    container_name: db
+    image: postgres:16-alpine
+    restart: always
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: example
+    ports:
+      - "5432:5432"
