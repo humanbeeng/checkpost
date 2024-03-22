@@ -1,54 +1,24 @@
 package main
 
 import (
-	// "encoding/json"
-	// "fmt"
-	// "strings"
+	"log"
 
-	"fmt"
-	"time"
+	"github.com/gofiber/fiber/v2"
+	"github.com/humanbeeng/checkpost/server/internal/auth/api"
 
-	"github.com/humanbeeng/checkpost/server/internal/auth"
-	// _ "github.com/jackc/pgx/v5"
-	// fiber "github.com/gofiber/fiber/v2"
+	"github.com/joho/godotenv"
 )
 
 func main() {
-	pv, _ := auth.NewPasetoVerifier("TW9XIRA4EXFJ7ZJTA5G6CV1KZSMMUGYH")
-
-	token, err := pv.CreateToken("nithin", time.Hour)
+	err := godotenv.Load()
 	if err != nil {
-		return
+		log.Fatalf("Unable to load .env file. %v", err)
 	}
 
-	fmt.Println(token)
-	// app := fiber.New()
-	//
-	// app.Get("/dashboard", func(c *fiber.Ctx) error {
-	// 	return c.SendString("Dashboard")
-	// })
-	//
-	// app.Get("/profile", func(c *fiber.Ctx) error {
-	// 	return c.SendString("Profile")
-	// })
-	//
-	// app.All("/url/*", func(c *fiber.Ctx) error {
-	// 	var req any
-	//
-	// 	_ = c.BodyParser(&req)
-	//
-	// 	strBytes, _ := json.Marshal(req)
-	//
-	// 	str := string(strBytes)
-	// 	ip := c.Query("ip", "unknown")
-	// 	path := c.Path()
-	// 	path, _ = strings.CutPrefix(path, "/url")
-	// 	method := c.Method()
-	//
-	// 	msg := fmt.Sprintf("Path: %v \nBody: %v\nSource IP: %v\nMethod: %v", path, str, ip, method)
-	//
-	// 	return c.SendString(msg)
-	// })
-	//
-	// app.Listen(":8080")
+	app := fiber.New()
+	ac := api.NewGithubAuthController()
+	ac.RegisterRoutes(app)
+
+	app.Listen(":3000")
+
 }
