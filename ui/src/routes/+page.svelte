@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { Button } from '$lib/components/ui/button/index.js';
-	import * as Card from '$lib/components/ui/card';
+	import * as Card from '$lib/components/ui/card/index.js';
 </script>
 
 <header
@@ -11,7 +11,7 @@
 		<nav class="flex items-center gap-6 text-sm">
 			<a href="/pricing" class="hover:underline">Pricing</a>
 			<a href="/about" class="hover:underline">About</a>
-			<a href="/login"><Button class="h-8 border-black" variant="default">Sign in</Button></a>
+			<Button class="h-8 border-black" href="/auth/github" variant="default">Sign in</Button>
 		</nav>
 	</div>
 </header>
