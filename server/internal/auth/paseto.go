@@ -42,15 +42,17 @@ func (p *PasetoVerifier) CreateToken(username string, duration time.Duration) (s
 	if err != nil {
 		return "", err
 	}
-
-	payload := &Payload{
-		ID:        id,
-		Username:  username,
-		IssuedAt:  time.Now(),
-		ExpiredAt: time.Now().Add(duration),
+	fmt.Println("Username", username)
+	jt := paseto.JSONToken{
+		Issuer:     "checkpost",
+		Jti:        id.String(),
+		Subject:    username,
+		IssuedAt:   time.Now(),
+		Expiration: time.Now().Add(duration),
 	}
 
-	token, err := p.paseto.Encrypt([]byte(p.symmetricKey), payload, nil)
+	fmt.Println("encrypting using", p.symmetricKey)
+	token, err := p.paseto.Encrypt([]byte(p.symmetricKey), jt, nil)
 	if err != nil {
 		return "", err
 	}
@@ -58,17 +60,17 @@ func (p *PasetoVerifier) CreateToken(username string, duration time.Duration) (s
 	return token, nil
 }
 
-func (p *PasetoVerifier) VerifyToken(token string) (*Payload, error) {
-	payload := &Payload{}
+func (p *PasetoVerifier) VerifyToken(token string) (paseto.JSONToken, error) {
+	var jt paseto.JSONToken
 
-	err := p.paseto.Decrypt(token, []byte(p.symmetricKey), payload, nil)
+	err := p.paseto.Decrypt(token, []byte(p.symmetricKey), &jt, nil)
 	if err != nil {
-		return nil, err
+		return jt, err
 	}
 
-	if !payload.Valid() {
-		return nil, fmt.Errorf("Token has expired")
+	if time.Now().After(jt.Expiration) {
+		return jt, fmt.Errorf("Token has expired")
 	}
 
-	return payload, nil
+	return jt, nil
 }

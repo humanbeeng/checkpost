@@ -24,6 +24,7 @@ func NewGithubAuthController() (*AuthController, error) {
 	key := os.Getenv("GITHUB_KEY")
 	secret := os.Getenv("GITHUB_SECRET")
 	symmetricKey := os.Getenv("PASETO_KEY")
+
 	pasetoVerifier, err := NewPasetoVerifier(symmetricKey)
 	if err != nil {
 		return nil, err
@@ -44,7 +45,7 @@ func NewGithubAuthController() (*AuthController, error) {
 
 type GithubUser struct {
 	Name      string `json:"name"`
-	Username  string `json:"username"`
+	Username  string `json:"login"`
 	Email     string `json:"email"`
 	AvatarUrl string `json:"avatar_url"`
 }
@@ -63,7 +64,7 @@ func (ac *AuthController) RegisterRoutes(router fiber.Router) {
 }
 
 func (ac *AuthController) LoginHandler(c *fiber.Ctx) error {
-	fmt.Println("Received login request")
+	// TODO: Add state to oauth request
 	url := ac.config.AuthCodeURL("not-implemented-yet")
 	return c.Redirect(url)
 }
@@ -109,11 +110,12 @@ func (ac *AuthController) CallbackHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	// Create a token with 1 month expiry time.
+	// Create token and encrypt it
 	pasetoToken, err := ac.pasetoVerifier.CreateToken(githubUser.Username, time.Hour*24*30)
 	if err != nil {
 		return err
 	}
+	fmt.Println("Generated token", pasetoToken)
 
 	response := AuthResponse{Token: pasetoToken}
 
