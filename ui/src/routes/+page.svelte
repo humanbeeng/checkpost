@@ -11,6 +11,7 @@
 		<nav class="flex items-center gap-6 text-sm">
 			<a href="/pricing" class="hover:underline">Pricing</a>
 			<a href="/about" class="hover:underline">About</a>
+			<a href="/admin/dashboard" class="hover:underline">Dashboard</a>
 			<Button class="h-8 border-black" href="/auth/github" variant="default">Sign in</Button>
 		</nav>
 	</div>
