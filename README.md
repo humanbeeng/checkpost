@@ -1,3 +1,3 @@
 # Checkpost
 
-Checkpost is an open-source http request inspection tool.
+Checkpost is a http request inspection tool.
