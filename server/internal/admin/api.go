@@ -12,8 +12,9 @@ func NewAdminController() *AdminController {
 	return &AdminController{}
 }
 
-func (ac *AdminController) RegisterRoutes(router fiber.Router) {
-	router.Get("/dashboard", ac.AdminHandler)
+func (ac *AdminController) RegisterRoutes(app *fiber.App, pasetoMiddleware *fiber.Handler) {
+	apiGroup := app.Group("admin", *pasetoMiddleware)
+	apiGroup.Get("/dashboard", ac.AdminHandler)
 }
 
 func (ac *AdminController) AdminHandler(c *fiber.Ctx) error {

@@ -13,6 +13,6 @@ sql:
         emit_interface: true
         emit_empty_slices: true
         emit_exact_table_names: false
-        overrides:
-          - db_type: "uuid"
-            go_type: "github.com/google/uuid.UUID"
+        # overrides:
+        #   - db_type: "uuid"
+        #     go_type: "github.com/google/uuid.UUID"
