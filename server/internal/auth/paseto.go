@@ -5,7 +5,7 @@ import (
 	"time"
 
 	"github.com/aead/chacha20poly1305"
-	"github.com/google/uuid"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/o1egl/paseto"
 )
 
@@ -23,35 +23,22 @@ func NewPasetoVerifier(symmetricKey string) (*PasetoVerifier, error) {
 		symmetricKey: symmetricKey,
 		paseto:       paseto.NewV2(),
 	}, nil
-
-}
-
-type Payload struct {
-	ID        uuid.UUID `json:"id"`
-	Username  string    `json:"username"`
-	IssuedAt  time.Time `json:"issued_at"`
-	ExpiredAt time.Time `json:"expired_at"`
-}
-
-func (p *Payload) Valid() bool {
-	return time.Now().After(p.ExpiredAt)
 }
 
 func (p *PasetoVerifier) CreateToken(username string, duration time.Duration) (string, error) {
-	id, err := uuid.NewRandom()
+	id, err := gonanoid.New()
 	if err != nil {
 		return "", err
 	}
-	fmt.Println("Username", username)
+
 	jt := paseto.JSONToken{
 		Issuer:     "checkpost",
-		Jti:        id.String(),
+		Jti:        id,
 		Subject:    username,
 		IssuedAt:   time.Now(),
 		Expiration: time.Now().Add(duration),
 	}
 
-	fmt.Println("encrypting using", p.symmetricKey)
 	token, err := p.paseto.Encrypt([]byte(p.symmetricKey), jt, nil)
 	if err != nil {
 		return "", err

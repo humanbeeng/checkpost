@@ -15,12 +15,12 @@ import (
 	"golang.org/x/oauth2/github"
 )
 
-type AuthController struct {
+type AuthHandler struct {
 	config         *oauth2.Config
 	pasetoVerifier *PasetoVerifier
 }
 
-func NewGithubAuthController() (*AuthController, error) {
+func NewGithubAuthHandler() (*AuthHandler, error) {
 	key := os.Getenv("GITHUB_KEY")
 	secret := os.Getenv("GITHUB_SECRET")
 	symmetricKey := os.Getenv("PASETO_KEY")
@@ -37,7 +37,7 @@ func NewGithubAuthController() (*AuthController, error) {
 		Scopes:       []string{},
 	}
 
-	return &AuthController{
+	return &AuthHandler{
 		config:         config,
 		pasetoVerifier: pasetoVerifier,
 	}, err
@@ -58,18 +58,18 @@ type AuthResponse struct {
 	AvatarUrl string `json:"avatar_url"`
 }
 
-func (ac *AuthController) RegisterRoutes(router fiber.Router) {
-	router.Get("/auth/github", ac.LoginHandler)
-	router.Get("/auth/github/callback", ac.CallbackHandler)
+func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
+	app.Get("/auth/github", ac.LoginHandler)
+	app.Get("/auth/github/callback", ac.CallbackHandler)
 }
 
-func (ac *AuthController) LoginHandler(c *fiber.Ctx) error {
+func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	// TODO: Add state to oauth request
-	url := ac.config.AuthCodeURL("not-implemented-yet")
+	url := a.config.AuthCodeURL("not-implemented-yet")
 	return c.Redirect(url)
 }
 
-func (ac *AuthController) CallbackHandler(c *fiber.Ctx) error {
+func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	code := c.Query("code")
 	if code == "" {
 		return fmt.Errorf("No auth code received")
@@ -77,7 +77,7 @@ func (ac *AuthController) CallbackHandler(c *fiber.Ctx) error {
 	// exchange the auth code that retrieved from github via
 	// URL query parameter into an access token.
 
-	token, err := ac.config.Exchange(c.Context(), code)
+	token, err := a.config.Exchange(c.Context(), code)
 	if err != nil {
 		return c.SendStatus(fiber.StatusInternalServerError)
 	}
@@ -111,11 +111,10 @@ func (ac *AuthController) CallbackHandler(c *fiber.Ctx) error {
 	}
 
 	// Create token and encrypt it
-	pasetoToken, err := ac.pasetoVerifier.CreateToken(githubUser.Username, time.Hour*24*30)
+	pasetoToken, err := a.pasetoVerifier.CreateToken(githubUser.Username, time.Hour*24*30)
 	if err != nil {
 		return err
 	}
-	fmt.Println("Generated token", pasetoToken)
 
 	response := AuthResponse{Token: pasetoToken}
 
