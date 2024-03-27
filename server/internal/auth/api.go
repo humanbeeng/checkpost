@@ -3,14 +3,17 @@ package auth
 import (
 	"context"
 	"encoding/json"
-	"fmt"
+	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/url"
 	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	db "github.com/humanbeeng/checkpost/server/db/sqlc"
+	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
 )
@@ -18,9 +21,10 @@ import (
 type AuthHandler struct {
 	config         *oauth2.Config
 	pasetoVerifier *PasetoVerifier
+	q              db.Querier
 }
 
-func NewGithubAuthHandler() (*AuthHandler, error) {
+func NewGithubAuthHandler(querier db.Querier) (*AuthHandler, error) {
 	key := os.Getenv("GITHUB_KEY")
 	secret := os.Getenv("GITHUB_SECRET")
 	symmetricKey := os.Getenv("PASETO_KEY")
@@ -40,6 +44,7 @@ func NewGithubAuthHandler() (*AuthHandler, error) {
 	return &AuthHandler{
 		config:         config,
 		pasetoVerifier: pasetoVerifier,
+		q:              querier,
 	}, err
 }
 
@@ -65,49 +70,20 @@ func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
 
 func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	// TODO: Add state to oauth request
-	url := a.config.AuthCodeURL("not-implemented-yet")
+	url := a.config.AuthCodeURL("none")
 	return c.Redirect(url)
 }
 
 func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	code := c.Query("code")
 	if code == "" {
-		return fmt.Errorf("No auth code received")
-	}
-	// exchange the auth code that retrieved from github via
-	// URL query parameter into an access token.
-
-	token, err := a.config.Exchange(c.Context(), code)
-	if err != nil {
-		return c.SendStatus(fiber.StatusInternalServerError)
+		slog.Warn("No code found in callback url")
 	}
 
-	baseUrl, err := url.Parse("https://api.github.com/user")
+	githubUser, err := a.exchangeCodeForUser(c, code)
 	if err != nil {
-		return err
-	}
-
-	req, err := http.NewRequestWithContext(context.Background(), http.MethodGet, baseUrl.String(), nil)
-	if err != nil {
-		return err
-	}
-	req.Header.Add("Authorization", "Bearer "+token.AccessToken)
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return err
-	}
-
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return err
-	}
-
-	var githubUser GithubUser
-	err = json.Unmarshal(body, &githubUser)
-	if err != nil {
-		return err
+		slog.Error("Unable to exchange code for github user", "err", err)
+		return fiber.ErrInternalServerError
 	}
 
 	// Create token and encrypt it
@@ -116,7 +92,60 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 		return err
 	}
 
-	response := AuthResponse{Token: pasetoToken}
+	_, err = a.q.GetUserFromEmail(context.Background(), githubUser.Email)
+	if errors.Is(err, pgx.ErrNoRows) {
+		_, err = a.q.CreateUser(context.Background(), db.CreateUserParams{
+			Name:  githubUser.Name,
+			Plan:  db.PlanFree,
+			Email: githubUser.Email,
+		})
+		if err != nil {
+			slog.Error("Unable to create new user", err)
+			return fiber.ErrInternalServerError
+		}
+	}
 
-	return c.JSON(response)
+	res := AuthResponse{Token: pasetoToken}
+
+	return c.JSON(res)
+}
+
+// exchange the auth code that retrieved from github via URL query parameter into an access token.
+func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUser, error) {
+	token, err := a.config.Exchange(c.Context(), code)
+	if err != nil {
+		return nil, err
+	}
+
+	baseUrl, err := url.Parse("https://api.github.com/user")
+	if err != nil {
+		return nil, err
+	}
+
+	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	req.Header.Add("Authorization", "Bearer "+token.AccessToken)
+
+	githubRes, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+
+	defer githubRes.Body.Close()
+
+	body, err := io.ReadAll(githubRes.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var githubUser GithubUser
+	err = json.Unmarshal(body, &githubUser)
+	if err != nil {
+		return nil, err
+	}
+
+	return &githubUser, nil
 }
