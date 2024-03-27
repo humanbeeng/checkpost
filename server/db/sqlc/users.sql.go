@@ -3,7 +3,7 @@
 //   sqlc v1.25.0
 // source: users.sql
 
-package checkpost
+package db
 
 import (
 	"context"
@@ -60,6 +60,23 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	return i, err
 }
 
+const getUserFromEmail = `-- name: GetUserFromEmail :one
+select id, name, plan, email, created_at from users where email = $1 limit 1
+`
+
+func (q *Queries) GetUserFromEmail(ctx context.Context, email string) (User, error) {
+	row := q.db.QueryRow(ctx, getUserFromEmail, email)
+	var i User
+	err := row.Scan(
+		&i.ID,
+		&i.Name,
+		&i.Plan,
+		&i.Email,
+		&i.CreatedAt,
+	)
+	return i, err
+}
+
 const listUsers = `-- name: ListUsers :many
 select id, name, plan, email, created_at from users limit $1 offset $2
 `
@@ -75,7 +92,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 		return nil, err
 	}
 	defer rows.Close()
-	var items []User
+	items := []User{}
 	for rows.Next() {
 		var i User
 		if err := rows.Scan(

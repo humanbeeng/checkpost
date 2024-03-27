@@ -5,7 +5,7 @@ sql:
     schema: "./db/migration"
     gen:
       go:
-        package: "checkpost"
+        package: "db"
         out: "./db/sqlc"
         sql_package: "pgx/v5"
         emit_json_tags: true
