@@ -20,8 +20,7 @@ func NewPasetoMiddleware() fiber.Handler {
 			return fiber.NewError(401)
 		}
 
-		c.Locals("username", payload.Subject)
+		c.Locals("userId", payload.Subject)
 		return c.Next()
-
 	}
 }

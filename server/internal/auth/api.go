@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -48,6 +49,11 @@ func NewGithubAuthHandler(querier db.Querier) (*AuthHandler, error) {
 	}, err
 }
 
+func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
+	app.Get("/auth/github", ac.LoginHandler)
+	app.Get("/auth/github/callback", ac.CallbackHandler)
+}
+
 type GithubUser struct {
 	Name      string `json:"name"`
 	Username  string `json:"login"`
@@ -63,11 +69,6 @@ type AuthResponse struct {
 	AvatarUrl string `json:"avatar_url"`
 }
 
-func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
-	app.Get("/auth/github", ac.LoginHandler)
-	app.Get("/auth/github/callback", ac.CallbackHandler)
-}
-
 func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	// TODO: Add state to oauth request
 	url := a.config.AuthCodeURL("none")
@@ -77,7 +78,7 @@ func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	code := c.Query("code")
 	if code == "" {
-		slog.Warn("No code found in callback url")
+		slog.Warn("Code not found in callback url")
 	}
 
 	githubUser, err := a.exchangeCodeForUser(c, code)
@@ -86,27 +87,31 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
+	user, err := a.q.GetUserFromEmail(context.Background(), githubUser.Email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			user, err = a.q.CreateUser(c.Context(), db.CreateUserParams{
+				Name:     githubUser.Name,
+				Username: githubUser.Username,
+				Plan:     db.PlanFree,
+				Email:    githubUser.Email,
+			})
+			if err != nil {
+				slog.Error("Unable to create new user", "err", err)
+				return fiber.ErrInternalServerError
+			}
+		} else {
+			slog.Error("Unable to fetch existing user", "err", err)
+		}
+	}
+
 	// Create token and encrypt it
-	pasetoToken, err := a.pasetoVerifier.CreateToken(githubUser.Username, time.Hour*24*30)
+	pasetoToken, err := a.pasetoVerifier.CreateToken(user.ID, githubUser.Username, time.Hour*24*30)
 	if err != nil {
 		return err
 	}
 
-	_, err = a.q.GetUserFromEmail(context.Background(), githubUser.Email)
-	if errors.Is(err, pgx.ErrNoRows) {
-		_, err = a.q.CreateUser(context.Background(), db.CreateUserParams{
-			Name:  githubUser.Name,
-			Plan:  db.PlanFree,
-			Email: githubUser.Email,
-		})
-		if err != nil {
-			slog.Error("Unable to create new user", err)
-			return fiber.ErrInternalServerError
-		}
-	}
-
 	res := AuthResponse{Token: pasetoToken}
-
 	return c.JSON(res)
 }
 

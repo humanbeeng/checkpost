@@ -25,7 +25,7 @@ func NewPasetoVerifier(symmetricKey string) (*PasetoVerifier, error) {
 	}, nil
 }
 
-func (p *PasetoVerifier) CreateToken(username string, duration time.Duration) (string, error) {
+func (p *PasetoVerifier) CreateToken(userId int64, username string, duration time.Duration) (string, error) {
 	id, err := gonanoid.New()
 	if err != nil {
 		return "", err
@@ -34,10 +34,11 @@ func (p *PasetoVerifier) CreateToken(username string, duration time.Duration) (s
 	jt := paseto.JSONToken{
 		Issuer:     "checkpost",
 		Jti:        id,
-		Subject:    username,
+		Subject:    fmt.Sprint(userId),
 		IssuedAt:   time.Now(),
 		Expiration: time.Now().Add(duration),
 	}
+	jt.Set("username", username)
 
 	token, err := p.paseto.Encrypt([]byte(p.symmetricKey), jt, nil)
 	if err != nil {

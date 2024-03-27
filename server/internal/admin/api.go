@@ -1,6 +1,7 @@
 package admin
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/gofiber/fiber/v2"
@@ -29,20 +30,24 @@ func (ac *AdminController) AdminHandler(c *fiber.Ctx) error {
 	path := c.Path()
 	path, _ = strings.CutPrefix(path, "/url")
 	method := c.Method()
-	username := c.Locals("username").(string)
+	userIdStr := c.Locals("userId").(string)
+	userId, err := strconv.ParseInt(userIdStr, 10, 64)
+	if err != nil {
+		return err
+	}
 
 	// headers, _ := json.MarshalIndent(c.GetReqHeaders(), "", "  ")
 
 	res := struct {
-		IP       string `json:"ip"`
-		Path     string `json:"path"`
-		Method   string `json:"method"`
-		Username string `json:"username"`
+		IP     string `json:"ip"`
+		Path   string `json:"path"`
+		Method string `json:"method"`
+		UserId int64  `json:"user_id"`
 	}{
-		IP:       ip,
-		Path:     path,
-		Method:   method,
-		Username: username,
+		IP:     ip,
+		Path:   path,
+		Method: method,
+		UserId: userId,
 	}
 
 	return c.JSON(res)
