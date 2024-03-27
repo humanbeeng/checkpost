@@ -2,7 +2,7 @@
 // versions:
 //   sqlc v1.25.0
 
-package checkpost
+package db
 
 import (
 	"database/sql/driver"
@@ -64,7 +64,7 @@ type Plan string
 
 const (
 	PlanGuest     Plan = "guest"
-	PlanSignedIn  Plan = "signed_in"
+	PlanFree      Plan = "free"
 	PlanNoBrainer Plan = "no_brainer"
 	PlanPro       Plan = "pro"
 )
