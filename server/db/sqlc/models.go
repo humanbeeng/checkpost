@@ -106,16 +106,19 @@ func (ns NullPlan) Value() (driver.Value, error) {
 
 type FileAttachment struct {
 	ID        int64            `json:"id"`
-	Url       string           `json:"url"`
+	Uri       string           `json:"uri"`
+	UrlID     int64            `json:"url_id"`
 	UserID    pgtype.Int8      `json:"user_id"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 }
 
 type Request struct {
-	ID      int64       `json:"id"`
-	UserID  int64       `json:"user_id"`
-	Content pgtype.Text `json:"content"`
-	Method  HttpMethod  `json:"method"`
+	ID         int64       `json:"id"`
+	UserID     pgtype.Int8 `json:"user_id"`
+	UrlID      int64       `json:"url_id"`
+	ResponseID pgtype.Int8 `json:"response_id"`
+	Content    pgtype.Text `json:"content"`
+	Method     HttpMethod  `json:"method"`
 	// IPv4
 	SourceIp     string           `json:"source_ip"`
 	ContentSize  int32            `json:"content_size"`
@@ -127,7 +130,8 @@ type Request struct {
 
 type Response struct {
 	ID           int64            `json:"id"`
-	UserID       int64            `json:"user_id"`
+	UserID       pgtype.Int8      `json:"user_id"`
+	UrlID        int64            `json:"url_id"`
 	ResponseCode int32            `json:"response_code"`
 	Content      pgtype.Text      `json:"content"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
@@ -136,13 +140,15 @@ type Response struct {
 type Url struct {
 	ID        int64            `json:"id"`
 	Url       string           `json:"url"`
-	UserID    int64            `json:"user_id"`
+	UserID    pgtype.Int8      `json:"user_id"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
+	Plan      Plan             `json:"plan"`
 }
 
 type User struct {
 	ID        int64            `json:"id"`
 	Name      string           `json:"name"`
+	Username  string           `json:"username"`
 	Plan      Plan             `json:"plan"`
 	Email     string           `json:"email"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`

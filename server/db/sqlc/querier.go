@@ -13,6 +13,7 @@ type Querier interface {
 	DeleteUser(ctx context.Context, id int64) error
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserFromEmail(ctx context.Context, email string) (User, error)
+	GetUserFromUsername(ctx context.Context, username string) (User, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 }
 

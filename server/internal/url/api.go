@@ -15,6 +15,7 @@ func NewURLHandler() *URLController {
 }
 
 func (uc *URLController) RegisterRoutes(app *fiber.App) {
+	// TODO: Add rate limiter
 	urlGroup := app.Group("/url")
 	urlGroup.Post("/generate", uc.GenerateURLHandler)
 	urlGroup.All("/hook/:path", uc.HookHandler)
@@ -55,6 +56,10 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
+
+	// Get user details and check plan
+	// If free. generate random url
+	// If no_brainer plan, check if url already exists
 
 	id, _ := gonanoid.New()
 	return c.SendString(id)
