@@ -1,14 +1,13 @@
-drop table if exists requests;
+drop table if exists request;
 
-drop table if exists urls;
+drop table if exists url;
 
-drop table if exists file_attachments;
+drop table if exists file_attachment;
 
-drop table if exists responses;
+drop table if exists response;
 
-drop table if exists users;
+drop table if exists "user";
 
 drop type if exists http_method;
 
 drop type if exists plan;
-
