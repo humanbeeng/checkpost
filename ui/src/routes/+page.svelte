@@ -10,9 +10,11 @@
 		<a href="/" class="font-medium">Checkpost</a>
 		<nav class="flex items-center gap-6 text-sm">
 			<a href="/pricing" class="hover:underline">Pricing</a>
-			<a href="/about" class="hover:underline">About</a>
+			<a href="/about" class="hidden md:flex hover:underline">About</a>
 			<a href="/admin/dashboard" class="hover:underline">Dashboard</a>
-			<Button class="h-8 border-black" href="/auth/github" variant="default">Sign in</Button>
+			<Button class="h-8 hidden border-black md:flex" href="/auth/github" variant="default"
+				>Sign in</Button
+			>
 		</nav>
 	</div>
 </header>
@@ -239,7 +241,7 @@
 		</symbol>
 	</svg>
 
-	<div class=" grid grid-cols-1 mx-10 md:min-h-screen md:grid-cols-2 md:max-w-7xl lg:mx-auto">
+	<div class=" grid grid-cols-1 mx-6 md:min-h-screen md:grid-cols-2 md:max-w-7xl lg:mx-auto">
 		<div class="w-auto flex my-32 flex-col md:justify-center">
 			<h1
 				class="text-4xl antialiased font-bold leading-tight select-none tracking-tighter bg-gradient-to-r text-left lg:text-6xl lg:text-left lg:leading-[1.1]"
