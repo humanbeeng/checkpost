@@ -8,7 +8,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 	// TODO: Handle edge cases
 
 	// TODO: Replace this url with actual endpoint
-	const endpoint = `http://localhost:3000/auth/github/callback?code=${code}`
+	const endpoint = `http://api.checkpost.local:3000/auth/github/callback?code=${code}`
 
 	// TODO: Handle error case
 
