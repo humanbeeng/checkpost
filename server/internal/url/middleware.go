@@ -12,12 +12,12 @@ func NewSubdomainRouterMiddleware() fiber.Handler {
 		subdomains := c.Subdomains()
 		if len(subdomains) == 0 {
 			slog.Error("No subdomains found")
-			return fiber.ErrBadGateway
+			return c.Next()
 		}
 		subdomain := subdomains[0]
 		switch subdomain {
 		// TODO: Add reserved subdomain routing
-		case "api":
+		case "api", "localhost:3000":
 			{
 				return c.Next()
 			}

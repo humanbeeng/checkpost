@@ -6,4 +6,4 @@ values
 
 
 -- name: GetEndpoint :one
-select endpoint from "endpoint" where endpoint = $1 limit 1;
+select * from "endpoint" where endpoint = $1 limit 1;

@@ -52,6 +52,8 @@ func NewGithubAuthHandler(querier db.Querier) (*AuthHandler, error) {
 func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
 	app.Get("/auth/github", ac.LoginHandler)
 	app.Get("/auth/github/callback", ac.CallbackHandler)
+	// TODO: Remove this
+	app.Get("/auth/token", ac.GenerateToken)
 }
 
 type GithubUser struct {
@@ -106,12 +108,11 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	}
 
 	// Create token and encrypt it
-	pasetoToken, err := a.pasetoVerifier.CreateToken(user.Username, user.Email, time.Hour*24*30)
+	pasetoToken, err := a.pasetoVerifier.CreateToken(user.Username, user.ID, time.Hour*24*30)
 	if err != nil {
 		fmt.Println("err", err)
 		return err
 	}
-	fmt.Println("Token", pasetoToken)
 
 	res := AuthResponse{Token: pasetoToken}
 	return c.JSON(res)
@@ -123,7 +124,6 @@ func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUse
 	if err != nil {
 		return nil, err
 	}
-	fmt.Println("token", token)
 
 	baseUrl, err := url.Parse("https://api.github.com/user")
 	if err != nil {
@@ -156,4 +156,14 @@ func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUse
 	}
 
 	return &githubUser, nil
+}
+
+func (ac *AuthHandler) GenerateToken(c *fiber.Ctx) error {
+	token, err := ac.pasetoVerifier.CreateToken("humanbeeng", 1, time.Hour*12)
+	if err != nil {
+		slog.Error("err", "err", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return c.SendString(token)
 }

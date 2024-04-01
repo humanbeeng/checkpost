@@ -38,11 +38,18 @@ func (q *Queries) CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointPa
 }
 
 const getEndpoint = `-- name: GetEndpoint :one
-select endpoint from "endpoint" where endpoint = $1 limit 1
+select id, endpoint, user_id, created_at, plan from "endpoint" where endpoint = $1 limit 1
 `
 
-func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (string, error) {
+func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error) {
 	row := q.db.QueryRow(ctx, getEndpoint, endpoint)
-	err := row.Scan(&endpoint)
-	return endpoint, err
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.Plan,
+	)
+	return i, err
 }

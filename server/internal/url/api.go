@@ -1,10 +1,8 @@
 package url
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -23,8 +21,8 @@ func (uc *URLController) RegisterRoutes(app *fiber.App, pmw *fiber.Handler) {
 	// TODO: Add rate limiter
 	urlGroup := app.Group("/url")
 	urlGroup.Post("/generate", *pmw, uc.GenerateURLHandler)
-	urlGroup.All("/hook/:endpoint/:path", uc.HookHandler)
-	urlGroup.Get("/:path/:requestId", uc.RequestDetailsHandler)
+	urlGroup.All("/hook/:endpoint/:path?", uc.HookHandler)
+	urlGroup.Get("/:path/:request-id", uc.RequestDetailsHandler)
 	urlGroup.Get("/stats", uc.StatsHandler)
 }
 
@@ -42,6 +40,7 @@ func (uc *URLController) StatsHandler(c *fiber.Ctx) error {
 	return c.SendString("Ok")
 }
 
+// TODO: Implement this
 func (uc *URLController) RequestDetailsHandler(c *fiber.Ctx) error {
 	return fiber.ErrBadGateway
 	path := c.Params("path")
@@ -68,19 +67,19 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
-	var mail string
-	fmt.Println(c.Locals("email"))
+	var username string
 
-	if email, ok := c.Locals("email").(string); !ok {
-		mail = ""
+	if usernameLocal, ok := c.Locals("username").(string); !ok {
+		username = ""
 	} else {
-		mail = email
+		username = usernameLocal
 	}
 
-	url, err := uc.service.GenerateUrl(c.Context(), mail, req.Endpoint)
+	url, err := uc.service.GenerateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
 		if errors.Is(err, ErrEndpointAlreadyExists) {
-			return fiber.NewError(fiber.ErrConflict.Code, fmt.Sprintf("Endpoint %v already exists", req.Endpoint))
+			// TODO: Refactor this url
+			return fiber.NewError(fiber.ErrConflict.Code, fmt.Sprintf("Endpoint https://%v.checkpost.io already exists", req.Endpoint))
 		} else if errors.Is(err, ErrNoUser) {
 			return fiber.ErrBadRequest
 		}
@@ -95,34 +94,5 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 }
 
 func (uc *URLController) HookHandler(c *fiber.Ctx) error {
-	var req any
-
-	_ = c.BodyParser(&req)
-
-	strBytes, _ := json.Marshal(req)
-
-	body := string(strBytes)
-	ip := c.Query("ip", "Unknown")
-	path := c.Path()
-	path, _ = strings.CutPrefix(path, "/url/hook")
-	endpoint := c.Params("endpoint")
-	method := c.Method()
-	query := c.Queries()
-
-	fmt.Println("method:", method)
-	fmt.Println("endpoint:", endpoint)
-	fmt.Println("path:", path)
-	fmt.Println("ip:", ip)
-	fmt.Println("body:", body)
-
-	fmt.Println("query")
-	for k, v := range query {
-		fmt.Printf("%v: %v\n", k, v)
-	}
-
-	fmt.Println("headers")
-	for k, v := range c.GetReqHeaders() {
-		fmt.Println(k, ":", v)
-	}
-	return c.SendString("ok")
+	return uc.service.StoreRequestDetails(c)
 }
