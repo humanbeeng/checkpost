@@ -1,8 +1,6 @@
 package admin
 
 import (
-	"strings"
-
 	"github.com/gofiber/fiber/v2"
 )
 
@@ -18,32 +16,5 @@ func (ac *AdminController) RegisterRoutes(app *fiber.App, pasetoMiddleware *fibe
 }
 
 func (ac *AdminController) AdminHandler(c *fiber.Ctx) error {
-	var req any
-
-	_ = c.BodyParser(&req)
-
-	// strBytes, _ := json.Marshal(req)
-	// reqBody := string(strBytes)
-
-	ip := c.Query("ip", "unknown")
-	path := c.Path()
-	path, _ = strings.CutPrefix(path, "/url")
-	method := c.Method()
-	username := c.Locals("username").(string)
-
-	// headers, _ := json.MarshalIndent(c.GetReqHeaders(), "", "  ")
-
-	res := struct {
-		IP       string `json:"ip"`
-		Path     string `json:"path"`
-		Method   string `json:"method"`
-		Username string `json:"username"`
-	}{
-		IP:       ip,
-		Path:     path,
-		Method:   method,
-		Username: username,
-	}
-
-	return c.JSON(res)
+	return c.SendString("admin")
 }

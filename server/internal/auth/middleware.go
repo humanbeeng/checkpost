@@ -1,6 +1,7 @@
 package auth
 
 import (
+	"log/slog"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,11 +18,11 @@ func NewPasetoMiddleware() fiber.Handler {
 		token := c.Cookies("token", "")
 		payload, err := pv.VerifyToken(token)
 		if err != nil {
-			return fiber.NewError(401)
+			slog.Error("Unable to verify token", "err", err)
+			return fiber.ErrUnauthorized
 		}
-
-		c.Locals("username", payload.Subject)
+		slog.Info("Payload", "subject", payload.Subject)
+		c.Locals("email", payload.Subject)
 		return c.Next()
-
 	}
 }

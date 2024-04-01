@@ -7,13 +7,13 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
+	"github.com/jackc/pgx/v5"
+	"github.com/joho/godotenv"
+
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/admin"
 	"github.com/humanbeeng/checkpost/server/internal/auth"
 	"github.com/humanbeeng/checkpost/server/internal/url"
-	"github.com/jackc/pgx/v5"
-
-	"github.com/joho/godotenv"
 )
 
 func main() {
@@ -25,6 +25,8 @@ func main() {
 	app := fiber.New()
 	app.Use(cors.New())
 	pmw := auth.NewPasetoMiddleware()
+	rmw := url.NewSubdomainRouterMiddleware()
+	app.Use(rmw)
 	ctx := context.Background()
 
 	connUrl := os.Getenv("POSTGRES_URL")
@@ -46,8 +48,10 @@ func main() {
 	adc := admin.NewAdminController()
 	adc.RegisterRoutes(app, &pmw)
 
-	url := url.NewURLHandler()
-	url.RegisterRoutes(app)
+	endpointService := url.NewUrlService(queries)
+	urlHandler := url.NewEndpointHandler(endpointService)
+	urlHandler.RegisterRoutes(app, &pmw)
 
+	// TODO: Fetch port from config
 	app.Listen(":3000")
 }
