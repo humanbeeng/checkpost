@@ -2,7 +2,9 @@ package main
 
 import (
 	"context"
+	"errors"
 	"log"
+	"log/slog"
 	"os"
 
 	"github.com/gofiber/fiber/v2"
@@ -17,9 +19,12 @@ import (
 )
 
 func main() {
+	env := os.Getenv("ENVIRONMENT")
 	err := godotenv.Load()
 	if err != nil {
-		log.Fatalf("Unable to load .env file. %v", err)
+		if errors.Is(err, os.ErrNotExist) && env == "" {
+			log.Fatal(err)
+		}
 	}
 
 	app := fiber.New()
@@ -36,6 +41,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close(ctx)
+	slog.Info("Connection established with db", "conn", connUrl)
 
 	queries := db.New(conn)
 
