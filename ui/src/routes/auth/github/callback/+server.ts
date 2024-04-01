@@ -20,11 +20,11 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 		// TODO: Increase security
 		cookies.set('token', response.token, {
 			path: '/',
-			sameSite: 'strict',
+			// TODO: Fetch expiry from response
 			maxAge: 60 * 60 * 24 * 1000
 		});
 
-		redirect(302, '/dashboard')
+		redirect(302, '/admin/dashboard')
 	} else {
 		error(401)
 	}
