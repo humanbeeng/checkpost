@@ -3,7 +3,7 @@ import type { PageServerLoad } from '../../$types';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
-	const res = await fetch('http://localhost:3000/admin/dashboard', {
+	const res = await fetch('http://api.checkpost.local:3000/admin/dashboard', {
 		method: 'GET'
 	})
 
