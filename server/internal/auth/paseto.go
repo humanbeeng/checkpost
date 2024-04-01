@@ -2,6 +2,7 @@ package auth
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/aead/chacha20poly1305"
@@ -25,7 +26,7 @@ func NewPasetoVerifier(symmetricKey string) (*PasetoVerifier, error) {
 	}, nil
 }
 
-func (p *PasetoVerifier) CreateToken(username string, email string, duration time.Duration) (string, error) {
+func (p *PasetoVerifier) CreateToken(username string, userId int64, duration time.Duration) (string, error) {
 	id, err := gonanoid.New()
 	if err != nil {
 		return "", err
@@ -34,7 +35,7 @@ func (p *PasetoVerifier) CreateToken(username string, email string, duration tim
 	jt := paseto.JSONToken{
 		Issuer:     "checkpost",
 		Jti:        id,
-		Subject:    email,
+		Subject:    strconv.FormatInt(userId, 10),
 		IssuedAt:   time.Now(),
 		Expiration: time.Now().Add(duration),
 	}

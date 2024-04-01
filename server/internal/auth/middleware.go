@@ -3,6 +3,7 @@ package auth
 import (
 	"log/slog"
 	"os"
+	"strconv"
 
 	"github.com/gofiber/fiber/v2"
 )
@@ -21,8 +22,9 @@ func NewPasetoMiddleware() fiber.Handler {
 			slog.Error("Unable to verify token", "err", err)
 			return fiber.ErrUnauthorized
 		}
-		slog.Info("Payload", "subject", payload.Subject)
-		c.Locals("email", payload.Subject)
+		userId, err := strconv.ParseInt(payload.Subject, 10, 64)
+		c.Locals("userId", userId)
+		c.Locals("username", payload.Subject)
 		return c.Next()
 	}
 }

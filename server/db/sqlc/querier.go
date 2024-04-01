@@ -10,12 +10,15 @@ import (
 
 type Querier interface {
 	CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error)
+	CreateNewRequest(ctx context.Context, arg CreateNewRequestParams) (Request, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteUser(ctx context.Context, id int64) error
-	GetEndpoint(ctx context.Context, endpoint string) (string, error)
+	GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error)
+	GetRequestById(ctx context.Context, id int64) (Request, error)
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserFromEmail(ctx context.Context, email string) (User, error)
 	GetUserFromUsername(ctx context.Context, username string) (User, error)
+	GetUserRequests(ctx context.Context, arg GetUserRequestsParams) ([]Request, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 }
 

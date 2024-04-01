@@ -2,10 +2,13 @@ package url
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"log/slog"
+	"strings"
 
+	"github.com/gofiber/fiber/v2"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -25,14 +28,14 @@ var (
 	ErrNoUser                = errors.New("no user found")
 )
 
-func (u *UrlService) GenerateUrl(c context.Context, email string, endpoint string) (string, error) {
-	user, err := u.q.GetUserFromEmail(c, email)
+func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint string) (string, error) {
+	user, err := u.q.GetUserFromUsername(c, username)
 
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
-		if email == "" {
+		if username == "" {
 			return u.generateRandomUrlAndInsertIntoDb(c)
 		} else {
-			slog.Warn("No user found", "email", email)
+			slog.Warn("No user found", "username", username)
 			return "", ErrNoUser
 		}
 	}
@@ -73,6 +76,66 @@ func (u *UrlService) GenerateUrl(c context.Context, email string, endpoint strin
 	}
 
 	return "", nil
+}
+
+func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
+	endpoint := c.Params("endpoint", "")
+	if endpoint == "" {
+		return fiber.ErrNotFound
+	}
+	endpointRecord, err := s.q.GetEndpoint(c.Context(), endpoint)
+	if err != nil && errors.Is(err, pgx.ErrNoRows) {
+		slog.Error("Endpoint not found", "endpoint", endpoint)
+		return fiber.ErrNotFound
+	}
+
+	userId := endpointRecord.UserID
+
+	var req any
+
+	_ = c.BodyParser(&req)
+
+	strBytes, _ := json.Marshal(req)
+	body := string(strBytes)
+	headers := c.GetReqHeaders()
+	ip := c.Query("ip", "Unknown")
+	path := c.Path()
+	path, found := strings.CutPrefix(path, "/url/hook")
+	if !found {
+		return fiber.ErrBadRequest
+	}
+
+	method := c.Method()
+	query := c.Queries()
+
+	queryBytes, err := json.Marshal(query)
+	if err != nil {
+		slog.Error("Unable to marshal query params", "err", err)
+		return fiber.ErrBadRequest
+	}
+
+	headerBytes, err := json.Marshal(headers)
+	if err != nil {
+		slog.Error("Unable to marshal headers", "err", err)
+		return fiber.ErrBadRequest
+	}
+
+	if _, err := s.q.CreateNewRequest(c.Context(), db.CreateNewRequestParams{
+		UserID:       userId,
+		EndpointID:   endpointRecord.ID,
+		Method:       db.HttpMethod(strings.ToLower(method)),
+		Content:      pgtype.Text{String: body, Valid: true},
+		ResponseCode: pgtype.Int4{Int32: fiber.StatusOK, Valid: true},
+		QueryParams:  queryBytes,
+		Headers:      headerBytes,
+		SourceIp:     ip,
+		ContentSize:  int32(c.Request().Header.ContentLength()),
+	}); err != nil {
+		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
+		return fiber.ErrInternalServerError
+	}
+
+	return c.SendStatus(fiber.StatusOK)
 }
 
 func (s *UrlService) generateRandomUrlAndInsertIntoDb(c context.Context) (string, error) {
