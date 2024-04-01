@@ -1,8 +1,7 @@
 -- name: CreateUser :one
 insert into "user" (
 	name, username, plan ,email
-) values ($1, $2, $3, $4) returning *;
-
+	) values ($1, $2, $3, $4) returning *;
 
 -- name: GetUser :one
 select * from "user" where id = $1 limit 1; 
