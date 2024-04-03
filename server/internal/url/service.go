@@ -99,7 +99,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
 	strBytes, _ := json.Marshal(req)
 	body := string(strBytes)
 	headers := c.GetReqHeaders()
-	ip := c.Query("ip", "Unknown")
+	ip := c.IP()
 	path := c.Path()
 	path, found := strings.CutPrefix(path, "/url/hook")
 	if !found {
@@ -130,7 +130,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
 		QueryParams:  queryBytes,
 		Headers:      headerBytes,
 		SourceIp:     ip,
-		ContentSize:  int32(c.Request().Header.ContentLength()),
+		ContentSize:  int32(len(body)),
 	}); err != nil {
 		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
 		return fiber.ErrInternalServerError
@@ -140,7 +140,8 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
 }
 
 func (s *UrlService) generateRandomUrlAndInsertIntoDb(c context.Context) (string, error) {
-	randomEndpoint, err := gonanoid.Generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 12)
+	// TODO: length from config ?
+	randomEndpoint, err := gonanoid.Generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
 	if err != nil {
 		slog.Error("Unable to generate nano id", "err", err)
 		return "", err
@@ -154,6 +155,7 @@ func (s *UrlService) generateRandomUrlAndInsertIntoDb(c context.Context) (string
 	if _, err := s.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
 		Endpoint: randomEndpoint,
 	}); err != nil {
+		// TODO: Add a check to see if the random url also exists (improbable, but i think we can add it// without any cost)
 		slog.Error("Unable to insert endpoint", "endpoint", randomUrl, "err", err)
 		return "", err
 	}
