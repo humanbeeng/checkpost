@@ -24,7 +24,7 @@ func NewPasetoMiddleware() fiber.Handler {
 		}
 		userId, err := strconv.ParseInt(payload.Subject, 10, 64)
 		c.Locals("userId", userId)
-		c.Locals("username", payload.Subject)
+		c.Locals("username", payload.Get("username"))
 		return c.Next()
 	}
 }

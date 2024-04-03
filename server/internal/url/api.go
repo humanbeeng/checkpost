@@ -3,6 +3,7 @@ package url
 import (
 	"errors"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -74,6 +75,7 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 	} else {
 		username = usernameLocal
 	}
+	slog.Info("Generate url request received", "username", username)
 
 	url, err := uc.service.GenerateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
