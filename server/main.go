@@ -9,7 +9,10 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
-	"github.com/jackc/pgx/v5"
+	"github.com/golang-migrate/migrate/v4"
+	_ "github.com/golang-migrate/migrate/v4/database/postgres"
+	_ "github.com/golang-migrate/migrate/v4/source/file"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
@@ -34,14 +37,16 @@ func main() {
 	app.Use(rmw)
 	ctx := context.Background()
 
-	connUrl := os.Getenv("POSTGRES_URL")
+	connectionString := os.Getenv("POSTGRES_URL")
 
-	conn, err := pgx.Connect(ctx, connUrl)
+	conn, err := pgxpool.New(ctx, connectionString)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer conn.Close(ctx)
-	slog.Info("Connection established with db", "conn", connUrl)
+	defer conn.Close()
+	slog.Info("Connection established with db", "conn", connectionString)
+
+	runDBMigration("file://db/migration", connectionString)
 
 	queries := db.New(conn)
 
@@ -60,4 +65,17 @@ func main() {
 
 	// TODO: Fetch port from config
 	app.Listen(":3000")
+}
+
+func runDBMigration(migrationURL string, dbSource string) {
+	migration, err := migrate.New(migrationURL, dbSource)
+	if err != nil {
+		slog.Error("Unable to create new migrate instance", "err", err)
+	}
+
+	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
+		slog.Error("Unable to run migrate up", "err", err)
+	}
+
+	slog.Info("DB migrated successfully")
 }

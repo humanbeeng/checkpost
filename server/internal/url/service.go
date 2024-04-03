@@ -29,6 +29,7 @@ var (
 )
 
 func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint string) (string, error) {
+	slog.Info("Generate url request received", "username", username, "endpoint", endpoint)
 	user, err := u.q.GetUserFromUsername(c, username)
 
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {

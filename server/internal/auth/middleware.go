@@ -23,8 +23,12 @@ func NewPasetoMiddleware() fiber.Handler {
 			return fiber.ErrUnauthorized
 		}
 		userId, err := strconv.ParseInt(payload.Subject, 10, 64)
+		if err != nil {
+			return fiber.ErrUnauthorized
+		}
+
 		c.Locals("userId", userId)
-		c.Locals("username", payload.Subject)
+		c.Locals("username", payload.Get("username"))
 		return c.Next()
 	}
 }
