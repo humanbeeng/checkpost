@@ -12,7 +12,7 @@ import (
 const createUser = `-- name: CreateUser :one
 insert into "user" (
 	name, username, plan ,email
-	) values ($1, $2, $3, $4) returning id, name, username, plan, email, created_at
+	) values ($1, $2, $3, $4) returning id, name, username, plan, email, created_at, is_deleted
 `
 
 type CreateUserParams struct {
@@ -37,6 +37,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 		&i.Plan,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
@@ -51,7 +52,7 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUser = `-- name: GetUser :one
-select id, name, username, plan, email, created_at from "user" where id = $1 limit 1
+select id, name, username, plan, email, created_at, is_deleted from "user" where id = $1 limit 1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -64,12 +65,13 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 		&i.Plan,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
 
 const getUserFromEmail = `-- name: GetUserFromEmail :one
-select id, name, username, plan, email, created_at from "user" where email = $1 limit 1
+select id, name, username, plan, email, created_at, is_deleted from "user" where email = $1 limit 1
 `
 
 func (q *Queries) GetUserFromEmail(ctx context.Context, email string) (User, error) {
@@ -82,12 +84,13 @@ func (q *Queries) GetUserFromEmail(ctx context.Context, email string) (User, err
 		&i.Plan,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
 
 const getUserFromUsername = `-- name: GetUserFromUsername :one
-select id, name, username, plan, email, created_at from "user" where username = $1 limit 1
+select id, name, username, plan, email, created_at, is_deleted from "user" where username = $1 limit 1
 `
 
 func (q *Queries) GetUserFromUsername(ctx context.Context, username string) (User, error) {
@@ -100,12 +103,13 @@ func (q *Queries) GetUserFromUsername(ctx context.Context, username string) (Use
 		&i.Plan,
 		&i.Email,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
 
 const listUsers = `-- name: ListUsers :many
-select id, name, username, plan, email, created_at from "user" limit $1 offset $2
+select id, name, username, plan, email, created_at, is_deleted from "user" limit $1 offset $2
 `
 
 type ListUsersParams struct {
@@ -129,6 +133,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 			&i.Plan,
 			&i.Email,
 			&i.CreatedAt,
+			&i.IsDeleted,
 		); err != nil {
 			return nil, err
 		}

@@ -109,7 +109,9 @@ type Endpoint struct {
 	Endpoint  string           `json:"endpoint"`
 	UserID    pgtype.Int8      `json:"user_id"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
 	Plan      Plan             `json:"plan"`
+	IsDeleted pgtype.Bool      `json:"is_deleted"`
 }
 
 type FileAttachment struct {
@@ -118,12 +120,14 @@ type FileAttachment struct {
 	EndpointID int64            `json:"endpoint_id"`
 	UserID     pgtype.Int8      `json:"user_id"`
 	CreatedAt  pgtype.Timestamp `json:"created_at"`
+	IsDeleted  pgtype.Bool      `json:"is_deleted"`
 }
 
 type Request struct {
 	ID         int64       `json:"id"`
 	UserID     pgtype.Int8 `json:"user_id"`
 	EndpointID int64       `json:"endpoint_id"`
+	Path       string      `json:"path"`
 	ResponseID pgtype.Int8 `json:"response_id"`
 	Content    pgtype.Text `json:"content"`
 	Method     HttpMethod  `json:"method"`
@@ -134,6 +138,7 @@ type Request struct {
 	Headers      []byte           `json:"headers"`
 	QueryParams  []byte           `json:"query_params"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	IsDeleted    pgtype.Bool      `json:"is_deleted"`
 }
 
 type Response struct {
@@ -143,6 +148,7 @@ type Response struct {
 	ResponseCode int32            `json:"response_code"`
 	Content      pgtype.Text      `json:"content"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	IsDeleted    pgtype.Bool      `json:"is_deleted"`
 }
 
 type User struct {
@@ -152,4 +158,5 @@ type User struct {
 	Plan      Plan             `json:"plan"`
 	Email     string           `json:"email"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
+	IsDeleted pgtype.Bool      `json:"is_deleted"`
 }
