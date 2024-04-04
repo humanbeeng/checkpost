@@ -9,7 +9,9 @@ import (
 )
 
 type Querier interface {
+	CheckEndpointExists(ctx context.Context, endpoint string) (bool, error)
 	CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error)
+	CreateNewGuestEndpoint(ctx context.Context, endpoint string) (Endpoint, error)
 	CreateNewRequest(ctx context.Context, arg CreateNewRequestParams) (Request, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteUser(ctx context.Context, id int64) error

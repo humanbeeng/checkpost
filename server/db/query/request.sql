@@ -3,6 +3,7 @@ insert into
   request (
     user_id,
     endpoint_id,
+    path,
     response_id,
     content,
     method,
@@ -13,7 +14,7 @@ insert into
     query_params
   )
 values
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning *;
+  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *;
 
 
 -- name: GetUserRequests :many

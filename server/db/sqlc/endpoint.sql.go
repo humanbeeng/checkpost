@@ -11,6 +11,17 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkEndpointExists = `-- name: CheckEndpointExists :one
+select exists(select id, endpoint, user_id, created_at, plan from endpoint where endpoint = $1 limit 1)
+`
+
+func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
+	row := q.db.QueryRow(ctx, checkEndpointExists, endpoint)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createNewEndpoint = `-- name: CreateNewEndpoint :one
 insert into
   endpoint (endpoint, user_id, plan)
@@ -26,6 +37,23 @@ type CreateNewEndpointParams struct {
 
 func (q *Queries) CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error) {
 	row := q.db.QueryRow(ctx, createNewEndpoint, arg.Endpoint, arg.UserID, arg.Plan)
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.Plan,
+	)
+	return i, err
+}
+
+const createNewGuestEndpoint = `-- name: CreateNewGuestEndpoint :one
+insert into endpoint (endpoint) values ($1) returning id, endpoint, user_id, created_at, plan
+`
+
+func (q *Queries) CreateNewGuestEndpoint(ctx context.Context, endpoint string) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, createNewGuestEndpoint, endpoint)
 	var i Endpoint
 	err := row.Scan(
 		&i.ID,
