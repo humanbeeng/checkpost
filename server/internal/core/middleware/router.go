@@ -23,7 +23,7 @@ func NewSubdomainRouterMiddleware() fiber.Handler {
 			}
 		default:
 			{
-				hook := fmt.Sprintf("/url/hook/%v%v", subdomain, c.Path())
+				hook := fmt.Sprintf("/url/hook/%s%s", subdomain, c.Path())
 				c.Path(hook)
 			}
 		}
