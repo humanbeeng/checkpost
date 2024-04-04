@@ -59,7 +59,7 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
 		return "", &UrlError{
 			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("No user found with username: %v", username),
+			Message: fmt.Sprintf("No user found with username: %s", username),
 		}
 	}
 
@@ -72,7 +72,7 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 		{
 
 			// TODO: Check number of endpoints limit
-			url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
+			url := fmt.Sprintf("https://%s.checkpost.io", endpoint)
 
 			// Check if the requested endpoint exists
 			exists, err := u.q.CheckEndpointExists(c, endpoint)
@@ -83,7 +83,7 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 			if exists {
 				return "", &UrlError{
 					Code:    http.StatusConflict,
-					Message: fmt.Sprintf("URL %v already exists", url),
+					Message: fmt.Sprintf("URL %s already exists", url),
 				}
 			}
 
@@ -93,6 +93,7 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 				UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
 				Plan:     user.Plan,
 				ExpiresAt: pgtype.Timestamp{
+					// TODO: Change this
 					Time:             time.Now().Add(time.Hour * 24),
 					InfinityModifier: pgtype.Finite,
 					Valid:            true,
@@ -124,7 +125,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
 		return &UrlError{
 			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("https://%v.checkpost.io is either not created or expired", endpoint),
+			Message: fmt.Sprintf("https://%s.checkpost.io is either not created or expired", endpoint),
 		}
 	}
 
@@ -196,7 +197,7 @@ func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string
 	}
 
 	// TODO: Fetch base url from config file
-	randomUrl := fmt.Sprintf("https://%v.checkpost.local", randomEndpoint)
+	randomUrl := fmt.Sprintf("https://%s.checkpost.io", randomEndpoint)
 
 	// Inserting into db assuming that no endpoint with that random url existed. We can add
 	// a check later on if needed.
