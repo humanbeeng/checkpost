@@ -190,7 +190,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 
 func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string, *UrlError) {
 	// TODO: length from config ?
-	randomEndpoint, err := gonanoid.Generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
+	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", 10)
 	if err != nil {
 		slog.Error("Unable to generate nano id", "err", err)
 		return "", NewInternalServerError()
