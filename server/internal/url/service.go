@@ -23,60 +23,59 @@ func NewUrlService(q db.Querier) *UrlService {
 	return &UrlService{q: q}
 }
 
-var (
-	ErrEndpointAlreadyExists = errors.New("endpoint already exists")
-	ErrNoUser                = errors.New("no user found")
-)
+var ErrInternal = errors.New("Sorry! Something went wrong :(")
 
 func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint string) (string, error) {
-	slog.Info("Generate url request received", "username", username, "endpoint", endpoint)
-	user, err := u.q.GetUserFromUsername(c, username)
+	// Check if the user is guest
+	if username == "" {
+		return u.GenerateRandomUrlAndInsertIntoDb(c)
+	}
 
+	user, err := u.q.GetUserFromUsername(c, username)
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
-		if username == "" {
-			return u.generateRandomUrlAndInsertIntoDb(c)
-		} else {
-			slog.Warn("No user found", "username", username)
-			return "", ErrNoUser
-		}
+		slog.Error("No user found", "username", username)
+		return "", fmt.Errorf("User %v not found", username)
 	}
 
 	switch user.Plan {
 	case db.PlanFree:
 		{
-			return u.generateRandomUrlAndInsertIntoDb(c)
+			return u.GenerateRandomUrlAndInsertIntoDb(c)
 		}
 	case db.PlanNoBrainer, db.PlanPro:
 		{
-			// Check if endpoint exists
-			_, err := u.q.GetEndpoint(c, endpoint)
+
+			// TODO: Check number of endpoints limit
+
+			// Check if the requested endpoint exists
+			exists, err := u.q.CheckEndpointExists(c, endpoint)
 			if err != nil {
-				if errors.Is(err, pgx.ErrNoRows) {
-					// endpoint is available
-					url := fmt.Sprintf("https://%v.checkpost.local", endpoint)
-					_, err := u.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
-						Endpoint: endpoint,
-						UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
-						Plan:     user.Plan,
-					})
-					if err != nil {
-						slog.Error("Unable to insert new url into db", "endpoint", endpoint, "user", user.ID, "err", err)
-						return "", err
-					}
-					slog.Info("Endpoint created and inserted into db", "endpoint", endpoint, "user", user.ID)
-					return url, nil
-				} else {
-					slog.Error("Unable to fetch existing url", "endpoint", endpoint)
-					return "", err
-				}
-			} else {
-				slog.Error("endpoint already exists", "endpoint", endpoint)
-				return "", ErrEndpointAlreadyExists
+				slog.Error("Unable to check if endpoint already exists", "err", err)
+				return "", ErrInternal
 			}
+			if exists {
+				slog.Info("Endpoint already exists", "endpoint", endpoint)
+				return "", fmt.Errorf("URL %v already exists", endpoint)
+			}
+
+			// endpoint is available
+			url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
+			_, err = u.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
+				Endpoint: endpoint,
+				UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
+				Plan:     user.Plan,
+			})
+			if err != nil {
+				slog.Error("Unable to insert new url into db", "endpoint", endpoint, "user", user.ID, "err", err)
+				return "", err
+			}
+
+			slog.Info("Endpoint created and inserted into db", "endpoint", endpoint, "user", user.ID)
+
+			return url, nil
 		}
 	}
-
-	return "", nil
+	return "", fmt.Errorf("invalid user plan")
 }
 
 func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
@@ -84,16 +83,17 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
 	if endpoint == "" {
 		return fiber.ErrNotFound
 	}
+
 	endpointRecord, err := s.q.GetEndpoint(c.Context(), endpoint)
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
 		slog.Error("Endpoint not found", "endpoint", endpoint)
 		return fiber.ErrNotFound
 	}
+	slog.Info("Endpoint record found", "endpoint", endpoint)
 
 	userId := endpointRecord.UserID
 
 	var req any
-
 	_ = c.BodyParser(&req)
 
 	strBytes, _ := json.Marshal(req)
@@ -126,6 +126,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
 		EndpointID:   endpointRecord.ID,
 		Method:       db.HttpMethod(strings.ToLower(method)),
 		Content:      pgtype.Text{String: body, Valid: true},
+		Path:         path,
 		ResponseCode: pgtype.Int4{Int32: fiber.StatusOK, Valid: true},
 		QueryParams:  queryBytes,
 		Headers:      headerBytes,
@@ -136,10 +137,12 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
+	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId)
+
 	return c.SendStatus(fiber.StatusOK)
 }
 
-func (s *UrlService) generateRandomUrlAndInsertIntoDb(c context.Context) (string, error) {
+func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string, error) {
 	// TODO: length from config ?
 	randomEndpoint, err := gonanoid.Generate("0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz", 10)
 	if err != nil {
@@ -152,10 +155,7 @@ func (s *UrlService) generateRandomUrlAndInsertIntoDb(c context.Context) (string
 
 	// Inserting into db assuming that no endpoint with that random url existed. We can add
 	// a check later on if needed.
-	if _, err := s.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
-		Endpoint: randomEndpoint,
-	}); err != nil {
-		// TODO: Add a check to see if the random url also exists (improbable, but i think we can add it// without any cost)
+	if _, err := s.q.CreateNewGuestEndpoint(c, randomEndpoint); err != nil {
 		slog.Error("Unable to insert endpoint", "endpoint", randomUrl, "err", err)
 		return "", err
 	}
