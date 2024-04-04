@@ -18,6 +18,8 @@ import (
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/admin"
 	"github.com/humanbeeng/checkpost/server/internal/auth"
+	"github.com/humanbeeng/checkpost/server/internal/core"
+	"github.com/humanbeeng/checkpost/server/internal/core/middleware"
 	"github.com/humanbeeng/checkpost/server/internal/url"
 )
 
@@ -32,8 +34,15 @@ func main() {
 
 	app := fiber.New()
 	app.Use(cors.New())
-	pmw := auth.NewPasetoMiddleware()
-	rmw := url.NewSubdomainRouterMiddleware()
+
+	key := os.Getenv("PASETO_KEY")
+	pv, err := core.NewPasetoVerifier(key)
+	if err != nil {
+		slog.Error("Unable to create new paseto verifier", "err", err)
+	}
+	pmw := middleware.NewPasetoMiddleware(pv)
+	tmw := middleware.NewGuestMiddleware(pv)
+	rmw := middleware.NewSubdomainRouterMiddleware()
 	app.Use(rmw)
 	ctx := context.Background()
 
@@ -44,7 +53,7 @@ func main() {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	slog.Info("Connection established with db", "conn", connectionString)
+	slog.Info("Connection established", "conn", connectionString)
 
 	runDBMigration("file://db/migration", connectionString)
 
@@ -61,7 +70,7 @@ func main() {
 
 	endpointService := url.NewUrlService(queries)
 	urlHandler := url.NewEndpointHandler(endpointService)
-	urlHandler.RegisterRoutes(app, &pmw)
+	urlHandler.RegisterRoutes(app, &tmw)
 
 	// TODO: Fetch port from config
 	app.Listen(":3000")
