@@ -1,8 +1,6 @@
 package url
 
 import (
-	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -81,11 +79,9 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 
 	url, err := uc.service.GenerateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
-		if errors.Is(err, ErrEndpointAlreadyExists) {
-			// TODO: Refactor this url
-			return fiber.NewError(fiber.ErrConflict.Code, fmt.Sprintf("Endpoint https://%v.checkpost.io already exists", req.Endpoint))
-		} else if errors.Is(err, ErrNoUser) {
-			return fiber.ErrBadRequest
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
 		}
 	}
 
@@ -98,5 +94,12 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 }
 
 func (uc *URLController) HookHandler(c *fiber.Ctx) error {
-	return uc.service.StoreRequestDetails(c)
+	err := uc.service.StoreRequestDetails(c)
+	if err != nil {
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
+		}
+	}
+	return c.SendStatus(fiber.StatusOK)
 }
