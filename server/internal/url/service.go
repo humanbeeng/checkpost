@@ -140,11 +140,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	body := string(strBytes)
 	headers := c.GetReqHeaders()
 	ip := c.IP()
-	path := c.Path()
-	path, found := strings.CutPrefix(path, "/url/hook")
-	if !found {
-		return NewInternalServerError()
-	}
+	path := c.Params("path", "/")
 
 	method := c.Method()
 	query := c.Queries()
