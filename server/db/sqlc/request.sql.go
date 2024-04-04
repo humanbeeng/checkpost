@@ -16,6 +16,7 @@ insert into
   request (
     user_id,
     endpoint_id,
+    path,
     response_id,
     content,
     method,
@@ -26,12 +27,13 @@ insert into
     query_params
   )
 values
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10) returning id, user_id, endpoint_id, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at
+  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
 	UserID       pgtype.Int8 `json:"user_id"`
 	EndpointID   int64       `json:"endpoint_id"`
+	Path         string      `json:"path"`
 	ResponseID   pgtype.Int8 `json:"response_id"`
 	Content      pgtype.Text `json:"content"`
 	Method       HttpMethod  `json:"method"`
@@ -46,6 +48,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 	row := q.db.QueryRow(ctx, createNewRequest,
 		arg.UserID,
 		arg.EndpointID,
+		arg.Path,
 		arg.ResponseID,
 		arg.Content,
 		arg.Method,
@@ -60,6 +63,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		&i.ID,
 		&i.UserID,
 		&i.EndpointID,
+		&i.Path,
 		&i.ResponseID,
 		&i.Content,
 		&i.Method,
@@ -69,12 +73,13 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		&i.Headers,
 		&i.QueryParams,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
 
 const getRequestById = `-- name: GetRequestById :one
-select id, user_id, endpoint_id, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at from request where id = $1 limit 1
+select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where id = $1 limit 1
 `
 
 func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error) {
@@ -84,6 +89,7 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 		&i.ID,
 		&i.UserID,
 		&i.EndpointID,
+		&i.Path,
 		&i.ResponseID,
 		&i.Content,
 		&i.Method,
@@ -93,12 +99,13 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 		&i.Headers,
 		&i.QueryParams,
 		&i.CreatedAt,
+		&i.IsDeleted,
 	)
 	return i, err
 }
 
 const getUserRequests = `-- name: GetUserRequests :many
-select id, user_id, endpoint_id, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at from request where user_id = $1 limit $2 offset $3
+select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where user_id = $1 limit $2 offset $3
 `
 
 type GetUserRequestsParams struct {
@@ -120,6 +127,7 @@ func (q *Queries) GetUserRequests(ctx context.Context, arg GetUserRequestsParams
 			&i.ID,
 			&i.UserID,
 			&i.EndpointID,
+			&i.Path,
 			&i.ResponseID,
 			&i.Content,
 			&i.Method,
@@ -129,6 +137,7 @@ func (q *Queries) GetUserRequests(ctx context.Context, arg GetUserRequestsParams
 			&i.Headers,
 			&i.QueryParams,
 			&i.CreatedAt,
+			&i.IsDeleted,
 		); err != nil {
 			return nil, err
 		}

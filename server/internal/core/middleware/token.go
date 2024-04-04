@@ -1,22 +1,19 @@
-package auth
+package middleware
 
 import (
 	"log/slog"
-	"os"
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
-func NewPasetoMiddleware() fiber.Handler {
+func NewPasetoMiddleware(pv *core.PasetoVerifier) fiber.Handler {
 	return func(c *fiber.Ctx) error {
-		key := os.Getenv("PASETO_KEY")
-		pv, err := NewPasetoVerifier(key)
-		if err != nil {
-			return err
-		}
-
 		token := c.Cookies("token", "")
+		if token == "" {
+			return fiber.ErrUnauthorized
+		}
 		payload, err := pv.VerifyToken(token)
 		if err != nil {
 			slog.Error("Unable to verify token", "err", err)

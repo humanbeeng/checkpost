@@ -11,34 +11,77 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
+const checkEndpointExists = `-- name: CheckEndpointExists :one
+select exists(select id, endpoint, user_id, created_at, expires_at, plan, is_deleted from endpoint where endpoint = $1 limit 1)
+`
+
+func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
+	row := q.db.QueryRow(ctx, checkEndpointExists, endpoint)
+	var exists bool
+	err := row.Scan(&exists)
+	return exists, err
+}
+
 const createNewEndpoint = `-- name: CreateNewEndpoint :one
 insert into
-  endpoint (endpoint, user_id, plan)
+  endpoint (endpoint, user_id, plan, expires_at)
 values
-($1, $2, $3) returning id, endpoint, user_id, created_at, plan
+($1, $2, $3, $4) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
 `
 
 type CreateNewEndpointParams struct {
-	Endpoint string      `json:"endpoint"`
-	UserID   pgtype.Int8 `json:"user_id"`
-	Plan     Plan        `json:"plan"`
+	Endpoint  string           `json:"endpoint"`
+	UserID    pgtype.Int8      `json:"user_id"`
+	Plan      Plan             `json:"plan"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
 }
 
 func (q *Queries) CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error) {
-	row := q.db.QueryRow(ctx, createNewEndpoint, arg.Endpoint, arg.UserID, arg.Plan)
+	row := q.db.QueryRow(ctx, createNewEndpoint,
+		arg.Endpoint,
+		arg.UserID,
+		arg.Plan,
+		arg.ExpiresAt,
+	)
 	var i Endpoint
 	err := row.Scan(
 		&i.ID,
 		&i.Endpoint,
 		&i.UserID,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 		&i.Plan,
+		&i.IsDeleted,
+	)
+	return i, err
+}
+
+const createNewGuestEndpoint = `-- name: CreateNewGuestEndpoint :one
+insert into endpoint (endpoint, expires_at) values ($1, $2) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+`
+
+type CreateNewGuestEndpointParams struct {
+	Endpoint  string           `json:"endpoint"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+func (q *Queries) CreateNewGuestEndpoint(ctx context.Context, arg CreateNewGuestEndpointParams) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, createNewGuestEndpoint, arg.Endpoint, arg.ExpiresAt)
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.Plan,
+		&i.IsDeleted,
 	)
 	return i, err
 }
 
 const getEndpoint = `-- name: GetEndpoint :one
-select id, endpoint, user_id, created_at, plan from "endpoint" where endpoint = $1 limit 1
+select id, endpoint, user_id, created_at, expires_at, plan, is_deleted from "endpoint" where endpoint = $1 limit 1
 `
 
 func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error) {
@@ -49,7 +92,9 @@ func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, e
 		&i.Endpoint,
 		&i.UserID,
 		&i.CreatedAt,
+		&i.ExpiresAt,
 		&i.Plan,
+		&i.IsDeleted,
 	)
 	return i, err
 }

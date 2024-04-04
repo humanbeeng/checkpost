@@ -14,6 +14,7 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
+	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
@@ -21,7 +22,7 @@ import (
 
 type AuthHandler struct {
 	config         *oauth2.Config
-	pasetoVerifier *PasetoVerifier
+	pasetoVerifier *core.PasetoVerifier
 	q              db.Querier
 }
 
@@ -30,7 +31,7 @@ func NewGithubAuthHandler(querier db.Querier) (*AuthHandler, error) {
 	secret := os.Getenv("GITHUB_SECRET")
 	symmetricKey := os.Getenv("PASETO_KEY")
 
-	pasetoVerifier, err := NewPasetoVerifier(symmetricKey)
+	pasetoVerifier, err := core.NewPasetoVerifier(symmetricKey)
 	if err != nil {
 		return nil, err
 	}

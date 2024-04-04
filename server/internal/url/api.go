@@ -1,8 +1,6 @@
 package url
 
 import (
-	"errors"
-	"fmt"
 	"log/slog"
 	"time"
 
@@ -18,10 +16,10 @@ func NewEndpointHandler(service *UrlService) *URLController {
 	return &URLController{service: service}
 }
 
-func (uc *URLController) RegisterRoutes(app *fiber.App, pmw *fiber.Handler) {
+func (uc *URLController) RegisterRoutes(app *fiber.App, tmw *fiber.Handler) {
 	// TODO: Add rate limiter
 	urlGroup := app.Group("/url")
-	urlGroup.Post("/generate", *pmw, uc.GenerateURLHandler)
+	urlGroup.Post("/generate", *tmw, uc.GenerateURLHandler)
 	urlGroup.All("/hook/:endpoint/:path?", uc.HookHandler)
 	urlGroup.Get("/:path/:request-id", uc.RequestDetailsHandler)
 	urlGroup.Get("/stats", uc.StatsHandler)
@@ -58,7 +56,7 @@ type GenerateUrlRequest struct {
 }
 
 type GenerateUrlResponse struct {
-	Endpoint  string    `json:"endpoint"`
+	Url       string    `json:"url"`
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
@@ -68,27 +66,27 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
+
 	var username string
 
 	if usernameLocal, ok := c.Locals("username").(string); !ok {
 		username = ""
+		slog.Info("Generate url request received from guest user")
 	} else {
 		username = usernameLocal
+		slog.Info("Generate url request received", "username", username)
 	}
-	slog.Info("Generate url request received", "username", username)
 
 	url, err := uc.service.GenerateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
-		if errors.Is(err, ErrEndpointAlreadyExists) {
-			// TODO: Refactor this url
-			return fiber.NewError(fiber.ErrConflict.Code, fmt.Sprintf("Endpoint https://%v.checkpost.io already exists", req.Endpoint))
-		} else if errors.Is(err, ErrNoUser) {
-			return fiber.ErrBadRequest
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
 		}
 	}
 
 	res := GenerateUrlResponse{
-		Endpoint: url,
+		Url: url,
 		// TODO: Add plan based expiry
 		ExpiresAt: time.Now().Add(time.Hour * 24),
 	}
@@ -96,5 +94,12 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 }
 
 func (uc *URLController) HookHandler(c *fiber.Ctx) error {
-	return uc.service.StoreRequestDetails(c)
+	err := uc.service.StoreRequestDetails(c)
+	if err != nil {
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
+		}
+	}
+	return c.SendStatus(fiber.StatusOK)
 }
