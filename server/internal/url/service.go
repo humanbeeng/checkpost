@@ -179,7 +179,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 		return NewInternalServerError()
 	}
 
-	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId)
+	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId.Int64)
 
 	return nil
 }
@@ -199,6 +199,7 @@ func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string
 	// a check later on if needed.
 	if _, err := s.q.CreateNewGuestEndpoint(c, db.CreateNewGuestEndpointParams{
 		Endpoint: randomEndpoint,
+		// TODO: Fetch expiry from config
 		ExpiresAt: pgtype.Timestamp{
 			Time:             time.Now().Add(time.Hour * 24),
 			Valid:            true,
@@ -208,5 +209,7 @@ func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string
 		slog.Error("Unable to insert endpoint", "endpoint", randomUrl, "err", err)
 		return "", NewInternalServerError()
 	}
+
+	slog.Info("Generated random url", "url", randomUrl)
 	return randomUrl, nil
 }
