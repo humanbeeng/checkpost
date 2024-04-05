@@ -9,10 +9,10 @@ import (
 	"log/slog"
 	"net/http"
 	"net/url"
-	"os"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/jackc/pgx/v5"
@@ -21,22 +21,23 @@ import (
 )
 
 type AuthHandler struct {
-	config         *oauth2.Config
+	config         *config.AppConfig
+	oauthConfig    *oauth2.Config
 	pasetoVerifier *core.PasetoVerifier
 	q              db.Querier
 }
 
-func NewGithubAuthHandler(querier db.Querier) (*AuthHandler, error) {
-	key := os.Getenv("GITHUB_KEY")
-	secret := os.Getenv("GITHUB_SECRET")
-	symmetricKey := os.Getenv("PASETO_KEY")
+func NewGithubAuthHandler(config *config.AppConfig, querier db.Querier) (*AuthHandler, error) {
+	key := config.Github.Key
+	secret := config.Github.Secret
+	symmetricKey := config.Paseto.Key
 
 	pasetoVerifier, err := core.NewPasetoVerifier(symmetricKey)
 	if err != nil {
 		return nil, err
 	}
 
-	config := &oauth2.Config{
+	oauthConfig := &oauth2.Config{
 		ClientID:     key,
 		ClientSecret: secret,
 		Endpoint:     github.Endpoint,
@@ -44,6 +45,7 @@ func NewGithubAuthHandler(querier db.Querier) (*AuthHandler, error) {
 	}
 
 	return &AuthHandler{
+		oauthConfig:    oauthConfig,
 		config:         config,
 		pasetoVerifier: pasetoVerifier,
 		q:              querier,
@@ -75,7 +77,7 @@ type AuthResponse struct {
 func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	slog.Info("Received login request")
 	// TODO: Add state to oauth request
-	url := a.config.AuthCodeURL("none")
+	url := a.oauthConfig.AuthCodeURL("none")
 	return c.Redirect(url)
 }
 
@@ -122,7 +124,7 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 
 // exchange the auth code that retrieved from github via URL query parameter into an access token.
 func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUser, error) {
-	token, err := a.config.Exchange(c.Context(), code)
+	token, err := a.oauthConfig.Exchange(c.Context(), code)
 	if err != nil {
 		return nil, err
 	}

@@ -2,21 +2,19 @@ package main
 
 import (
 	"context"
-	"errors"
+	"fmt"
 	"log"
 	"log/slog"
-	"os"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
-	"github.com/golang-migrate/migrate/v4"
 	_ "github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/joho/godotenv"
 
+	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/admin"
 	"github.com/humanbeeng/checkpost/server/internal/auth"
@@ -26,12 +24,9 @@ import (
 )
 
 func main() {
-	env := os.Getenv("ENVIRONMENT")
-	err := godotenv.Load()
+	config, err := config.GetAppConfig()
 	if err != nil {
-		if errors.Is(err, os.ErrNotExist) && env == "" {
-			log.Fatal(err)
-		}
+		log.Fatal(err)
 	}
 
 	app := fiber.New()
@@ -44,7 +39,7 @@ func main() {
 		Format:     "${time} | ${locals:requestid} | ${status} | ${latency} | ${method} ${path}​\n",
 	}))
 
-	key := os.Getenv("PASETO_KEY")
+	key := config.Paseto.Key
 	pv, err := core.NewPasetoVerifier(key)
 	if err != nil {
 		slog.Error("Unable to create new paseto verifier", "err", err)
@@ -55,20 +50,18 @@ func main() {
 	app.Use(rmw)
 	ctx := context.Background()
 
-	connectionString := os.Getenv("POSTGRES_URL")
+	connectionString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable", config.Postgres.User, config.Postgres.Password, config.Postgres.Host, config.Postgres.Port, config.Postgres.Database)
 
 	conn, err := pgxpool.New(ctx, connectionString)
 	if err != nil {
 		log.Fatal(err)
 	}
 	defer conn.Close()
-	slog.Info("Connection established", "conn", connectionString)
-
-	// runDBMigration("file://db/migration", connectionString)
+	slog.Info("Connection established", "host", config.Postgres.Host, "database", config.Postgres.Database, "user", config.Postgres.User)
 
 	queries := db.New(conn)
 
-	ac, err := auth.NewGithubAuthHandler(queries)
+	ac, err := auth.NewGithubAuthHandler(config, queries)
 	if err != nil {
 		log.Fatalf("Unable to init auth controller. %v", err)
 	}
@@ -83,17 +76,4 @@ func main() {
 
 	// TODO: Fetch port from config
 	app.Listen(":3000")
-}
-
-func runDBMigration(migrationURL string, dbSource string) {
-	migration, err := migrate.New(migrationURL, dbSource)
-	if err != nil {
-		slog.Error("Unable to create new migrate instance", "err", err)
-	}
-
-	if err = migration.Up(); err != nil && err != migrate.ErrNoChange {
-		slog.Error("Unable to run migrate up", "err", err)
-	}
-
-	slog.Info("DB migrated successfully")
 }
