@@ -68,9 +68,12 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 	}
 
 	var username string
+	usernameLocal, ok := c.Locals("username").(string)
+	if !ok {
+		return fiber.ErrInternalServerError
+	}
 
-	if usernameLocal, ok := c.Locals("username").(string); !ok {
-		username = ""
+	if usernameLocal == "" {
 		slog.Info("Generate url request received from guest user")
 	} else {
 		username = usernameLocal

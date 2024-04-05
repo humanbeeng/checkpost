@@ -11,7 +11,7 @@ migrate-up:
 	migrate -path db/migration -database "postgres://postgres.iwpavmyqhggvhpyjisev:BKsTXPMIBRfpk9Ua@aws-0-us-east-1.pooler.supabase.com:5432/postgres" -verbose up
 
 migrate-down:
-	migrate -path db/migration -database "postgresql://checkpost_owner:UT7ZObH3xufi@ep-wispy-recipe-a43kgz9e.us-east-1.aws.neon.tech/checkpost"  -verbose down
+	migrate -path db/migration -database "postgres://postgres.iwpavmyqhggvhpyjisev:BKsTXPMIBRfpk9Ua@aws-0-us-east-1.pooler.supabase.com:5432/postgres" -verbose down
 
 sqlc:
 	sqlc generate
