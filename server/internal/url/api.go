@@ -17,7 +17,6 @@ func NewUrlController(service *UrlService) *UrlController {
 }
 
 func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim fiber.Handler) {
-	// TODO: Add rate limiter
 	urlGroup := app.Group("/url")
 	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
@@ -62,7 +61,7 @@ type GenerateUrlResponse struct {
 }
 
 func (uc *UrlController) GenerateRandomUrlHandler(c *fiber.Ctx) error {
-	url, err := uc.service.CreateRandomUrl(c.Context())
+	url, err := uc.service.CreateRandomUrl(c.Context(), nil)
 	if err != nil {
 		return fiber.NewError(err.Code, err.Message)
 	}

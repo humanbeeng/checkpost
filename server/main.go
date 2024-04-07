@@ -36,7 +36,7 @@ func main() {
 	app.Use(logger.New(logger.Config{
 		// For more options, see the Config section
 		TimeFormat: "2006/03/01 15:04:05",
-		Format:     "${time} | ${latency} | ${locals:requestid} | ${status} | ${method} ${path}​\n",
+		Format:     "${time} | ${latency} | ${locals:requestid} | ${status} | ${method} ${path}\n",
 	}))
 
 	key := config.Paseto.Key
