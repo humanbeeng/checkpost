@@ -8,10 +8,10 @@ drop-db:
 	docker exec -it db dropdb checkpost 
 
 migrate-up:
-	migrate -path db/migration -database "postgres://postgres.iwpavmyqhggvhpyjisev:BKsTXPMIBRfpk9Ua@aws-0-us-east-1.pooler.supabase.com:5432/postgres" -verbose up
+	migrate -path db/migration -database "postgres://user:password@localhost:5432/postgres?sslmode=disable" -verbose up
 
 migrate-down:
-	migrate -path db/migration -database "postgres://postgres.iwpavmyqhggvhpyjisev:BKsTXPMIBRfpk9Ua@aws-0-us-east-1.pooler.supabase.com:5432/postgres" -verbose down
+	migrate -path db/migration -database "postgres://user:password@localhost:5432/postgres?sslmode=disable" -verbose down
 
 sqlc:
 	sqlc generate
