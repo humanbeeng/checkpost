@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/aead/chacha20poly1305"
+	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	gonanoid "github.com/matoous/go-nanoid/v2"
 	"github.com/o1egl/paseto"
 )
@@ -26,7 +27,14 @@ func NewPasetoVerifier(symmetricKey string) (*PasetoVerifier, error) {
 	}, nil
 }
 
-func (p *PasetoVerifier) CreateToken(username string, userId int64, duration time.Duration) (string, error) {
+type CreateTokenArgs struct {
+	Username string
+	UserId   int64
+	Plan     db.Plan
+	Role     string
+}
+
+func (p *PasetoVerifier) CreateToken(args CreateTokenArgs, duration time.Duration) (string, error) {
 	id, err := gonanoid.New()
 	if err != nil {
 		return "", err
@@ -35,11 +43,13 @@ func (p *PasetoVerifier) CreateToken(username string, userId int64, duration tim
 	jt := paseto.JSONToken{
 		Issuer:     "checkpost",
 		Jti:        id,
-		Subject:    strconv.FormatInt(userId, 10),
+		Subject:    strconv.FormatInt(args.UserId, 10),
 		IssuedAt:   time.Now(),
 		Expiration: time.Now().Add(duration),
 	}
-	jt.Set("username", username)
+	jt.Set("username", args.Username)
+	jt.Set("plan", string(args.Plan))
+	jt.Set("role", args.Role)
 
 	token, err := p.paseto.Encrypt([]byte(p.symmetricKey), jt, nil)
 	if err != nil {
