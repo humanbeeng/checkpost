@@ -56,6 +56,31 @@ func (q *Queries) CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointPa
 	return i, err
 }
 
+const createNewFreeUrl = `-- name: CreateNewFreeUrl :one
+insert into endpoint(endpoint, user_id, expires_at) values($1, $2, $3) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+`
+
+type CreateNewFreeUrlParams struct {
+	Endpoint  string           `json:"endpoint"`
+	UserID    pgtype.Int8      `json:"user_id"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+func (q *Queries) CreateNewFreeUrl(ctx context.Context, arg CreateNewFreeUrlParams) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, createNewFreeUrl, arg.Endpoint, arg.UserID, arg.ExpiresAt)
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.Plan,
+		&i.IsDeleted,
+	)
+	return i, err
+}
+
 const createNewGuestEndpoint = `-- name: CreateNewGuestEndpoint :one
 insert into endpoint (endpoint, expires_at) values ($1, $2) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
 `
@@ -97,4 +122,36 @@ func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, e
 		&i.IsDeleted,
 	)
 	return i, err
+}
+
+const getNonExpiredEndpointsOfUser = `-- name: GetNonExpiredEndpointsOfUser :many
+select id, endpoint, user_id, created_at, expires_at, plan, is_deleted from "endpoint" where user_id = $1 and expires_at > now()
+`
+
+func (q *Queries) GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error) {
+	rows, err := q.db.Query(ctx, getNonExpiredEndpointsOfUser, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Endpoint{}
+	for rows.Next() {
+		var i Endpoint
+		if err := rows.Scan(
+			&i.ID,
+			&i.Endpoint,
+			&i.UserID,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.Plan,
+			&i.IsDeleted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
 }
