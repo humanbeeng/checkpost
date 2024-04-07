@@ -6,16 +6,20 @@ package db
 
 import (
 	"context"
+
+	"github.com/jackc/pgx/v5/pgtype"
 )
 
 type Querier interface {
 	CheckEndpointExists(ctx context.Context, endpoint string) (bool, error)
 	CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error)
+	CreateNewFreeUrl(ctx context.Context, arg CreateNewFreeUrlParams) (Endpoint, error)
 	CreateNewGuestEndpoint(ctx context.Context, arg CreateNewGuestEndpointParams) (Endpoint, error)
 	CreateNewRequest(ctx context.Context, arg CreateNewRequestParams) (Request, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteUser(ctx context.Context, id int64) error
 	GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error)
+	GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error)
 	GetRequestById(ctx context.Context, id int64) (Request, error)
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserFromEmail(ctx context.Context, email string) (User, error)

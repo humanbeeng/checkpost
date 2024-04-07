@@ -1,7 +1,6 @@
 package middleware
 
 import (
-	"fmt"
 	"log/slog"
 	"strconv"
 
@@ -32,7 +31,6 @@ func NewExtractPayloadMiddleware(pv *core.PasetoVerifier) fiber.Handler {
 		c.Locals("username", payload.Get("username"))
 		c.Locals("plan", payload.Get("plan"))
 		c.Locals("role", payload.Get("role"))
-		fmt.Println(c.Locals("userId"), c.Locals("username"))
 		return c.Next()
 	}
 }

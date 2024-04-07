@@ -43,12 +43,17 @@ func NewInternalServerError() *UrlError {
 	}
 }
 
+const (
+	RandomUrlLength          int = 10
+	NumUrlLimitPlanNoBrainer int = 1
+)
+
 func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (string, *UrlError) {
-	// TODO: Min len of 4
+	// Check subdomain length
 	if len(endpoint) < 4 {
 		return "", &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprint("Endpoint should be atleast 4 characters"),
+			Message: "Subdomain should be atleast 4 characters",
 		}
 	}
 
@@ -59,18 +64,39 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 			Message: fmt.Sprintf("No user found with username: %s", username),
 		}
 	}
+	// Check if user has exceeded number of urls that can be generated
+	urls, err := s.q.GetNonExpiredEndpointsOfUser(c, pgtype.Int8{Int64: user.ID, Valid: true})
+	if err != nil {
+		slog.Error("Unable to get non expired endpoints", "userId", user.ID, "err", err)
+		return "", NewInternalServerError()
+	}
+	for u := range urls {
+		fmt.Println("URL:", u)
+	}
 
 	switch user.Plan {
 	case db.PlanFree:
 		{
-			return s.CreateRandomUrl(c)
+			if len(urls) >= 1 {
+				return "", &UrlError{
+					Code:    http.StatusNotAcceptable,
+					Message: "Cannot generate more that one url for your current plan. Consider upgrading to Pro.",
+				}
+			}
+			return s.CreateFreeUrl(c, user.ID)
 		}
 	case db.PlanNoBrainer, db.PlanPro:
 		{
-			// TODO: Check number of endpoints limit
 			url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
 
-			// Check if the requested endpoint exists
+			if user.Plan == db.PlanNoBrainer && len(urls) >= NumUrlLimitPlanNoBrainer {
+				return "", &UrlError{
+					Code:    http.StatusNotAcceptable,
+					Message: "Cannot generate more than one url for your current plan. Consider upgrading to Pro.",
+				}
+			}
+
+			// Check if the requested endpoint already exists
 			exists, err := s.q.CheckEndpointExists(c, endpoint)
 			if err != nil {
 				slog.Error("Unable to check if endpoint already exists", "err", err)
@@ -113,7 +139,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	if endpoint == "" {
 		return &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("Empty endpoint"),
+			Message: "Empty endpoint",
 		}
 	}
 
@@ -146,7 +172,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 		slog.Error("Unable to marshal query params", "err", err)
 		return &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprint("Unable to parse query params"),
+			Message: "Unable to parse query params",
 		}
 	}
 
@@ -155,7 +181,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 		slog.Error("Unable to marshal headers", "err", err)
 		return &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprint("Unable to parse headers"),
+			Message: "Unable to parse headers",
 		}
 	}
 
@@ -180,9 +206,9 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	return nil
 }
 
-func (s *UrlService) CreateRandomUrl(c context.Context) (string, *UrlError) {
-	// TODO: length from config ?
-	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", 10)
+func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, *UrlError) {
+	// TODO: length from config
+	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
 	if err != nil {
 		slog.Error("Unable to generate nano id", "err", err)
 		return "", NewInternalServerError()
@@ -207,4 +233,34 @@ func (s *UrlService) CreateRandomUrl(c context.Context) (string, *UrlError) {
 
 	slog.Info("Random url generated", "url", randomUrl)
 	return randomUrl, nil
+}
+
+func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (string, *UrlError) {
+	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
+	if err != nil {
+		slog.Error("Unable to generate nano id", "err", err)
+		return "", NewInternalServerError()
+	}
+
+	freeUrl := fmt.Sprintf("https://%s.checkpost.io", randomEndpoint)
+
+	// Inserting into db assuming that no endpoint with that random url existed. We can add
+	// a check later on if needed.
+	if _, err := s.q.CreateNewFreeUrl(c, db.CreateNewFreeUrlParams{
+		Endpoint: randomEndpoint,
+		UserID:   pgtype.Int8{Int64: userId, Valid: true},
+
+		// TODO: Fetch expiry from config
+		ExpiresAt: pgtype.Timestamp{
+			Time:             time.Now().Add(time.Hour * 24),
+			Valid:            true,
+			InfinityModifier: pgtype.Finite,
+		},
+	}); err != nil {
+		slog.Error("Unable to insert free endpoint", "endpoint", freeUrl, "err", err)
+		return "", NewInternalServerError()
+	}
+
+	slog.Info("Free url generated", "url", freeUrl)
+	return freeUrl, nil
 }
