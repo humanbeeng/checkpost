@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/gofiber/fiber/v2"
+	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -18,11 +19,12 @@ import (
 )
 
 type UrlService struct {
-	q db.Querier
+	q      db.Querier
+	config *config.AppConfig
 }
 
-func NewUrlService(q db.Querier) *UrlService {
-	return &UrlService{q: q}
+func NewUrlService(q db.Querier, config *config.AppConfig) *UrlService {
+	return &UrlService{q: q, config: config}
 }
 
 type UrlError struct {
@@ -41,12 +43,7 @@ func NewInternalServerError() *UrlError {
 	}
 }
 
-func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint string) (string, *UrlError) {
-	// Check if the user is guest
-	if username == "" {
-		return u.GenerateRandomUrlAndInsertIntoDb(c)
-	}
-
+func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (string, *UrlError) {
 	// TODO: Min len of 4
 	if len(endpoint) < 4 {
 		return "", &UrlError{
@@ -55,7 +52,7 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 		}
 	}
 
-	user, err := u.q.GetUserFromUsername(c, username)
+	user, err := s.q.GetUserFromUsername(c, username)
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
 		return "", &UrlError{
 			Code:    http.StatusNotFound,
@@ -66,16 +63,15 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 	switch user.Plan {
 	case db.PlanFree:
 		{
-			return u.GenerateRandomUrlAndInsertIntoDb(c)
+			return s.CreateRandomUrl(c)
 		}
 	case db.PlanNoBrainer, db.PlanPro:
 		{
-
 			// TODO: Check number of endpoints limit
-			url := fmt.Sprintf("https://%s.checkpost.io", endpoint)
+			url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
 
 			// Check if the requested endpoint exists
-			exists, err := u.q.CheckEndpointExists(c, endpoint)
+			exists, err := s.q.CheckEndpointExists(c, endpoint)
 			if err != nil {
 				slog.Error("Unable to check if endpoint already exists", "err", err)
 				return "", NewInternalServerError()
@@ -88,7 +84,7 @@ func (u *UrlService) GenerateUrl(c context.Context, username string, endpoint st
 			}
 
 			// endpoint is available
-			_, err = u.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
+			_, err = s.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
 				Endpoint: endpoint,
 				UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
 				Plan:     user.Plan,
@@ -125,11 +121,11 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	if err != nil && errors.Is(err, pgx.ErrNoRows) {
 		return &UrlError{
 			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("https://%s.checkpost.io is either not created or expired", endpoint),
+			Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired", endpoint),
 		}
 	}
 
-	slog.Info("Endpoint record found", "endpoint", endpoint)
+	slog.Info("Storing request details", "endpoint", endpoint)
 
 	userId := endpointRecord.UserID
 
@@ -184,7 +180,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	return nil
 }
 
-func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string, *UrlError) {
+func (s *UrlService) CreateRandomUrl(c context.Context) (string, *UrlError) {
 	// TODO: length from config ?
 	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", 10)
 	if err != nil {
@@ -192,7 +188,6 @@ func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string
 		return "", NewInternalServerError()
 	}
 
-	// TODO: Fetch base url from config file
 	randomUrl := fmt.Sprintf("https://%s.checkpost.io", randomEndpoint)
 
 	// Inserting into db assuming that no endpoint with that random url existed. We can add
@@ -210,6 +205,6 @@ func (s *UrlService) GenerateRandomUrlAndInsertIntoDb(c context.Context) (string
 		return "", NewInternalServerError()
 	}
 
-	slog.Info("Generated random url", "url", randomUrl)
+	slog.Info("Random url generated", "url", randomUrl)
 	return randomUrl, nil
 }

@@ -8,25 +8,26 @@ import (
 )
 
 // TODO: Add better error messages
-type URLController struct {
+type UrlController struct {
 	service *UrlService
 }
 
-func NewEndpointHandler(service *UrlService) *URLController {
-	return &URLController{service: service}
+func NewUrlController(service *UrlService) *UrlController {
+	return &UrlController{service: service}
 }
 
-func (uc *URLController) RegisterRoutes(app *fiber.App, tmw *fiber.Handler) {
+func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim fiber.Handler) {
 	// TODO: Add rate limiter
 	urlGroup := app.Group("/url")
-	urlGroup.Post("/generate", *tmw, uc.GenerateURLHandler)
-	urlGroup.All("/hook/:endpoint/:path?", uc.HookHandler)
+	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
+	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
+	urlGroup.All("/hook/:endpoint/:path?", gl, fl, nbl, pl, uc.HookHandler)
 	urlGroup.Get("/:path/:request-id", uc.RequestDetailsHandler)
 	urlGroup.Get("/stats", uc.StatsHandler)
 }
 
 // Returns status of a given endpoint and request-id
-func (uc *URLController) StatsHandler(c *fiber.Ctx) error {
+func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 	// url := c.Query("url", "")
 	// if url == "" {
 	// 	return fiber.ErrBadRequest
@@ -40,10 +41,10 @@ func (uc *URLController) StatsHandler(c *fiber.Ctx) error {
 }
 
 // TODO: Implement this
-func (uc *URLController) RequestDetailsHandler(c *fiber.Ctx) error {
+func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 	return fiber.ErrBadGateway
 	path := c.Params("path")
-	reqId := c.Params("requestId")
+	reqId := c.Params("request-id")
 	res := map[string]string{
 		"path": path,
 		"req":  reqId,
@@ -60,27 +61,32 @@ type GenerateUrlResponse struct {
 	ExpiresAt time.Time `json:"expires_at"`
 }
 
-func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
+func (uc *UrlController) GenerateRandomUrlHandler(c *fiber.Ctx) error {
+	url, err := uc.service.CreateRandomUrl(c.Context())
+	if err != nil {
+		return fiber.NewError(err.Code, err.Message)
+	}
+
+	return c.JSON(GenerateUrlResponse{
+		Url: url,
+	})
+}
+
+func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 	var req GenerateUrlRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		return fiber.ErrBadRequest
 	}
 
-	var username string
-	usernameLocal, ok := c.Locals("username").(string)
+	username, ok := c.Locals("username").(string)
 	if !ok {
 		return fiber.ErrInternalServerError
 	}
 
-	if usernameLocal == "" {
-		slog.Info("Generate url request received from guest user")
-	} else {
-		username = usernameLocal
-		slog.Info("Generate url request received", "username", username)
-	}
+	slog.Info("Generate url request received", "username", username)
 
-	url, err := uc.service.GenerateUrl(c.Context(), username, req.Endpoint)
+	url, err := uc.service.CreateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -96,7 +102,7 @@ func (uc *URLController) GenerateURLHandler(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-func (uc *URLController) HookHandler(c *fiber.Ctx) error {
+func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 	err := uc.service.StoreRequestDetails(c)
 	if err != nil {
 		return &fiber.Error{

@@ -10,8 +10,6 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/cors"
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
-	_ "github.com/golang-migrate/migrate/v4/database/postgres"
-	_ "github.com/golang-migrate/migrate/v4/source/file"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/humanbeeng/checkpost/server/config"
@@ -32,11 +30,13 @@ func main() {
 	app := fiber.New()
 	app.Use(cors.New())
 	app.Use(requestid.New())
+
 	// TODO: Revisit this configuration and slog configuration
+
 	app.Use(logger.New(logger.Config{
 		// For more options, see the Config section
 		TimeFormat: "2006/03/01 15:04:05",
-		Format:     "${time} | ${locals:requestid} | ${status} | ${latency} | ${method} ${path}​\n",
+		Format:     "${time} | ${latency} | ${locals:requestid} | ${status} | ${method} ${path}​\n",
 	}))
 
 	key := config.Paseto.Key
@@ -44,10 +44,22 @@ func main() {
 	if err != nil {
 		slog.Error("Unable to create new paseto verifier", "err", err)
 	}
-	pmw := middleware.NewPasetoMiddleware(pv)
-	tmw := middleware.NewGuestMiddleware(pv)
+
+	payloadmw := middleware.NewExtractPayloadMiddleware(pv)
+	genRandLim := middleware.NewGenerateRandomUrlLimiter()
+	genLim := middleware.NewGenerateUrlLimiter()
+
+	pmw := middleware.NewAuthRequiredMiddleware(pv)
+	gl := middleware.NewGuestPlanLimiter()
+	fl := middleware.NewFreePlanLimiter()
+	nbl := middleware.NewNoBrainerPlanLimiter()
+	pl := middleware.NewProPlanLimiter()
 	rmw := middleware.NewSubdomainRouterMiddleware()
+
+	app.Use(payloadmw)
+	// app.Use(fl)
 	app.Use(rmw)
+
 	ctx := context.Background()
 
 	connectionString := fmt.Sprintf("postgres://%v:%v@%v:%v/%v?sslmode=disable", config.Postgres.User, config.Postgres.Password, config.Postgres.Host, config.Postgres.Port, config.Postgres.Database)
@@ -66,14 +78,14 @@ func main() {
 		log.Fatalf("Unable to init auth controller. %v", err)
 	}
 
+	authmw := middleware.NewAuthRequiredMiddleware(pv)
 	adc := admin.NewAdminController()
-	endpointService := url.NewUrlService(queries)
-	urlHandler := url.NewEndpointHandler(endpointService)
+	endpointService := url.NewUrlService(queries, config)
+	urlHandler := url.NewUrlController(endpointService)
 
 	adc.RegisterRoutes(app, &pmw)
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, &tmw)
+	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, genLim, genRandLim)
 
-	// TODO: Fetch port from config
 	app.Listen(":3000")
 }

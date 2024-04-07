@@ -112,7 +112,12 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	}
 
 	// Create token and encrypt it
-	pasetoToken, err := a.pasetoVerifier.CreateToken(user.Username, user.ID, time.Hour*24*30)
+	args := core.CreateTokenArgs{
+		Username: user.Username,
+		UserId:   user.ID,
+		Plan:     db.PlanFree,
+	}
+	pasetoToken, err := a.pasetoVerifier.CreateToken(args, time.Hour*24*30)
 	if err != nil {
 		fmt.Println("err", err)
 		return err
@@ -162,8 +167,15 @@ func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUse
 	return &githubUser, nil
 }
 
+// TODO: Delete this
 func (ac *AuthHandler) GenerateToken(c *fiber.Ctx) error {
-	token, err := ac.pasetoVerifier.CreateToken("humanbeeng", 1, time.Hour*12)
+	args := core.CreateTokenArgs{
+		Username: "humanbeeng",
+		UserId:   1,
+		Plan:     db.PlanFree,
+		Role:     "user",
+	}
+	token, err := ac.pasetoVerifier.CreateToken(args, time.Hour*12)
 	if err != nil {
 		slog.Error("err", "err", err)
 		return fiber.ErrInternalServerError
