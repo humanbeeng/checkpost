@@ -87,6 +87,5 @@ func main() {
 	ac.RegisterRoutes(app)
 	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, genLim, genRandLim)
 
-	// TODO: Fetch port from config
 	app.Listen(":3000")
 }
