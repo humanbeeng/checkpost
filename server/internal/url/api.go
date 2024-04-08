@@ -19,10 +19,15 @@ func NewUrlController(service *UrlService) *UrlController {
 
 func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim fiber.Handler) {
 	urlGroup := app.Group("/url")
-	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
+
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
+	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
+
 	urlGroup.All("/hook/:endpoint/:path?", gl, fl, nbl, pl, uc.HookHandler)
-	urlGroup.Get("/:path/:request-id", uc.RequestDetailsHandler)
+
+	urlGroup.Get("/history/:endpoint/", uc.GetEndpointHistoryHandler)
+	urlGroup.Get("/request/:request-id/", uc.RequestDetailsHandler)
+
 	urlGroup.Get("/stats", uc.StatsHandler)
 }
 
@@ -52,7 +57,8 @@ func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 
 	reqId, parseErr := strconv.ParseInt(reqIdStr, 10, 64)
 	if parseErr != nil {
-		return fiber.ErrInternalServerError
+		slog.Error("Unable to convert request id from path to int", "err", parseErr)
+		return fiber.ErrBadRequest
 	}
 
 	req, err := uc.service.GetRequestDetails(c.Context(), reqId)
@@ -123,4 +129,21 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		}
 	}
 	return c.SendStatus(fiber.StatusOK)
+}
+
+func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
+	endpoint := c.Params("endpoint", "")
+	if endpoint == "" {
+		slog.Info("No endpoint found in path params")
+		return fiber.ErrBadRequest
+	}
+
+	reqIdStr := c.Params("request-id", "")
+	if reqIdStr == "" {
+		return fiber.NewError(
+			fiber.StatusNotFound,
+			"No request id found",
+		)
+	}
+
 }
