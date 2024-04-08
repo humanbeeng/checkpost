@@ -2,6 +2,7 @@ package url
 
 import (
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -41,14 +42,26 @@ func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 
 // TODO: Implement this
 func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
-	return fiber.ErrBadGateway
-	path := c.Params("path")
-	reqId := c.Params("request-id")
-	res := map[string]string{
-		"path": path,
-		"req":  reqId,
+	reqIdStr := c.Params("request-id", "")
+	if reqIdStr == "" {
+		return fiber.NewError(
+			fiber.StatusNotFound,
+			"No request id found",
+		)
 	}
-	return c.JSON(res)
+
+	reqId, parseErr := strconv.ParseInt(reqIdStr, 10, 64)
+	if parseErr != nil {
+		return fiber.ErrInternalServerError
+	}
+
+	req, err := uc.service.GetRequestDetails(c.Context(), reqId)
+	if err != nil {
+		return &fiber.Error{Code: err.Code, Message: err.Message}
+	}
+
+	return c.JSON(req)
+
 }
 
 type GenerateUrlRequest struct {

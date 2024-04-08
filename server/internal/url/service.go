@@ -264,3 +264,37 @@ func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (string, *Ur
 	slog.Info("Free url generated", "url", freeUrl)
 	return freeUrl, nil
 }
+
+func (s *UrlService) GetEndpointRequests(c context.Context, endpoint string) ([]db.Request, *UrlError) {
+	// TODO: Receive offset and limit from UI
+
+	req, err := s.q.GetEndpointHistory(c, db.GetEndpointHistoryParams{EndpointID: endpoint, Limit: 10, Offset: 1})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, &UrlError{
+				Code:    http.StatusNotFound,
+				Message: "No requests found for given user",
+			}
+		} else {
+			slog.Error("Unable to fetch user requests", "endpoint", endpoint, "err", err)
+			return nil, NewInternalServerError()
+		}
+	}
+	return req, nil
+}
+
+func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (db.Request, *UrlError) {
+	req, err := s.q.GetRequestById(c, reqId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return req, &UrlError{
+				Code:    http.StatusNotFound,
+				Message: fmt.Sprintf("No request found for request id: %v", reqId),
+			}
+		} else {
+			slog.Error("Unable to fetch request details", "reqId", reqId, "err", err)
+			return req, NewInternalServerError()
+		}
+	}
+	return req, nil
+}

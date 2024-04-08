@@ -17,8 +17,8 @@ values
   ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning *;
 
 
--- name: GetUserRequests :many
-select * from request where user_id = $1 limit $2 offset $3;
+-- name: GetEndpointHistory :many
+select * from request where endpoint_id = $1 limit $2 offset $3;
 
 
 -- name: GetRequestById :one

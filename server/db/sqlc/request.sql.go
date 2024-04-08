@@ -78,44 +78,18 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 	return i, err
 }
 
-const getRequestById = `-- name: GetRequestById :one
-select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where id = $1 limit 1
+const getEndpointHistory = `-- name: GetEndpointHistory :many
+select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where endpoint_id = $1 limit $2 offset $3
 `
 
-func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error) {
-	row := q.db.QueryRow(ctx, getRequestById, id)
-	var i Request
-	err := row.Scan(
-		&i.ID,
-		&i.UserID,
-		&i.EndpointID,
-		&i.Path,
-		&i.ResponseID,
-		&i.Content,
-		&i.Method,
-		&i.SourceIp,
-		&i.ContentSize,
-		&i.ResponseCode,
-		&i.Headers,
-		&i.QueryParams,
-		&i.CreatedAt,
-		&i.IsDeleted,
-	)
-	return i, err
+type GetEndpointHistoryParams struct {
+	EndpointID int64 `json:"endpoint_id"`
+	Limit      int32 `json:"limit"`
+	Offset     int32 `json:"offset"`
 }
 
-const getUserRequests = `-- name: GetUserRequests :many
-select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where user_id = $1 limit $2 offset $3
-`
-
-type GetUserRequestsParams struct {
-	UserID pgtype.Int8 `json:"user_id"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
-}
-
-func (q *Queries) GetUserRequests(ctx context.Context, arg GetUserRequestsParams) ([]Request, error) {
-	rows, err := q.db.Query(ctx, getUserRequests, arg.UserID, arg.Limit, arg.Offset)
+func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistoryParams) ([]Request, error) {
+	rows, err := q.db.Query(ctx, getEndpointHistory, arg.EndpointID, arg.Limit, arg.Offset)
 	if err != nil {
 		return nil, err
 	}
@@ -147,4 +121,30 @@ func (q *Queries) GetUserRequests(ctx context.Context, arg GetUserRequestsParams
 		return nil, err
 	}
 	return items, nil
+}
+
+const getRequestById = `-- name: GetRequestById :one
+select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where id = $1 limit 1
+`
+
+func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error) {
+	row := q.db.QueryRow(ctx, getRequestById, id)
+	var i Request
+	err := row.Scan(
+		&i.ID,
+		&i.UserID,
+		&i.EndpointID,
+		&i.Path,
+		&i.ResponseID,
+		&i.Content,
+		&i.Method,
+		&i.SourceIp,
+		&i.ContentSize,
+		&i.ResponseCode,
+		&i.Headers,
+		&i.QueryParams,
+		&i.CreatedAt,
+		&i.IsDeleted,
+	)
+	return i, err
 }
