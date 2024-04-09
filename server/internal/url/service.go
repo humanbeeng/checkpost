@@ -71,16 +71,13 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		slog.Error("Unable to get non expired endpoints", "userId", user.ID, "err", err)
 		return "", NewInternalServerError()
 	}
-	for u := range urls {
-		fmt.Println("URL:", u)
-	}
 
 	switch user.Plan {
 	case db.PlanFree:
 		{
 			if len(urls) >= 1 {
 				return "", &UrlError{
-					Code:    http.StatusNotAcceptable,
+					Code:    http.StatusBadRequest,
 					Message: "Cannot generate more that one url for your current plan. Consider upgrading to Pro.",
 				}
 			}
@@ -92,7 +89,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 
 			if user.Plan == db.PlanNoBrainer && len(urls) >= NumUrlLimitPlanNoBrainer {
 				return "", &UrlError{
-					Code:    http.StatusNotAcceptable,
+					Code:    http.StatusBadRequest,
 					Message: "Cannot generate more than one url for your current plan. Consider upgrading to Pro.",
 				}
 			}
@@ -135,21 +132,36 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	return "", &UrlError{Code: http.StatusBadRequest, Message: "invalid user plan"}
 }
 
-func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
+type HookRequest struct {
+	Endpoint     string              `json:"endpoint"`
+	Path         string              `json:"path"`
+	Headers      map[string][]string `json:"headers"`
+	Query        map[string]string   `json:"queries"`
+	SourceIp     string              `json:"source_ip"`
+	Content      string              `json:"content"`
+	ContentSize  int                 `json:"content_size"`
+	ResponseCode int                 `json:"response_code"`
+	CreatedAt    time.Time           `json:"created_at"`
+}
+
+func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) {
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
-		return &UrlError{
+		return HookRequest{}, &UrlError{
 			Code:    http.StatusBadRequest,
 			Message: "Empty endpoint",
 		}
 	}
 
 	endpointRecord, err := s.q.GetEndpoint(c.Context(), endpoint)
-	if err != nil && errors.Is(err, pgx.ErrNoRows) {
-		return &UrlError{
-			Code:    http.StatusNotFound,
-			Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired", endpoint),
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return HookRequest{}, &UrlError{
+				Code:    http.StatusNotFound,
+				Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired", endpoint),
+			}
 		}
+		return HookRequest{}, NewInternalServerError()
 	}
 
 	slog.Info("Storing request details", "endpoint", endpoint)
@@ -172,7 +184,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	queryBytes, err := json.Marshal(query)
 	if err != nil {
 		slog.Error("Unable to marshal query params", "err", err)
-		return &UrlError{
+		return HookRequest{}, &UrlError{
 			Code:    http.StatusBadRequest,
 			Message: "Unable to parse query params",
 		}
@@ -181,31 +193,45 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 	headerBytes, err := json.Marshal(headers)
 	if err != nil {
 		slog.Error("Unable to marshal headers", "err", err)
-		return &UrlError{
+		return HookRequest{}, &UrlError{
 			Code:    http.StatusBadRequest,
 			Message: "Unable to parse headers",
 		}
 	}
 
-	if _, err := s.q.CreateNewRequest(c.Context(), db.CreateNewRequestParams{
-		UserID:       userId,
-		EndpointID:   endpointRecord.ID,
-		Method:       db.HttpMethod(strings.ToLower(method)),
-		Content:      pgtype.Text{String: body, Valid: true},
-		Path:         path,
+	cr, err := s.q.CreateNewRequest(c.Context(), db.CreateNewRequestParams{
+		UserID:     userId,
+		EndpointID: endpointRecord.ID,
+		Method:     db.HttpMethod(strings.ToLower(method)),
+		Content:    pgtype.Text{String: body, Valid: true},
+		Path:       path,
+		// TODO: Fetch response from configured response
 		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
 		QueryParams:  queryBytes,
 		Headers:      headerBytes,
 		SourceIp:     ip,
 		ContentSize:  int32(len(body)),
-	}); err != nil {
+	})
+	if err != nil {
 		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
-		return NewInternalServerError()
+		return HookRequest{}, NewInternalServerError()
+	}
+
+	hookReq := HookRequest{
+		Endpoint:     endpoint,
+		Path:         path,
+		Headers:      headers,
+		Query:        query,
+		SourceIp:     ip,
+		Content:      body,
+		ContentSize:  len(body),
+		ResponseCode: http.StatusOK,
+		CreatedAt:    cr.CreatedAt.Time,
 	}
 
 	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId.Int64)
 
-	return nil
+	return hookReq, nil
 }
 
 func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, *UrlError) {
