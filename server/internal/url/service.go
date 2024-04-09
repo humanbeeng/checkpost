@@ -36,6 +36,7 @@ func (u *UrlError) Error() string {
 	return u.Message
 }
 
+// TODO: Convert this into checkpost custom error
 func NewInternalServerError() *UrlError {
 	return &UrlError{
 		Code:    http.StatusInternalServerError,
@@ -160,6 +161,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) *UrlError {
 
 	strBytes, _ := json.Marshal(req)
 	body := string(strBytes)
+	// Note: key is string and value is []string
 	headers := c.GetReqHeaders()
 	ip := c.IP()
 	path := c.Params("path", "/")
@@ -265,36 +267,85 @@ func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (string, *Ur
 	return freeUrl, nil
 }
 
-func (s *UrlService) GetEndpointRequests(c context.Context, endpoint string) ([]db.Request, *UrlError) {
-	// TODO: Receive offset and limit from UI
+// TODO: Add a request dto.
 
-	req, err := s.q.GetEndpointHistory(c, db.GetEndpointHistoryParams{EndpointID: endpoint, Limit: 10, Offset: 1})
-	if err != nil {
-		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, &UrlError{
-				Code:    http.StatusNotFound,
-				Message: "No requests found for given user",
-			}
-		} else {
-			slog.Error("Unable to fetch user requests", "endpoint", endpoint, "err", err)
-			return nil, NewInternalServerError()
-		}
-	}
-	return req, nil
+type Request struct {
+	ID      int64         `json:"id"`
+	Path    string        `json:"path"`
+	Content pgtype.Text   `json:"content"`
+	Method  db.HttpMethod `json:"method"`
+	// IPv4
+	SourceIp     string           `json:"source_ip"`
+	ContentSize  int32            `json:"content_size"`
+	ResponseCode pgtype.Int4      `json:"response_code"`
+	Headers      map[string]any   `json:"headers"`
+	QueryParams  map[string]any   `json:"query_params"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
 }
 
-func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (db.Request, *UrlError) {
-	req, err := s.q.GetRequestById(c, reqId)
+func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint string, limit int32, offset int32) ([]Request, *UrlError) {
+	slog.Info("Received request to fetch endpoint request history", "endpoint", endpoint)
+
+	// TODO: Add a check to see if the user is authorized to access this endpoint history
+	var reqHistory []Request
+
+	reqs, err := s.q.GetEndpointHistory(c, db.GetEndpointHistoryParams{Endpoint: endpoint, Limit: limit, Offset: offset})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return req, &UrlError{
+			return reqHistory, nil
+		}
+		slog.Error("Unable to fetch endpoint request history", "endpoint", endpoint, "err", err)
+		return nil, NewInternalServerError()
+	}
+
+	for _, req := range reqs {
+		rh := Request{
+			ID:           req.ID,
+			Path:         req.Path,
+			Content:      req.Content,
+			Method:       req.Method,
+			SourceIp:     req.SourceIp,
+			ContentSize:  req.ContentSize,
+			ResponseCode: req.ResponseCode,
+		}
+
+		json.Unmarshal(req.Headers, &rh.Headers)
+		json.Unmarshal(req.QueryParams, &rh.QueryParams)
+
+		reqHistory = append(reqHistory, rh)
+	}
+
+	return reqHistory, nil
+}
+
+func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request, *UrlError) {
+	slog.Info("Received request to fetch request details", "reqId", reqId)
+	reqRecord, err := s.q.GetRequestById(c, reqId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Request{}, &UrlError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("No request found for request id: %v", reqId),
 			}
 		} else {
 			slog.Error("Unable to fetch request details", "reqId", reqId, "err", err)
-			return req, NewInternalServerError()
+			return Request{}, NewInternalServerError()
 		}
 	}
+
+	req := Request{
+		ID:           reqRecord.ID,
+		Path:         reqRecord.Path,
+		Method:       reqRecord.Method,
+		SourceIp:     reqRecord.SourceIp,
+		Content:      reqRecord.Content,
+		ContentSize:  reqRecord.ContentSize,
+		ResponseCode: reqRecord.ResponseCode,
+		CreatedAt:    reqRecord.CreatedAt,
+	}
+
+	json.Unmarshal(reqRecord.Headers, &req.Headers)
+	json.Unmarshal(reqRecord.QueryParams, &req.QueryParams)
+
 	return req, nil
 }

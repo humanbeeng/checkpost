@@ -25,8 +25,8 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl,
 
 	urlGroup.All("/hook/:endpoint/:path?", gl, fl, nbl, pl, uc.HookHandler)
 
-	urlGroup.Get("/history/:endpoint/", uc.GetEndpointHistoryHandler)
-	urlGroup.Get("/request/:request-id/", uc.RequestDetailsHandler)
+	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
+	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
 
 	urlGroup.Get("/stats", uc.StatsHandler)
 }
@@ -47,7 +47,7 @@ func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 
 // TODO: Implement this
 func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
-	reqIdStr := c.Params("request-id", "")
+	reqIdStr := c.Params("requestid", "")
 	if reqIdStr == "" {
 		return fiber.NewError(
 			fiber.StatusNotFound,
@@ -67,7 +67,6 @@ func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 	}
 
 	return c.JSON(req)
-
 }
 
 type GenerateUrlRequest struct {
@@ -131,6 +130,10 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+type GetEndpointsHistoryResponse struct {
+	Requests []Request `json:"requests"`
+}
+
 func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
@@ -138,12 +141,27 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	reqIdStr := c.Params("request-id", "")
-	if reqIdStr == "" {
-		return fiber.NewError(
-			fiber.StatusNotFound,
-			"No request id found",
-		)
+	limitStr := c.Query("limit", "20")
+	limit, err := strconv.ParseInt(limitStr, 10, 32)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+	offsetStr := c.Query("limit", "1")
+	offset, err := strconv.ParseInt(offsetStr, 10, 32)
+	if err != nil {
+		return fiber.ErrBadRequest
 	}
 
+	reqs, serviceErr := uc.service.GetEndpointRequestHistory(c.Context(), endpoint, int32(limit), int32(offset))
+	if serviceErr != nil {
+		return &fiber.Error{
+			Code:    serviceErr.Code,
+			Message: serviceErr.Message,
+		}
+	}
+
+	res := GetEndpointsHistoryResponse{
+		Requests: reqs,
+	}
+	return c.JSON(res)
 }
