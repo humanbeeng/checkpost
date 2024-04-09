@@ -57,7 +57,6 @@ func main() {
 	rmw := middleware.NewSubdomainRouterMiddleware()
 
 	app.Use(payloadmw)
-	// app.Use(fl)
 	app.Use(rmw)
 
 	ctx := context.Background()

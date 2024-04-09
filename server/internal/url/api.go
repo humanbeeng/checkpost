@@ -1,20 +1,55 @@
 package url
 
 import (
+	"context"
 	"log/slog"
 	"strconv"
+	"sync"
 	"time"
 
+	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 )
 
 // TODO: Add better error messages
 type UrlController struct {
+	conns   *sync.Map
 	service *UrlService
 }
 
+func (uc *UrlController) AddRequestListener(endpoint string, conn *websocket.Conn) {
+	// TODO: Resolve concurrency issue.
+	// TODO: Add limit to number of active connections.
+	conns, loaded := uc.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
+	if loaded {
+		c := conns.([]*websocket.Conn)
+		c = append(c, conn)
+		uc.conns.Store(endpoint, c)
+	}
+
+	slog.Info("Ws connection added", "endpoint", endpoint)
+}
+
+func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
+	slog.Info("Broadcasting JSON", "endpoint", endpoint)
+	connAny, ok := uc.conns.Load(endpoint)
+	if !ok {
+		slog.Info("No active listeners found", "endpoint", endpoint)
+		return
+	}
+
+	conns := connAny.([]*websocket.Conn)
+
+	for _, c := range conns {
+		err := c.WriteJSON(data)
+		if err != nil {
+			slog.Error("Unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
+		}
+	}
+}
+
 func NewUrlController(service *UrlService) *UrlController {
-	return &UrlController{service: service}
+	return &UrlController{conns: &sync.Map{}, service: service}
 }
 
 func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim fiber.Handler) {
@@ -29,6 +64,49 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl,
 	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
 
 	urlGroup.Get("/stats", uc.StatsHandler)
+
+	// TODO: Add rate/conn limiter
+	urlGroup.Use("/inspect", func(c *fiber.Ctx) error {
+		// IsWebSocketUpgrade returns true if the client
+		// requested upgrade to the WebSocket protocol.
+		if websocket.IsWebSocketUpgrade(c) {
+			c.Locals("allowed", true)
+			return c.Next()
+		}
+		return fiber.ErrUpgradeRequired
+	})
+
+	urlGroup.Get("/inspect/:endpoint", websocket.New(uc.InspectRequestsHandler))
+}
+
+func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
+	endpoint := c.Params("endpoint")
+	// Check if endpoint exists
+	// TODO: Revisit this context
+
+	exists, err := uc.service.q.CheckEndpointExists(context.TODO(), endpoint)
+	if !exists {
+		slog.Info("No endpoint found", "endpoint", endpoint)
+		// TODO: Format this into response
+		c.WriteMessage(websocket.TextMessage, []byte("Endpoint does not exist or has expired"))
+		c.Close()
+		return
+	}
+
+	if err != nil {
+		slog.Error("Unable to check if endpoint exists", "err", err)
+		c.WriteMessage(websocket.TextMessage, []byte("Oops! Something went wrong."))
+		c.Close()
+	}
+
+	// TODO: Add authorization
+	uc.AddRequestListener(endpoint, c)
+
+	for {
+		if _, _, err := c.ReadMessage(); err != nil {
+			break
+		}
+	}
 }
 
 // Returns status of a given endpoint and request-id
@@ -120,13 +198,18 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 }
 
 func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
-	err := uc.service.StoreRequestDetails(c)
+	// TODO: return request details
+	req, err := uc.service.StoreRequestDetails(c)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
 			Message: err.Message,
 		}
 	}
+
+	endpoint := c.Params("endpoint", "")
+	uc.BroadcastJSON(endpoint, req)
+
 	return c.SendStatus(fiber.StatusOK)
 }
 
@@ -146,6 +229,7 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	if err != nil {
 		return fiber.ErrBadRequest
 	}
+
 	offsetStr := c.Query("limit", "1")
 	offset, err := strconv.ParseInt(offsetStr, 10, 32)
 	if err != nil {
