@@ -3,19 +3,23 @@ select * from "endpoint" where endpoint = $1 limit 1;
 
 -- name: CreateNewEndpoint :one
 insert into
-  endpoint (endpoint, user_id, plan, expires_at)
-values
-($1, $2, $3, $4) returning *;
+    endpoint (
+        endpoint, user_id, plan, expires_at
+    )
+values ($1, $2, $3, $4) returning *;
 
 -- name: CreateNewGuestEndpoint :one
-insert into endpoint (endpoint, expires_at) values ($1, $2) returning *;
+insert into
+    endpoint (endpoint, expires_at)
+values ($1, $2) returning *;
 
 -- name: CreateNewFreeUrl :one
-insert into endpoint(endpoint, user_id, expires_at) values($1, $2, $3) returning *;
+insert into
+    endpoint (endpoint, user_id, expires_at)
+values ($1, $2, $3) returning *;
 
 -- name: CheckEndpointExists :one
-select exists(select * from endpoint where endpoint = $1 limit 1);
+select exists ( select * from endpoint where endpoint = $1 limit 1 );
 
 -- name: GetNonExpiredEndpointsOfUser :many
 select * from "endpoint" where user_id = $1 and expires_at > now();
-

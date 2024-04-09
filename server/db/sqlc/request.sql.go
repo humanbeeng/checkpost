@@ -13,21 +13,12 @@ import (
 
 const createNewRequest = `-- name: CreateNewRequest :one
 insert into
-  request (
-    user_id,
-    endpoint_id,
-    path,
-    response_id,
-    content,
-    method,
-    source_ip,
-    content_size,
-    response_code,
-    headers,
-    query_params
-  )
-values
-  ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) returning id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted
+    request (
+        user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params
+    )
+values (
+        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
+    ) returning id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
@@ -78,6 +69,89 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 	return i, err
 }
 
+const getEndpointHistory = `-- name: GetEndpointHistory :many
+select request.id, request.user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, request.created_at, request.is_deleted, endpoint.id, endpoint, endpoint.user_id, endpoint.created_at, expires_at, plan, endpoint.is_deleted
+from request
+    left join endpoint on request.endpoint_id = endpoint.id
+where
+    endpoint.endpoint = $1
+limit $2
+offset
+    $3
+`
+
+type GetEndpointHistoryParams struct {
+	Endpoint string `json:"endpoint"`
+	Limit    int32  `json:"limit"`
+	Offset   int32  `json:"offset"`
+}
+
+type GetEndpointHistoryRow struct {
+	ID           int64            `json:"id"`
+	UserID       pgtype.Int8      `json:"user_id"`
+	EndpointID   int64            `json:"endpoint_id"`
+	Path         string           `json:"path"`
+	ResponseID   pgtype.Int8      `json:"response_id"`
+	Content      pgtype.Text      `json:"content"`
+	Method       HttpMethod       `json:"method"`
+	SourceIp     string           `json:"source_ip"`
+	ContentSize  int32            `json:"content_size"`
+	ResponseCode pgtype.Int4      `json:"response_code"`
+	Headers      []byte           `json:"headers"`
+	QueryParams  []byte           `json:"query_params"`
+	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	IsDeleted    pgtype.Bool      `json:"is_deleted"`
+	ID_2         pgtype.Int8      `json:"id_2"`
+	Endpoint     pgtype.Text      `json:"endpoint"`
+	UserID_2     pgtype.Int8      `json:"user_id_2"`
+	CreatedAt_2  pgtype.Timestamp `json:"created_at_2"`
+	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
+	Plan         NullPlan         `json:"plan"`
+	IsDeleted_2  pgtype.Bool      `json:"is_deleted_2"`
+}
+
+func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistoryParams) ([]GetEndpointHistoryRow, error) {
+	rows, err := q.db.Query(ctx, getEndpointHistory, arg.Endpoint, arg.Limit, arg.Offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []GetEndpointHistoryRow{}
+	for rows.Next() {
+		var i GetEndpointHistoryRow
+		if err := rows.Scan(
+			&i.ID,
+			&i.UserID,
+			&i.EndpointID,
+			&i.Path,
+			&i.ResponseID,
+			&i.Content,
+			&i.Method,
+			&i.SourceIp,
+			&i.ContentSize,
+			&i.ResponseCode,
+			&i.Headers,
+			&i.QueryParams,
+			&i.CreatedAt,
+			&i.IsDeleted,
+			&i.ID_2,
+			&i.Endpoint,
+			&i.UserID_2,
+			&i.CreatedAt_2,
+			&i.ExpiresAt,
+			&i.Plan,
+			&i.IsDeleted_2,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const getRequestById = `-- name: GetRequestById :one
 select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where id = $1 limit 1
 `
@@ -102,49 +176,4 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 		&i.IsDeleted,
 	)
 	return i, err
-}
-
-const getUserRequests = `-- name: GetUserRequests :many
-select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted from request where user_id = $1 limit $2 offset $3
-`
-
-type GetUserRequestsParams struct {
-	UserID pgtype.Int8 `json:"user_id"`
-	Limit  int32       `json:"limit"`
-	Offset int32       `json:"offset"`
-}
-
-func (q *Queries) GetUserRequests(ctx context.Context, arg GetUserRequestsParams) ([]Request, error) {
-	rows, err := q.db.Query(ctx, getUserRequests, arg.UserID, arg.Limit, arg.Offset)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-	items := []Request{}
-	for rows.Next() {
-		var i Request
-		if err := rows.Scan(
-			&i.ID,
-			&i.UserID,
-			&i.EndpointID,
-			&i.Path,
-			&i.ResponseID,
-			&i.Content,
-			&i.Method,
-			&i.SourceIp,
-			&i.ContentSize,
-			&i.ResponseCode,
-			&i.Headers,
-			&i.QueryParams,
-			&i.CreatedAt,
-			&i.IsDeleted,
-		); err != nil {
-			return nil, err
-		}
-		items = append(items, i)
-	}
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-	return items, nil
 }

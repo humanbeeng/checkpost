@@ -2,6 +2,7 @@ package url
 
 import (
 	"log/slog"
+	"strconv"
 	"time"
 
 	"github.com/gofiber/fiber/v2"
@@ -18,10 +19,15 @@ func NewUrlController(service *UrlService) *UrlController {
 
 func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim fiber.Handler) {
 	urlGroup := app.Group("/url")
-	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
+
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
+	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
+
 	urlGroup.All("/hook/:endpoint/:path?", gl, fl, nbl, pl, uc.HookHandler)
-	urlGroup.Get("/:path/:request-id", uc.RequestDetailsHandler)
+
+	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
+	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
+
 	urlGroup.Get("/stats", uc.StatsHandler)
 }
 
@@ -41,14 +47,26 @@ func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 
 // TODO: Implement this
 func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
-	return fiber.ErrBadGateway
-	path := c.Params("path")
-	reqId := c.Params("request-id")
-	res := map[string]string{
-		"path": path,
-		"req":  reqId,
+	reqIdStr := c.Params("requestid", "")
+	if reqIdStr == "" {
+		return fiber.NewError(
+			fiber.StatusNotFound,
+			"No request id found",
+		)
 	}
-	return c.JSON(res)
+
+	reqId, parseErr := strconv.ParseInt(reqIdStr, 10, 64)
+	if parseErr != nil {
+		slog.Error("Unable to convert request id from path to int", "err", parseErr)
+		return fiber.ErrBadRequest
+	}
+
+	req, err := uc.service.GetRequestDetails(c.Context(), reqId)
+	if err != nil {
+		return &fiber.Error{Code: err.Code, Message: err.Message}
+	}
+
+	return c.JSON(req)
 }
 
 type GenerateUrlRequest struct {
@@ -110,4 +128,40 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		}
 	}
 	return c.SendStatus(fiber.StatusOK)
+}
+
+type GetEndpointsHistoryResponse struct {
+	Requests []Request `json:"requests"`
+}
+
+func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
+	endpoint := c.Params("endpoint", "")
+	if endpoint == "" {
+		slog.Info("No endpoint found in path params")
+		return fiber.ErrBadRequest
+	}
+
+	limitStr := c.Query("limit", "20")
+	limit, err := strconv.ParseInt(limitStr, 10, 32)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+	offsetStr := c.Query("limit", "1")
+	offset, err := strconv.ParseInt(offsetStr, 10, 32)
+	if err != nil {
+		return fiber.ErrBadRequest
+	}
+
+	reqs, serviceErr := uc.service.GetEndpointRequestHistory(c.Context(), endpoint, int32(limit), int32(offset))
+	if serviceErr != nil {
+		return &fiber.Error{
+			Code:    serviceErr.Code,
+			Message: serviceErr.Message,
+		}
+	}
+
+	res := GetEndpointsHistoryResponse{
+		Requests: reqs,
+	}
+	return c.JSON(res)
 }
