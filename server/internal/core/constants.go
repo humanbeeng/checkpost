@@ -1,0 +1,37 @@
+package core
+
+var (
+	ReservedDomains = map[string]bool{
+		"api":       true,
+		"blog":      true,
+		"dash":      true,
+		"dashboard": true,
+		"uat":       true,
+		"qa":        true,
+		"staging":   true,
+		"jobs":      true,
+		"career":    true,
+		"auth":      true,
+		"cdn":       true,
+		"files":     true,
+		"file":      true,
+		"free":      true,
+		"secure":    true,
+		"media":     true,
+		"portal":    true,
+		"forum":     true,
+		"support":   true,
+		"www":       true,
+		"help":      true,
+		"console":   true,
+		"app":       true,
+		"share":     true,
+		"dev":       true,
+		"community": true,
+		"url":       true,
+		"link":      true,
+		"demo":      true,
+		"shop":      true,
+		"about":     true,
+	}
+)
