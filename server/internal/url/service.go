@@ -13,6 +13,7 @@ import (
 	"github.com/gofiber/fiber/v2"
 	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
+	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
 	gonanoid "github.com/matoous/go-nanoid/v2"
@@ -54,7 +55,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	if len(endpoint) < 4 {
 		return "", &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Subdomain should be atleast 4 characters",
+			Message: "Subdomain should be atleast 4 characters.",
 		}
 	}
 
@@ -94,6 +95,13 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 				}
 			}
 
+			if _, ok := core.ReservedDomains[endpoint]; ok {
+				return "", &UrlError{
+					Code:    http.StatusConflict,
+					Message: fmt.Sprintf("URL %s is reserved.", url),
+				}
+			}
+
 			// Check if the requested endpoint already exists
 			exists, err := s.q.CheckEndpointExists(c, endpoint)
 			if err != nil {
@@ -129,7 +137,9 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 			return url, nil
 		}
 	}
-	return "", &UrlError{Code: http.StatusBadRequest, Message: "invalid user plan"}
+
+	slog.Error("Invalid user plan", "user", username, "plan", user.Plan)
+	return "", &UrlError{Code: http.StatusBadRequest, Message: "Invalid user plan."}
 }
 
 type HookRequest struct {
@@ -158,7 +168,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		if errors.Is(err, pgx.ErrNoRows) {
 			return HookRequest{}, &UrlError{
 				Code:    http.StatusNotFound,
-				Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired", endpoint),
+				Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired.", endpoint),
 			}
 		}
 		return HookRequest{}, NewInternalServerError()
@@ -186,7 +196,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		slog.Error("Unable to marshal query params", "err", err)
 		return HookRequest{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Unable to parse query params",
+			Message: "Unable to parse query params.",
 		}
 	}
 
@@ -195,7 +205,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		slog.Error("Unable to marshal headers", "err", err)
 		return HookRequest{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Unable to parse headers",
+			Message: "Unable to parse headers.",
 		}
 	}
 
@@ -210,7 +220,9 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		QueryParams:  queryBytes,
 		Headers:      headerBytes,
 		SourceIp:     ip,
-		ContentSize:  int32(len(body)),
+
+		// TODO: Add request body limiting
+		ContentSize: int32(len(body)),
 	})
 	if err != nil {
 		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
