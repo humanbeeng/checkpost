@@ -12,7 +12,15 @@ import (
 )
 
 const checkEndpointExists = `-- name: CheckEndpointExists :one
-select exists(select id, endpoint, user_id, created_at, expires_at, plan, is_deleted from endpoint where endpoint = $1 limit 1)
+select exists (
+        select id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+        from endpoint
+        where
+            endpoint = $1
+            and expires_at > now()
+            and is_deleted = false
+        limit 1
+    )
 `
 
 func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
@@ -24,9 +32,12 @@ func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (boo
 
 const createNewEndpoint = `-- name: CreateNewEndpoint :one
 insert into
-  endpoint (endpoint, user_id, plan, expires_at)
-values
-($1, $2, $3, $4) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+    endpoint (
+        endpoint, user_id, plan, expires_at
+    )
+values ($1, $2, $3, $4)
+returning
+    id, endpoint, user_id, created_at, expires_at, plan, is_deleted
 `
 
 type CreateNewEndpointParams struct {
@@ -57,7 +68,11 @@ func (q *Queries) CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointPa
 }
 
 const createNewFreeUrl = `-- name: CreateNewFreeUrl :one
-insert into endpoint(endpoint, user_id, expires_at) values($1, $2, $3) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+insert into
+    endpoint (endpoint, user_id, expires_at)
+values ($1, $2, $3)
+returning
+    id, endpoint, user_id, created_at, expires_at, plan, is_deleted
 `
 
 type CreateNewFreeUrlParams struct {
@@ -82,7 +97,11 @@ func (q *Queries) CreateNewFreeUrl(ctx context.Context, arg CreateNewFreeUrlPara
 }
 
 const createNewGuestEndpoint = `-- name: CreateNewGuestEndpoint :one
-insert into endpoint (endpoint, expires_at) values ($1, $2) returning id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+insert into
+    endpoint (endpoint, expires_at)
+values ($1, $2)
+returning
+    id, endpoint, user_id, created_at, expires_at, plan, is_deleted
 `
 
 type CreateNewGuestEndpointParams struct {
@@ -106,7 +125,12 @@ func (q *Queries) CreateNewGuestEndpoint(ctx context.Context, arg CreateNewGuest
 }
 
 const getEndpoint = `-- name: GetEndpoint :one
-select id, endpoint, user_id, created_at, expires_at, plan, is_deleted from "endpoint" where endpoint = $1 limit 1
+select id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+from "endpoint"
+where
+    endpoint = $1
+    and is_deleted = false
+limit 1
 `
 
 func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error) {
@@ -125,7 +149,12 @@ func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, e
 }
 
 const getNonExpiredEndpointsOfUser = `-- name: GetNonExpiredEndpointsOfUser :many
-select id, endpoint, user_id, created_at, expires_at, plan, is_deleted from "endpoint" where user_id = $1 and expires_at > now()
+select id, endpoint, user_id, created_at, expires_at, plan, is_deleted
+from "endpoint"
+where
+    user_id = $1
+    and expires_at > now()
+    and is_deleted = false
 `
 
 func (q *Queries) GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error) {

@@ -2,6 +2,7 @@ package url
 
 import (
 	"context"
+	"fmt"
 	"log/slog"
 	"strconv"
 	"sync"
@@ -63,7 +64,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl,
 	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
 	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
 
-	urlGroup.Get("/stats", uc.StatsHandler)
+	urlGroup.Get("/stats/:endpoint", uc.StatsHandler)
 
 	// TODO: Add rate/conn limiter
 	urlGroup.Use("/inspect", func(c *fiber.Ctx) error {
@@ -109,18 +110,22 @@ func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 	}
 }
 
-// Returns status of a given endpoint and request-id
+// Returns status of a given endpoint
 func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
-	// url := c.Query("url", "")
-	// if url == "" {
-	// 	return fiber.ErrBadRequest
-	// }
-	//
-	// res := map[string]string{
-	// 	"req": url,
-	// }
-	// return c.JSON(res)
-	return c.SendString("Ok")
+	endpoint := c.Params("endpoint", "")
+	if endpoint == "" {
+		return fiber.ErrBadRequest
+	}
+
+	stats, err := uc.service.GetEndpointStats(c.Context(), endpoint)
+	if err != nil {
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
+		}
+	}
+	return c.JSON(stats)
+
 }
 
 // TODO: Implement this
@@ -154,16 +159,18 @@ type GenerateUrlRequest struct {
 type GenerateUrlResponse struct {
 	Url       string    `json:"url"`
 	ExpiresAt time.Time `json:"expires_at"`
+	Plan      string    `json:"plan"`
 }
 
 func (uc *UrlController) GenerateRandomUrlHandler(c *fiber.Ctx) error {
-	url, err := uc.service.CreateRandomUrl(c.Context(), nil)
+	url, plan, err := uc.service.CreateRandomUrl(c.Context(), nil)
 	if err != nil {
 		return fiber.NewError(err.Code, err.Message)
 	}
 
 	return c.JSON(GenerateUrlResponse{
-		Url: url,
+		Url:  url,
+		Plan: plan,
 	})
 }
 
@@ -199,6 +206,11 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 
 func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 	// TODO: return request details
+	// Get the Content-Type header from the request
+	contentType := c.Get(fiber.HeaderContentType)
+
+	// Print the Content-Type
+	fmt.Println("Content-Type:", contentType)
 	req, err := uc.service.StoreRequestDetails(c)
 	if err != nil {
 		return &fiber.Error{
