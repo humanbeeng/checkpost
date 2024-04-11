@@ -34,7 +34,7 @@ SELECT
         CASE
             WHEN response_code != 200 THEN 1
         END
-    ) AS failure_count
+    ) AS lailed_request_count
 FROM request r
     LEFT JOIN endpoint e on r.endpoint_id = e.id
 where

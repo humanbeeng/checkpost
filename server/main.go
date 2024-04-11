@@ -82,9 +82,12 @@ func main() {
 	endpointService := url.NewUrlService(queries, config)
 	urlHandler := url.NewUrlController(endpointService)
 
+	cachemw := middleware.NewCacheMiddleware()
+	endpointCheckLim := middleware.NewEndpointCheckLimiter()
+
 	adc.RegisterRoutes(app, &pmw)
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, genLim, genRandLim)
+	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, genLim, genRandLim, endpointCheckLim, cachemw)
 
 	app.Listen(":3000")
 }

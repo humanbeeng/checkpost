@@ -228,7 +228,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 	return hookReq, nil
 }
 
-func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, string, *UrlError) {
+func (s *UrlService) CreateGuestUrl(c context.Context, user *db.User) (string, string, *UrlError) {
 	slog.Info("Creating random URL")
 
 	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
@@ -255,7 +255,7 @@ func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, 
 	}
 
 	slog.Info("Random url generated", "url", randomUrl)
-	return randomUrl, string(user.Plan), nil
+	return randomUrl, string(db.PlanGuest), nil
 }
 
 func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (string, *UrlError) {
@@ -386,4 +386,16 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 		ExpiresAt:    endpointDetails.ExpiresAt.Time.String(),
 		Plan:         string(endpointDetails.Plan),
 	}, nil
+}
+
+func (s *UrlService) CheckEndpointExists(c context.Context, endpoint string) (bool, *UrlError) {
+
+	slog.Info("Checking if endpoint exists", "endpoint", endpoint)
+
+	exists, err := s.q.CheckEndpointExists(c, endpoint)
+	if err != nil {
+		slog.Error("Unable to check if endpoint exists", "endpoint", endpoint, "err", err)
+		return false, NewInternalServerError()
+	}
+	return exists, nil
 }

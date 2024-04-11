@@ -53,11 +53,13 @@ func NewUrlController(service *UrlService) *UrlController {
 	return &UrlController{conns: &sync.Map{}, service: service}
 }
 
-func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim fiber.Handler) {
+func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim, endpointCheckLim, cache fiber.Handler) {
 	urlGroup := app.Group("/url")
 
+	urlGroup.Get("/exists/:endpoint", endpointCheckLim, cache, uc.CheckEndpointExistsHandler)
+
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
-	urlGroup.Get("/generate/random", genRandLim, uc.GenerateRandomUrlHandler)
+	urlGroup.Get("/generate/random", genRandLim, uc.GenerateGuestUrlHandler)
 
 	urlGroup.All("/hook/:endpoint/:path?", gl, fl, nbl, pl, uc.HookHandler)
 
@@ -162,8 +164,8 @@ type GenerateUrlResponse struct {
 	Plan      string    `json:"plan"`
 }
 
-func (uc *UrlController) GenerateRandomUrlHandler(c *fiber.Ctx) error {
-	url, plan, err := uc.service.CreateRandomUrl(c.Context(), nil)
+func (uc *UrlController) GenerateGuestUrlHandler(c *fiber.Ctx) error {
+	url, plan, err := uc.service.CreateGuestUrl(c.Context(), nil)
 	if err != nil {
 		return fiber.NewError(err.Code, err.Message)
 	}
@@ -260,4 +262,47 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 		Requests: reqs,
 	}
 	return c.JSON(res)
+}
+
+type CheckEndpointExistsResponse struct {
+	Endpoint string `json:"endpoint"`
+	Exists   bool   `json:"exists"`
+	Message  string `json:"message"`
+}
+
+func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
+	endpoint := c.Params("endpoint", "")
+
+	if endpoint == "" {
+		return fiber.ErrBadRequest
+	}
+	if len(endpoint) < 4 {
+		return &fiber.Error{
+			Code:    fiber.StatusBadRequest,
+			Message: "Must be atleast 4 characters",
+		}
+	}
+
+	exists, err := uc.service.CheckEndpointExists(c.Context(), endpoint)
+	if err != nil {
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
+		}
+	}
+
+	if exists {
+		return c.JSON(CheckEndpointExistsResponse{
+			Endpoint: endpoint,
+			Exists:   exists,
+			Message:  "Its available 🐱. Sign up and make it yours!",
+		})
+	} else {
+		return c.JSON(CheckEndpointExistsResponse{
+			Endpoint: endpoint,
+			Exists:   exists,
+			Message:  "That endpoint is already taken 😿. Try something else. Maybe your workplace name?",
+		})
+	}
+
 }

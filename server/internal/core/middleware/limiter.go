@@ -79,3 +79,11 @@ func NewGenerateRandomUrlLimiter() fiber.Handler {
 		LimiterMiddleware: limiter.SlidingWindow{},
 	})
 }
+
+func NewEndpointCheckLimiter() fiber.Handler {
+	return limiter.New(limiter.Config{
+		Max:               10,
+		Expiration:        time.Minute,
+		LimiterMiddleware: limiter.SlidingWindow{},
+	})
+}
