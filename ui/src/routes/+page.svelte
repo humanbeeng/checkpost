@@ -431,10 +431,9 @@
 				</Card.Header>
 				<Card.Content>
 					<ul class="list-disc mx-5">
-						<li>One endpoint.</li>
-						<li>Expires in 1 hour.</li>
-						<li>All paths allowed.</li>
-						<li>Request history is locally stored.</li>
+						<li>One random endpoint. <br>Example: <a href="/"><u>https://xyzxa.checkpost.io</u></a> </li>
+						<li>Expires in 1 day.</li>
+						<li>Request history retained for 1 day.</li>
 						<li>Request payload limit 32Kb.</li>
 						<li>Rate limit 2 rps.</li>
 					</ul>
@@ -449,13 +448,12 @@
 				</Card.Header>
 				<Card.Content>
 					<ul class="list-disc mx-5">
-						<li>One endpoint.</li>
-						<li>Expires in 4h.</li>
-						<li>All paths allowed.</li>
+						<li>One random endpoint. <br>Example: <a href="/"><u>https://xyzxa.checkpost.io</u></a> </li>
+						<li>Expires in 2 days.</li>
 						<li>Request history retained for 2 days.</li>
 						<li>Request payload limit 32Kb.</li>
-						<li>Rate limit: 10 rps.</li>
-						<li>Discord Access.</li>
+						<li>Rate limit: 3 rps.</li>
+						<li>Discord Access - Community channel.</li>
 					</ul>
 				</Card.Content>
 				<!-- <Card.Footer> -->
@@ -467,21 +465,24 @@
 			<Card.Root>
 				<Card.Header>
 					<Card.Title tag="h1" class="underline text-xl">Pro</Card.Title>
-					<Card.Description>$8/month | $90/year</Card.Description>
+					<Card.Description>$5/month | $55/year</Card.Description>
 				</Card.Header>
 				<Card.Content>
 					<ul class="list-disc mx-5">
+						<li>10 custom endpoints. <br><a href="/"><u>Example: https://yourname.checkpost.io</u></a></li>
 						<li>Request history is stored upto 180 days.</li>
-						<li>Web CRON.</li>
+						<li>10 Web CRONs.</li>
 						<li>Request payload limit 510Kb.</li>
 						<li>Password protected endpoints.</li>
-						<li>1 middleware.</li>
+						<li>File attachments support.</li>
+						<li>Port forwarding for local servers.</li>
+						<li>1 proxy middleware.</li>
 						<li>Rate limit: 30 rps.</li>
 						<li>Discord Access - Private Channel</li>
 					</ul>
 				</Card.Content>
 				<Card.Footer>
-					<Button class="w-full bg-black underline">Upgrade</Button>
+					<Button class="w-full bg-black underline">Upgrade - Coming soon</Button>
 				</Card.Footer>
 			</Card.Root>
 
