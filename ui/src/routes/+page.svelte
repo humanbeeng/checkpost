@@ -471,17 +471,18 @@
 				</Card.Header>
 				<Card.Content>
 					<ul class="list-disc mx-5">
+						<li>Unlimited custom subdomains. <br>Example: https://yourname.checkpost.io</li>
 						<li>Request history is stored upto 180 days.</li>
 						<li>Web CRON.</li>
 						<li>Request payload limit 510Kb.</li>
 						<li>Password protected endpoints.</li>
-						<li>1 middleware.</li>
+						<li>1 proxy middleware.</li>
 						<li>Rate limit: 30 rps.</li>
 						<li>Discord Access - Private Channel</li>
 					</ul>
 				</Card.Content>
 				<Card.Footer>
-					<Button class="w-full bg-black underline">Upgrade</Button>
+					<Button class="w-full bg-black underline">Upgrade - Coming soon</Button>
 				</Card.Footer>
 			</Card.Root>
 
