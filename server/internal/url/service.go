@@ -28,15 +28,6 @@ func NewUrlService(q db.Querier, config *config.AppConfig) *UrlService {
 	return &UrlService{q: q, config: config}
 }
 
-type UrlError struct {
-	Code    int
-	Message string
-}
-
-func (u *UrlError) Error() string {
-	return u.Message
-}
-
 // TODO: Convert this into checkpost custom error
 func NewInternalServerError() *UrlError {
 	return &UrlError{
@@ -116,6 +107,8 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 			}
 
 			// endpoint is available
+			slog.Info("Creating new pro endpoint", "endpoint", endpoint, "username", username)
+
 			_, err = s.q.CreateNewEndpoint(c, db.CreateNewEndpointParams{
 				Endpoint: endpoint,
 				UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
@@ -142,19 +135,8 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	return "", &UrlError{Code: http.StatusBadRequest, Message: "Invalid user plan."}
 }
 
-type HookRequest struct {
-	Endpoint     string              `json:"endpoint"`
-	Path         string              `json:"path"`
-	Headers      map[string][]string `json:"headers"`
-	Query        map[string]string   `json:"queries"`
-	SourceIp     string              `json:"source_ip"`
-	Content      string              `json:"content"`
-	ContentSize  int                 `json:"content_size"`
-	ResponseCode int                 `json:"response_code"`
-	CreatedAt    time.Time           `json:"created_at"`
-}
-
 func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) {
+
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
 		return HookRequest{}, &UrlError{
@@ -246,12 +228,13 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 	return hookReq, nil
 }
 
-func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, *UrlError) {
-	// TODO: length from config
+func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, string, *UrlError) {
+	slog.Info("Creating random URL")
+
 	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
 	if err != nil {
 		slog.Error("Unable to generate nano id", "err", err)
-		return "", NewInternalServerError()
+		return "", "", NewInternalServerError()
 	}
 
 	randomUrl := fmt.Sprintf("https://%s.checkpost.io", randomEndpoint)
@@ -268,14 +251,16 @@ func (s *UrlService) CreateRandomUrl(c context.Context, user *db.User) (string, 
 		},
 	}); err != nil {
 		slog.Error("Unable to insert endpoint", "endpoint", randomUrl, "err", err)
-		return "", NewInternalServerError()
+		return "", "", NewInternalServerError()
 	}
 
 	slog.Info("Random url generated", "url", randomUrl)
-	return randomUrl, nil
+	return randomUrl, string(user.Plan), nil
 }
 
 func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (string, *UrlError) {
+	slog.Info("Creating free url", "userId", userId)
+
 	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
 	if err != nil {
 		slog.Error("Unable to generate nano id", "err", err)
@@ -305,24 +290,8 @@ func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (string, *Ur
 	return freeUrl, nil
 }
 
-// TODO: Add a request dto.
-
-type Request struct {
-	ID      int64         `json:"id"`
-	Path    string        `json:"path"`
-	Content pgtype.Text   `json:"content"`
-	Method  db.HttpMethod `json:"method"`
-	// IPv4
-	SourceIp     string           `json:"source_ip"`
-	ContentSize  int32            `json:"content_size"`
-	ResponseCode pgtype.Int4      `json:"response_code"`
-	Headers      map[string]any   `json:"headers"`
-	QueryParams  map[string]any   `json:"query_params"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-}
-
 func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint string, limit int32, offset int32) ([]Request, *UrlError) {
-	slog.Info("Received request to fetch endpoint request history", "endpoint", endpoint)
+	slog.Info("Fetch endpoint request history", "endpoint", endpoint)
 
 	// TODO: Add a check to see if the user is authorized to access this endpoint history
 	var reqHistory []Request
@@ -357,7 +326,8 @@ func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint strin
 }
 
 func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request, *UrlError) {
-	slog.Info("Received request to fetch request details", "reqId", reqId)
+	slog.Info("Fetch request details", "reqId", reqId)
+
 	reqRecord, err := s.q.GetRequestById(c, reqId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -386,4 +356,34 @@ func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request,
 	json.Unmarshal(reqRecord.QueryParams, &req.QueryParams)
 
 	return req, nil
+}
+
+func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (EndpointStats, *UrlError) {
+	slog.Info("Request endpoint stats", "endpoint", endpoint)
+
+	endpointDetails, err := s.q.GetEndpoint(c, endpoint)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return EndpointStats{}, &UrlError{
+				Code:    http.StatusNotFound,
+				Message: fmt.Sprintf("Endpoint %v not found", endpoint),
+			}
+		}
+		slog.Error("Unable to fetch endpoint details", "endpoint", endpoint, "err", err)
+		return EndpointStats{}, NewInternalServerError()
+	}
+
+	stats, err := s.q.GetEndpointRequestCount(c, endpoint)
+	if err != nil {
+		slog.Error("Unable to fetch endpoint request count", "endpoint", endpoint, "err", err)
+		return EndpointStats{}, NewInternalServerError()
+	}
+
+	return EndpointStats{
+		SuccessCount: stats.SuccessCount,
+		FailureCount: stats.FailureCount,
+		TotalCount:   stats.TotalCount,
+		ExpiresAt:    endpointDetails.ExpiresAt.Time.String(),
+		Plan:         string(endpointDetails.Plan),
+	}, nil
 }

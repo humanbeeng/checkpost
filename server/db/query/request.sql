@@ -5,7 +5,9 @@ insert into
     )
 values (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-    ) returning *;
+    )
+returning
+    *;
 
 -- name: GetEndpointHistory :many
 select *
@@ -19,3 +21,21 @@ offset
 
 -- name: GetRequestById :one
 select * from request where id = $1 limit 1;
+
+-- name: GetEndpointRequestCount :one
+SELECT
+    COUNT(*) AS total_count,
+    COUNT(
+        CASE
+            WHEN response_code = 200 THEN 1
+        END
+    ) AS success_count,
+    COUNT(
+        CASE
+            WHEN response_code != 200 THEN 1
+        END
+    ) AS failure_count
+FROM request r
+    LEFT JOIN endpoint e on r.endpoint_id = e.id
+where
+    endpoint = $1;

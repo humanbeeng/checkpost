@@ -18,7 +18,9 @@ insert into
     )
 values (
         $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11
-    ) returning id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted
+    )
+returning
+    id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
@@ -150,6 +152,38 @@ func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistory
 		return nil, err
 	}
 	return items, nil
+}
+
+const getEndpointRequestCount = `-- name: GetEndpointRequestCount :one
+SELECT
+    COUNT(*) AS total_count,
+    COUNT(
+        CASE
+            WHEN response_code = 200 THEN 1
+        END
+    ) AS success_count,
+    COUNT(
+        CASE
+            WHEN response_code != 200 THEN 1
+        END
+    ) AS failure_count
+FROM request r
+    LEFT JOIN endpoint e on r.endpoint_id = e.id
+where
+    endpoint = $1
+`
+
+type GetEndpointRequestCountRow struct {
+	TotalCount   int64 `json:"total_count"`
+	SuccessCount int64 `json:"success_count"`
+	FailureCount int64 `json:"failure_count"`
+}
+
+func (q *Queries) GetEndpointRequestCount(ctx context.Context, endpoint string) (GetEndpointRequestCountRow, error) {
+	row := q.db.QueryRow(ctx, getEndpointRequestCount, endpoint)
+	var i GetEndpointRequestCountRow
+	err := row.Scan(&i.TotalCount, &i.SuccessCount, &i.FailureCount)
+	return i, err
 }
 
 const getRequestById = `-- name: GetRequestById :one
