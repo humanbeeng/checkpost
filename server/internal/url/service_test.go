@@ -13,8 +13,8 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type UrlStoreTest struct{}
-type UserStoreTest struct{}
+type MockUrlStore struct{}
+type MockUserStore struct{}
 
 type CtxKey string
 
@@ -34,7 +34,7 @@ const (
 	BasicEndpoint string = "basicendpoint"
 )
 
-func (us UserStoreTest) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
+func (us MockUserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
 	if username == UnknownUser {
 		return db.User{}, pgx.ErrNoRows
 	} else if username == FreeUser {
@@ -59,29 +59,29 @@ func (us UserStoreTest) GetUserFromUsername(ctx context.Context, username string
 	return db.User{}, fmt.Errorf("not found")
 }
 
-var _ UrlQuerier = (*UrlStoreTest)(nil)
+var _ UrlQuerier = (*MockUrlStore)(nil)
 
-var userStore = UserStoreTest{}
-var urlStore = UrlStoreTest{}
+var userStore = MockUserStore{}
+var urlStore = MockUrlStore{}
 
 var service = UrlService{
 	urlq:  urlStore,
 	userq: userStore,
 }
 
-func (us UrlStoreTest) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
+func (us MockUrlStore) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
 	return db.GetEndpointRequestCountRow{}, nil
 }
 
-func (us UrlStoreTest) GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error) {
+func (us MockUrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error) {
 	return db.Endpoint{}, nil
 }
 
-func (us UrlStoreTest) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {
+func (us MockUrlStore) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {
 	return []db.GetEndpointHistoryRow{}, nil
 }
 
-func (us UrlStoreTest) GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgtype.Int8) ([]db.Endpoint, error) {
+func (us MockUrlStore) GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgtype.Int8) ([]db.Endpoint, error) {
 	numUrls := ctx.Value(NumUrls)
 	if numUrls == nil {
 		return []db.Endpoint{}, nil
@@ -96,7 +96,7 @@ func (us UrlStoreTest) GetNonExpiredEndpointsOfUser(ctx context.Context, userId 
 }
 
 // TODO: Rename this
-func (us UrlStoreTest) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
+func (us MockUrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{
 		Endpoint: params.Endpoint,
 		ExpiresAt: pgtype.Timestamp{
@@ -105,27 +105,27 @@ func (us UrlStoreTest) InsertFreeEndpoint(ctx context.Context, params db.InsertF
 	}, nil
 }
 
-func (us UrlStoreTest) InsertGuestEndpoint(ctx context.Context, params db.InsertGuestEndpointParams) (db.Endpoint, error) {
+func (us MockUrlStore) InsertGuestEndpoint(ctx context.Context, params db.InsertGuestEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{
 		Endpoint: GuestEndpoint,
 		Plan:     db.PlanGuest,
 	}, nil
 }
 
-func (us UrlStoreTest) InsertEndpoint(ctx context.Context, arg db.InsertEndpointParams) (db.Endpoint, error) {
+func (us MockUrlStore) InsertEndpoint(ctx context.Context, arg db.InsertEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{Endpoint: arg.Endpoint}, nil
 }
 
-func (us UrlStoreTest) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
+func (us MockUrlStore) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
 	return (endpoint == ProEndpoint || endpoint == GuestEndpoint || endpoint == BasicEndpoint || endpoint == FreeEndpoint), nil
 }
 
 // TODO: Remove this
-func (us UrlStoreTest) CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error) {
+func (us MockUrlStore) CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error) {
 	return db.Request{}, nil
 }
 
-func (us UrlStoreTest) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
+func (us MockUrlStore) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
 	return db.Request{}, nil
 }
 
