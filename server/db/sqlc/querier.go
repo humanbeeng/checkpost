@@ -12,9 +12,6 @@ import (
 
 type Querier interface {
 	CheckEndpointExists(ctx context.Context, endpoint string) (bool, error)
-	CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error)
-	CreateNewFreeUrl(ctx context.Context, arg CreateNewFreeUrlParams) (Endpoint, error)
-	CreateNewGuestEndpoint(ctx context.Context, arg CreateNewGuestEndpointParams) (Endpoint, error)
 	CreateNewRequest(ctx context.Context, arg CreateNewRequestParams) (Request, error)
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteUser(ctx context.Context, id int64) error
@@ -26,6 +23,9 @@ type Querier interface {
 	GetUser(ctx context.Context, id int64) (User, error)
 	GetUserFromEmail(ctx context.Context, email string) (User, error)
 	GetUserFromUsername(ctx context.Context, username string) (User, error)
+	InsertEndpoint(ctx context.Context, arg InsertEndpointParams) (Endpoint, error)
+	InsertFreeEndpoint(ctx context.Context, arg InsertFreeEndpointParams) (Endpoint, error)
+	InsertGuestEndpoint(ctx context.Context, arg InsertGuestEndpointParams) (Endpoint, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 }
 
