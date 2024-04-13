@@ -25,7 +25,7 @@ where
     and expires_at > now()
     and is_deleted = false;
 
--- name: CreateNewEndpoint :one
+-- name: InsertEndpoint :one
 insert into
     endpoint (
         endpoint, user_id, plan, expires_at
@@ -34,16 +34,16 @@ values ($1, $2, $3, $4)
 returning
     *;
 
--- name: CreateNewGuestEndpoint :one
+-- name: InsertGuestEndpoint :one
 insert into
-    endpoint (endpoint, expires_at)
-values ($1, $2)
+    endpoint (endpoint, expires_at, plan)
+values ($1, $2, 'guest')
 returning
     *;
 
--- name: CreateNewFreeUrl :one
+-- name: InsertFreeEndpoint :one
 insert into
-    endpoint (endpoint, user_id, expires_at)
-values ($1, $2, $3)
+    endpoint (endpoint, user_id, plan, expires_at)
+values ($1, $2, 'free', $3)
 returning
     *;

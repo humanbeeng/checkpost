@@ -19,6 +19,7 @@ import (
 	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/humanbeeng/checkpost/server/internal/core/middleware"
 	"github.com/humanbeeng/checkpost/server/internal/url"
+	"github.com/humanbeeng/checkpost/server/internal/user"
 )
 
 func main() {
@@ -52,7 +53,7 @@ func main() {
 	pmw := middleware.NewAuthRequiredMiddleware(pv)
 	gl := middleware.NewGuestPlanLimiter()
 	fl := middleware.NewFreePlanLimiter()
-	nbl := middleware.NewNoBrainerPlanLimiter()
+	nbl := middleware.NewHobbyPlanLimiter()
 	pl := middleware.NewProPlanLimiter()
 	rmw := middleware.NewSubdomainRouterMiddleware()
 
@@ -79,7 +80,10 @@ func main() {
 
 	authmw := middleware.NewAuthRequiredMiddleware(pv)
 	adc := admin.NewAdminController()
-	endpointService := url.NewUrlService(queries, config)
+
+	urlStore := url.NewUrlStore(queries)
+	userStore := user.NewUserStore(queries)
+	endpointService := url.NewUrlService(urlStore, userStore)
 	urlHandler := url.NewUrlController(endpointService)
 
 	cachemw := middleware.NewCacheMiddleware()

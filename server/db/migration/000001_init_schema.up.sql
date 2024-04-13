@@ -1,7 +1,7 @@
 CREATE TYPE "plan" AS ENUM (
   'guest',
   'free',
-  'no_brainer',
+  'basic',
   'pro'
 );
 

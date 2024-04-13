@@ -30,100 +30,6 @@ func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (boo
 	return exists, err
 }
 
-const createNewEndpoint = `-- name: CreateNewEndpoint :one
-insert into
-    endpoint (
-        endpoint, user_id, plan, expires_at
-    )
-values ($1, $2, $3, $4)
-returning
-    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-`
-
-type CreateNewEndpointParams struct {
-	Endpoint  string           `json:"endpoint"`
-	UserID    pgtype.Int8      `json:"user_id"`
-	Plan      Plan             `json:"plan"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-}
-
-func (q *Queries) CreateNewEndpoint(ctx context.Context, arg CreateNewEndpointParams) (Endpoint, error) {
-	row := q.db.QueryRow(ctx, createNewEndpoint,
-		arg.Endpoint,
-		arg.UserID,
-		arg.Plan,
-		arg.ExpiresAt,
-	)
-	var i Endpoint
-	err := row.Scan(
-		&i.ID,
-		&i.Endpoint,
-		&i.UserID,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.ExpiresAt,
-		&i.IsDeleted,
-	)
-	return i, err
-}
-
-const createNewFreeUrl = `-- name: CreateNewFreeUrl :one
-insert into
-    endpoint (endpoint, user_id, expires_at)
-values ($1, $2, $3)
-returning
-    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-`
-
-type CreateNewFreeUrlParams struct {
-	Endpoint  string           `json:"endpoint"`
-	UserID    pgtype.Int8      `json:"user_id"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-}
-
-func (q *Queries) CreateNewFreeUrl(ctx context.Context, arg CreateNewFreeUrlParams) (Endpoint, error) {
-	row := q.db.QueryRow(ctx, createNewFreeUrl, arg.Endpoint, arg.UserID, arg.ExpiresAt)
-	var i Endpoint
-	err := row.Scan(
-		&i.ID,
-		&i.Endpoint,
-		&i.UserID,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.ExpiresAt,
-		&i.IsDeleted,
-	)
-	return i, err
-}
-
-const createNewGuestEndpoint = `-- name: CreateNewGuestEndpoint :one
-insert into
-    endpoint (endpoint, expires_at)
-values ($1, $2)
-returning
-    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-`
-
-type CreateNewGuestEndpointParams struct {
-	Endpoint  string           `json:"endpoint"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-}
-
-func (q *Queries) CreateNewGuestEndpoint(ctx context.Context, arg CreateNewGuestEndpointParams) (Endpoint, error) {
-	row := q.db.QueryRow(ctx, createNewGuestEndpoint, arg.Endpoint, arg.ExpiresAt)
-	var i Endpoint
-	err := row.Scan(
-		&i.ID,
-		&i.Endpoint,
-		&i.UserID,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.ExpiresAt,
-		&i.IsDeleted,
-	)
-	return i, err
-}
-
 const getEndpoint = `-- name: GetEndpoint :one
 select id, endpoint, user_id, plan, created_at, expires_at, is_deleted
 from "endpoint"
@@ -183,4 +89,98 @@ func (q *Queries) GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtyp
 		return nil, err
 	}
 	return items, nil
+}
+
+const insertEndpoint = `-- name: InsertEndpoint :one
+insert into
+    endpoint (
+        endpoint, user_id, plan, expires_at
+    )
+values ($1, $2, $3, $4)
+returning
+    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+`
+
+type InsertEndpointParams struct {
+	Endpoint  string           `json:"endpoint"`
+	UserID    pgtype.Int8      `json:"user_id"`
+	Plan      Plan             `json:"plan"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+func (q *Queries) InsertEndpoint(ctx context.Context, arg InsertEndpointParams) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, insertEndpoint,
+		arg.Endpoint,
+		arg.UserID,
+		arg.Plan,
+		arg.ExpiresAt,
+	)
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.Plan,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+	)
+	return i, err
+}
+
+const insertFreeEndpoint = `-- name: InsertFreeEndpoint :one
+insert into
+    endpoint (endpoint, user_id, plan, expires_at)
+values ($1, $2, 'free', $3)
+returning
+    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+`
+
+type InsertFreeEndpointParams struct {
+	Endpoint  string           `json:"endpoint"`
+	UserID    pgtype.Int8      `json:"user_id"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+func (q *Queries) InsertFreeEndpoint(ctx context.Context, arg InsertFreeEndpointParams) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, insertFreeEndpoint, arg.Endpoint, arg.UserID, arg.ExpiresAt)
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.Plan,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+	)
+	return i, err
+}
+
+const insertGuestEndpoint = `-- name: InsertGuestEndpoint :one
+insert into
+    endpoint (endpoint, expires_at, plan)
+values ($1, $2, 'guest')
+returning
+    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+`
+
+type InsertGuestEndpointParams struct {
+	Endpoint  string           `json:"endpoint"`
+	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+}
+
+func (q *Queries) InsertGuestEndpoint(ctx context.Context, arg InsertGuestEndpointParams) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, insertGuestEndpoint, arg.Endpoint, arg.ExpiresAt)
+	var i Endpoint
+	err := row.Scan(
+		&i.ID,
+		&i.Endpoint,
+		&i.UserID,
+		&i.Plan,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+	)
+	return i, err
 }
