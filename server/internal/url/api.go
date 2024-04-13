@@ -53,7 +53,7 @@ func NewUrlController(service *UrlService) *UrlController {
 	return &UrlController{conns: &sync.Map{}, service: service}
 }
 
-func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl, genLim, genRandLim, endpointCheckLim, cache fiber.Handler) {
+func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, bl, pl, genLim, genRandLim, endpointCheckLim, cache fiber.Handler) {
 	urlGroup := app.Group("/url")
 
 	urlGroup.Get("/exists/:endpoint", endpointCheckLim, cache, uc.CheckEndpointExistsHandler)
@@ -61,7 +61,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, nbl, pl,
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
 	urlGroup.Get("/generate/random", genRandLim, uc.GenerateGuestUrlHandler)
 
-	urlGroup.All("/hook/:endpoint/:path?", gl, fl, nbl, pl, uc.HookHandler)
+	urlGroup.All("/hook/:endpoint/:path?", gl, fl, bl, pl, uc.HookHandler)
 
 	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
 	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
@@ -87,7 +87,7 @@ func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 	// Check if endpoint exists
 	// TODO: Revisit this context
 
-	exists, err := uc.service.q.CheckEndpointExists(context.TODO(), endpoint)
+	exists, err := uc.service.urlq.CheckEndpointExists(context.TODO(), endpoint)
 	if !exists {
 		slog.Info("No endpoint found", "endpoint", endpoint)
 		// TODO: Format this into response
@@ -165,14 +165,14 @@ type GenerateUrlResponse struct {
 }
 
 func (uc *UrlController) GenerateGuestUrlHandler(c *fiber.Ctx) error {
-	url, plan, err := uc.service.CreateGuestUrl(c.Context(), nil)
+	endpoint, err := uc.service.CreateGuestUrl(c.Context())
 	if err != nil {
 		return fiber.NewError(err.Code, err.Message)
 	}
 
 	return c.JSON(GenerateUrlResponse{
-		Url:  url,
-		Plan: plan,
+		Url:  fmt.Sprintf("https://%v.checkpost.io", endpoint.Endpoint),
+		Plan: string(endpoint.Plan),
 	})
 }
 
@@ -190,7 +190,7 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 
 	slog.Info("Generate url request received", "username", username)
 
-	url, err := uc.service.CreateUrl(c.Context(), username, req.Endpoint)
+	endpoint, err := uc.service.CreateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -199,9 +199,8 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 	}
 
 	res := GenerateUrlResponse{
-		Url: url,
-		// TODO: Add plan based expiry
-		ExpiresAt: time.Now().Add(time.Hour * 24),
+		Url:       endpoint.Endpoint,
+		ExpiresAt: endpoint.ExpiresAt.Time,
 	}
 	return c.JSON(res)
 }
