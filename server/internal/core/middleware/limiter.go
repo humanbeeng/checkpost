@@ -33,7 +33,7 @@ func NewFreePlanLimiter() fiber.Handler {
 	})
 }
 
-func NewNoBrainerPlanLimiter() fiber.Handler {
+func NewHobbyPlanLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
 			return c.Locals("plan").(string) != string(db.PlanFree)

@@ -63,10 +63,10 @@ func (ns NullHttpMethod) Value() (driver.Value, error) {
 type Plan string
 
 const (
-	PlanGuest     Plan = "guest"
-	PlanFree      Plan = "free"
-	PlanNoBrainer Plan = "no_brainer"
-	PlanPro       Plan = "pro"
+	PlanGuest Plan = "guest"
+	PlanFree  Plan = "free"
+	PlanBasic Plan = "basic"
+	PlanPro   Plan = "pro"
 )
 
 func (e *Plan) Scan(src interface{}) error {
