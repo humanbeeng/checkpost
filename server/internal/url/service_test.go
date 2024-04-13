@@ -28,10 +28,11 @@ const (
 	ProUser     string = "pro_user"
 	BasicUser   string = "basic_user"
 
-	GuestEndpoint string = "abcd"
-	FreeEndpoint  string = "freeendpoint"
-	ProEndpoint   string = "proendpoint"
-	BasicEndpoint string = "basicendpoint"
+	GuestEndpoint   string = "guest_endpoint"
+	FreeEndpoint    string = "free_endpoint"
+	ProEndpoint     string = "pro_endpoint"
+	BasicEndpoint   string = "basic_endpoint"
+	UnknownEndpoint string = "unknown_endpoint"
 )
 
 func (us MockUserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
@@ -70,11 +71,33 @@ var service = UrlService{
 }
 
 func (us MockUrlStore) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
-	return db.GetEndpointRequestCountRow{}, nil
+	if endpoint == BasicEndpoint || endpoint == ProEndpoint || endpoint == FreeEndpoint || endpoint == GuestEndpoint {
+		return db.GetEndpointRequestCountRow{
+			SuccessCount: 100,
+			FailureCount: 100,
+			TotalCount:   200,
+		}, nil
+	}
+	return db.GetEndpointRequestCountRow{}, &UrlError{
+		Code:    http.StatusNotFound,
+		Message: "not found",
+	}
 }
 
 func (us MockUrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error) {
-	return db.Endpoint{}, nil
+	if endpoint != UnknownEndpoint {
+		return db.Endpoint{
+			Endpoint: endpoint,
+			ExpiresAt: pgtype.Timestamp{
+				Time:             time.Now().Add(time.Hour),
+				Valid:            true,
+				InfinityModifier: pgtype.Infinity,
+			},
+			Plan:   db.PlanPro,
+			UserID: pgtype.Int8{Int64: 1, Valid: true},
+		}, nil
+	}
+	return db.Endpoint{}, pgx.ErrNoRows
 }
 
 func (us MockUrlStore) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {
@@ -207,4 +230,17 @@ func TestCreateUrlWhenEndpointLessThanFourChars(t *testing.T) {
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, err.Code)
 	assert.Empty(t, url)
+}
+
+func TestGetBasicEndpointStats(t *testing.T) {
+	stats, err := service.GetEndpointStats(context.TODO(), BasicEndpoint)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, stats)
+}
+
+func TestGetEndpointStatsUnknownUrl(t *testing.T) {
+	stats, err := service.GetEndpointStats(context.TODO(), UnknownEndpoint)
+	assert.NotNil(t, err)
+	assert.Equal(t, http.StatusNotFound, err.Code)
+	assert.Empty(t, stats)
 }
