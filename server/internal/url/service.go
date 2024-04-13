@@ -124,10 +124,11 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 				Endpoint: endpoint,
 				UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
 				Plan:     user.Plan,
+
+				// Never expires
 				ExpiresAt: pgtype.Timestamp{
-					// TODO: Change this
 					Time:             time.Now().Add(time.Hour * 24),
-					InfinityModifier: pgtype.Finite,
+					InfinityModifier: pgtype.Infinity,
 					Valid:            true,
 				},
 			})
@@ -285,9 +286,8 @@ func (s *UrlService) CreateGuestUrl(c context.Context) (db.Endpoint, *UrlError) 
 	// a check later on if needed.
 	record, err := s.urlq.InsertGuestEndpoint(c, db.InsertGuestEndpointParams{
 		Endpoint: randomEndpoint,
-		// TODO: Fetch expiry from config
 		ExpiresAt: pgtype.Timestamp{
-			Time:             time.Now().Add(time.Hour * 24),
+			Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
 			Valid:            true,
 			InfinityModifier: pgtype.Finite,
 		},
