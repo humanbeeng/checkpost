@@ -36,6 +36,7 @@ type Request struct {
 	Headers      map[string]any   `json:"headers"`
 	QueryParams  map[string]any   `json:"query_params"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
 }
 
 type HookRequest struct {
