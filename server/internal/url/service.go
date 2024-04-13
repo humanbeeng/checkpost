@@ -197,6 +197,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		Method:     db.HttpMethod(strings.ToLower(method)),
 		Content:    pgtype.Text{String: body, Valid: true},
 		Path:       path,
+
 		// TODO: Fetch response from configured response
 		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
 		QueryParams:  queryBytes,

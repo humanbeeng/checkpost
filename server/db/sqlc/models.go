@@ -108,9 +108,9 @@ type Endpoint struct {
 	ID        int64            `json:"id"`
 	Endpoint  string           `json:"endpoint"`
 	UserID    pgtype.Int8      `json:"user_id"`
+	Plan      Plan             `json:"plan"`
 	CreatedAt pgtype.Timestamp `json:"created_at"`
 	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-	Plan      Plan             `json:"plan"`
 	IsDeleted pgtype.Bool      `json:"is_deleted"`
 }
 
@@ -138,6 +138,7 @@ type Request struct {
 	Headers      []byte           `json:"headers"`
 	QueryParams  []byte           `json:"query_params"`
 	CreatedAt    pgtype.Timestamp `json:"created_at"`
+	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
 	IsDeleted    pgtype.Bool      `json:"is_deleted"`
 }
 
