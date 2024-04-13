@@ -39,6 +39,7 @@ func NewInternalServerError() *UrlError {
 const (
 	RandomUrlLength          int = 10
 	NumUrlLimitPlanNoBrainer int = 1
+	RequestExpiryInHoursFree int = 4
 )
 
 func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (string, *UrlError) {
@@ -57,6 +58,9 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 			Message: fmt.Sprintf("No user found with username: %s", username),
 		}
 	}
+
+	slog.Info("Create url request received", "endpoint", endpoint, "username", username)
+
 	// Check if user has exceeded number of urls that can be generated
 	urls, err := s.q.GetNonExpiredEndpointsOfUser(c, pgtype.Int8{Int64: user.ID, Valid: true})
 	if err != nil {
@@ -191,6 +195,34 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		}
 	}
 
+	var expiresAt pgtype.Timestamp
+	switch endpointRecord.Plan {
+	case db.PlanGuest, db.PlanFree:
+		{
+			expiresAt = pgtype.Timestamp{
+				Time:             time.Now().Add(time.Hour * time.Duration(RequestExpiryInHoursFree)),
+				InfinityModifier: pgtype.Finite,
+				Valid:            true,
+			}
+
+		}
+	case db.PlanPro, db.PlanNoBrainer:
+		{
+			expiresAt = pgtype.Timestamp{
+				Time:             time.Now(),
+				InfinityModifier: pgtype.Infinity,
+				Valid:            true,
+			}
+		}
+	default:
+		{
+			return HookRequest{}, &UrlError{
+				Code:    http.StatusBadRequest,
+				Message: "Invalid user plan",
+			}
+		}
+	}
+
 	cr, err := s.q.CreateNewRequest(c.Context(), db.CreateNewRequestParams{
 		UserID:     userId,
 		EndpointID: endpointRecord.ID,
@@ -206,6 +238,7 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 
 		// TODO: Add request body limiting
 		ContentSize: int32(len(body)),
+		ExpiresAt:   expiresAt,
 	})
 	if err != nil {
 		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
@@ -315,6 +348,7 @@ func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint strin
 			SourceIp:     req.SourceIp,
 			ContentSize:  req.ContentSize,
 			ResponseCode: req.ResponseCode,
+			ExpiresAt:    req.ExpiresAt,
 		}
 
 		json.Unmarshal(req.Headers, &rh.Headers)
@@ -351,6 +385,7 @@ func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request,
 		ContentSize:  reqRecord.ContentSize,
 		ResponseCode: reqRecord.ResponseCode,
 		CreatedAt:    reqRecord.CreatedAt,
+		ExpiresAt:    reqRecord.ExpiresAt,
 	}
 
 	json.Unmarshal(reqRecord.Headers, &req.Headers)

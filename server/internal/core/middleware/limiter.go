@@ -63,6 +63,9 @@ func NewProPlanLimiter() fiber.Handler {
 
 func NewGenerateUrlLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
+		Next: func(c *fiber.Ctx) bool {
+			return c.BaseURL() == "http://api.checkpost.local:3000"
+		},
 		Max:               1,
 		Expiration:        time.Minute,
 		LimiterMiddleware: limiter.SlidingWindow{},
@@ -74,6 +77,9 @@ func NewGenerateUrlLimiter() fiber.Handler {
 
 func NewGenerateRandomUrlLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
+		Next: func(c *fiber.Ctx) bool {
+			return c.BaseURL() == "http://api.checkpost.local:3000"
+		},
 		Max:               1,
 		Expiration:        time.Minute,
 		LimiterMiddleware: limiter.SlidingWindow{},
