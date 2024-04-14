@@ -1,7 +1,7 @@
 package core
 
 var (
-	ReservedDomains = map[string]bool{
+	ReservedSubdomains = map[string]bool{
 		"api":       true,
 		"blog":      true,
 		"dash":      true,

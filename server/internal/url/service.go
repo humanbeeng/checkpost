@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	stdurl "net/url"
 	"strings"
 	"time"
 
@@ -39,9 +40,9 @@ func NewInternalServerError() *UrlError {
 }
 
 const (
-	RandomUrlLength      int = 10
-	NumUrlLimitPlanBasic int = 1
-	DefaultExpiryHours   int = 4
+	RandomUrlLength    int = 10
+	DefaultLimitNumUrl int = 1
+	DefaultExpiryHours int = 4
 )
 
 func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (db.Endpoint, *UrlError) {
@@ -53,6 +54,37 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		}
 	}
 
+	url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
+
+	_, err := stdurl.ParseRequestURI(url)
+	if err != nil {
+		return db.Endpoint{}, &UrlError{
+			Code:    http.StatusBadRequest,
+			Message: "Invalid URL",
+		}
+	}
+
+	// Check reserved subdomains
+	if _, ok := core.ReservedSubdomains[endpoint]; ok {
+		return db.Endpoint{}, &UrlError{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("URL %s is reserved.", url),
+		}
+	}
+
+	// Check if the requested endpoint already exists
+	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
+	if err != nil {
+		slog.Error("Unable to check if endpoint already exists", "endpoint", endpoint, "username", username, "err", err)
+		return db.Endpoint{}, NewInternalServerError()
+	}
+	if exists {
+		return db.Endpoint{}, &UrlError{
+			Code:    http.StatusConflict,
+			Message: fmt.Sprintf("URL %s already exists", url),
+		}
+	}
+
 	user, err := s.userq.GetUserFromUsername(c, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
@@ -61,90 +93,49 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 				Message: fmt.Sprintf("No user found with username: %s", username),
 			}
 		}
+		slog.Error("Unable to get user from username", "username", username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
-
 	}
-
-	slog.Info("Create url request received", "endpoint", endpoint, "username", username)
 
 	// Check if user has exceeded number of urls that can be generated
 	urls, err := s.urlq.GetNonExpiredEndpointsOfUser(c, pgtype.Int8{Int64: user.ID, Valid: true})
 	if err != nil {
-		slog.Error("Unable to get non expired endpoints", "userId", user.ID, "err", err)
+		slog.Error("Unable to get non expired endpoints", "username", user.Username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 
-	switch user.Plan {
-	case db.PlanFree:
-		{
-			if len(urls) >= 1 {
-				return db.Endpoint{}, &UrlError{
-					Code:    http.StatusBadRequest,
-					Message: "Cannot generate more that one url for your current plan. Consider upgrading to Pro.",
-				}
-			}
-			return s.CreateFreeUrl(c, user.ID)
-		}
-	case db.PlanBasic, db.PlanPro:
-		{
-			url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
-
-			if user.Plan == db.PlanBasic && len(urls) >= NumUrlLimitPlanBasic {
-				return db.Endpoint{}, &UrlError{
-					Code:    http.StatusBadRequest,
-					Message: "Cannot generate more than one url for your current plan. Consider upgrading to Pro.",
-				}
-			}
-
-			if _, ok := core.ReservedDomains[endpoint]; ok {
-				return db.Endpoint{}, &UrlError{
-					Code:    http.StatusConflict,
-					Message: fmt.Sprintf("URL %s is reserved.", url),
-				}
-			}
-
-			// Check if the requested endpoint already exists
-			exists, err := s.urlq.CheckEndpointExists(c, endpoint)
-			if err != nil {
-				slog.Error("Unable to check if endpoint already exists", "err", err)
-				return db.Endpoint{}, NewInternalServerError()
-			}
-			if exists {
-				return db.Endpoint{}, &UrlError{
-					Code:    http.StatusConflict,
-					Message: fmt.Sprintf("URL %s already exists", url),
-				}
-			}
-
-			// endpoint is available
-			slog.Info("Creating new pro endpoint", "endpoint", endpoint, "username", username)
-
-			endpointRecord, err := s.urlq.InsertEndpoint(c, db.InsertEndpointParams{
-				Endpoint: endpoint,
-				UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
-				Plan:     user.Plan,
-
-				// Never expires
-				ExpiresAt: pgtype.Timestamp{
-					Time:             time.Now().Add(time.Hour * 24),
-					InfinityModifier: pgtype.Infinity,
-					Valid:            true,
-				},
-			})
-			if err != nil {
-				slog.Error("Unable to insert new url into db", "endpoint", endpoint, "user", user.ID, "err", err)
-				return db.Endpoint{}, NewInternalServerError()
-			}
-
-			endpointRecord.Endpoint = url
-			slog.Info("Endpoint created and inserted into db", "endpoint", endpoint, "user", user.ID)
-
-			return endpointRecord, nil
+	if (user.Plan == db.PlanBasic || user.Plan == db.PlanFree) && len(urls) >= DefaultLimitNumUrl {
+		return db.Endpoint{}, &UrlError{
+			Code:    http.StatusBadRequest,
+			Message: "Cannot generate more than one url for your current plan. Consider upgrading to Pro.",
 		}
 	}
 
-	slog.Error("Invalid user plan", "user", username, "plan", user.Plan)
-	return db.Endpoint{}, &UrlError{Code: http.StatusBadRequest, Message: "Invalid user plan."}
+	slog.Info("Create url request received", "endpoint", endpoint, "username", username, "plan", user.Plan)
+
+	endpointRecord, err := s.urlq.InsertEndpoint(c, db.InsertEndpointParams{
+		Endpoint: endpoint,
+		UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
+		Plan:     user.Plan,
+
+		// Never expires
+		ExpiresAt: pgtype.Timestamp{
+			Time:             time.Now().Add(time.Hour * 24),
+			InfinityModifier: pgtype.Infinity,
+			Valid:            true,
+		},
+	})
+	if err != nil {
+		slog.Error("Unable to insert new url into db", "endpoint", endpoint, "username", user.Username, "err", err)
+		return db.Endpoint{}, NewInternalServerError()
+	}
+
+	// Send complete url as response
+	endpointRecord.Endpoint = url
+
+	slog.Info("URL created", "url", url, "username", user.Username, "plan", user.Plan)
+
+	return endpointRecord, nil
 }
 
 func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookRequest) (db.Request, *UrlError) {
@@ -267,39 +258,6 @@ func (s *UrlService) CreateGuestUrl(c context.Context) (db.Endpoint, *UrlError) 
 
 	slog.Info("Random url generated", "url", randomUrl)
 	return record, nil
-}
-
-func (s *UrlService) CreateFreeUrl(c context.Context, userId int64) (db.Endpoint, *UrlError) {
-	slog.Info("Creating free url", "userId", userId)
-
-	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
-	if err != nil {
-		slog.Error("Unable to generate nano id", "err", err)
-		return db.Endpoint{}, NewInternalServerError()
-	}
-
-	freeUrl := fmt.Sprintf("https://%s.checkpost.io", randomEndpoint)
-
-	// Inserting into db assuming that no endpoint with that random url existed. We can add
-	// a check later on if needed.
-	endpointRecord, err := s.urlq.InsertFreeEndpoint(c, db.InsertFreeEndpointParams{
-		Endpoint: randomEndpoint,
-		UserID:   pgtype.Int8{Int64: userId, Valid: true},
-
-		// TODO: Fetch expiry from config
-		ExpiresAt: pgtype.Timestamp{
-			Time:             time.Now().Add(time.Hour * 24),
-			Valid:            true,
-			InfinityModifier: pgtype.Finite,
-		},
-	})
-	if err != nil {
-		slog.Error("Unable to insert free endpoint", "endpoint", freeUrl, "err", err)
-		return db.Endpoint{}, NewInternalServerError()
-	}
-
-	slog.Info("Free url generated", "url", freeUrl)
-	return endpointRecord, nil
 }
 
 func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint string, limit int32, offset int32) ([]Request, *UrlError) {

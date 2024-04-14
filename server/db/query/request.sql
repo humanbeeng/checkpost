@@ -1,26 +1,48 @@
 -- name: CreateNewRequest :one
-insert into
+INSERT INTO
     request (
-        user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, expires_at
+        user_id,
+        endpoint_id,
+        PATH,
+        response_id,
+        CONTENT,
+        METHOD,
+        source_ip,
+        content_size,
+        response_code,
+        headers,
+        query_params,
+        expires_at
     )
-values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-    )
-returning
+VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING
     *;
 
 -- name: GetEndpointHistory :many
-select *
-from request
-    left join endpoint on request.endpoint_id = endpoint.id
-where
+SELECT
+    *
+FROM
+    request
+    LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
+WHERE
     endpoint.endpoint = $1
-limit $2
-offset
+    AND request.is_deleted = FALSE
+LIMIT
+    $2
+OFFSET
     $3;
 
 -- name: GetRequestById :one
-select * from request where id = $1 limit 1;
+SELECT
+    *
+FROM
+    request
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+LIMIT
+    1;
 
 -- name: GetEndpointRequestCount :one
 SELECT
@@ -35,7 +57,9 @@ SELECT
             WHEN response_code != 200 THEN 1
         END
     ) AS failure_count
-FROM request r
-    LEFT JOIN endpoint e on r.endpoint_id = e.id
-where
-    endpoint = $1;
+FROM
+    request r
+    LEFT JOIN endpoint e ON r.endpoint_id = e.id
+WHERE
+    endpoint = $1
+    AND is_deleted = FALSE;
