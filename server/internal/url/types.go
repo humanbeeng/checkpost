@@ -44,9 +44,11 @@ type HookRequest struct {
 	Path         string              `json:"path"`
 	Headers      map[string][]string `json:"headers"`
 	Query        map[string]string   `json:"queries"`
+	Method       string              `json:"method"`
 	SourceIp     string              `json:"source_ip"`
 	Content      string              `json:"content"`
 	ContentSize  int                 `json:"content_size"`
 	ResponseCode int                 `json:"response_code"`
 	CreatedAt    time.Time           `json:"created_at"`
+	ExpiresAt    time.Time           `json:"expires_at"`
 }

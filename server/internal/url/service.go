@@ -10,7 +10,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/gofiber/fiber/v2"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/humanbeeng/checkpost/server/internal/user"
@@ -148,59 +147,40 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	return db.Endpoint{}, &UrlError{Code: http.StatusBadRequest, Message: "Invalid user plan."}
 }
 
-func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) {
+func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookRequest) (db.Request, *UrlError) {
 
-	endpoint := c.Params("endpoint", "")
-	if endpoint == "" {
-		return HookRequest{}, &UrlError{
-			Code:    http.StatusBadRequest,
-			Message: "Empty endpoint",
-		}
-	}
+	endpoint := hookReq.Endpoint
 
-	endpointRecord, err := s.urlq.GetEndpoint(c.Context(), endpoint)
+	endpointRecord, err := s.urlq.GetEndpoint(ctx, endpoint)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return HookRequest{}, &UrlError{
+			return db.Request{}, &UrlError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired.", endpoint),
 			}
 		}
-		return HookRequest{}, NewInternalServerError()
+		return db.Request{}, NewInternalServerError()
 	}
 
 	slog.Info("Storing request details", "endpoint", endpoint)
 
 	userId := endpointRecord.UserID
 
-	var req any
-	_ = c.BodyParser(&req)
-
-	strBytes, _ := json.Marshal(req)
-	body := string(strBytes)
-	// Note: key is string and value is []string
-	headers := c.GetReqHeaders()
-	ip := c.IP()
-	path := c.Params("path", "/")
-
-	method := c.Method()
-	query := c.Queries()
-
-	queryBytes, err := json.Marshal(query)
+	queryBytes, err := json.Marshal(hookReq.Query)
 	if err != nil {
 		slog.Error("Unable to marshal query params", "err", err)
-		return HookRequest{}, &UrlError{
+		return db.Request{}, &UrlError{
 			Code:    http.StatusBadRequest,
 			Message: "Unable to parse query params.",
 		}
 	}
 
-	headerBytes, err := json.Marshal(headers)
+	headerBytes, err := json.Marshal(hookReq.Headers)
 	if err != nil {
 		slog.Error("Unable to marshal headers", "err", err)
-		return HookRequest{}, &UrlError{
+		return db.Request{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Unable to parse headers.",
+			Message: "Unable to parse headers",
 		}
 	}
 
@@ -225,50 +205,38 @@ func (s *UrlService) StoreRequestDetails(c *fiber.Ctx) (HookRequest, *UrlError) 
 		}
 	default:
 		{
-			return HookRequest{}, &UrlError{
+			return db.Request{}, &UrlError{
 				Code:    http.StatusBadRequest,
 				Message: "Invalid user plan",
 			}
 		}
 	}
 
-	cr, err := s.urlq.CreateNewRequest(c.Context(), db.CreateNewRequestParams{
+	requestRecord, err := s.urlq.CreateNewRequest(ctx, db.CreateNewRequestParams{
 		UserID:     userId,
 		EndpointID: endpointRecord.ID,
-		Method:     db.HttpMethod(strings.ToLower(method)),
-		Content:    pgtype.Text{String: body, Valid: true},
-		Path:       path,
+		Method:     db.HttpMethod(strings.ToLower(hookReq.Method)),
+		Content:    pgtype.Text{String: hookReq.Content, Valid: true},
+		Path:       hookReq.Path,
 
 		// TODO: Fetch response from configured response
 		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
 		QueryParams:  queryBytes,
 		Headers:      headerBytes,
-		SourceIp:     ip,
+		SourceIp:     hookReq.SourceIp,
 
 		// TODO: Add request body limiting
-		ContentSize: int32(len(body)),
+		ContentSize: int32(len(hookReq.Content)),
 		ExpiresAt:   expiresAt,
 	})
 	if err != nil {
 		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
-		return HookRequest{}, NewInternalServerError()
-	}
-
-	hookReq := HookRequest{
-		Endpoint:     endpoint,
-		Path:         path,
-		Headers:      headers,
-		Query:        query,
-		SourceIp:     ip,
-		Content:      body,
-		ContentSize:  len(body),
-		ResponseCode: http.StatusOK,
-		CreatedAt:    cr.CreatedAt.Time,
+		return db.Request{}, NewInternalServerError()
 	}
 
 	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId.Int64)
 
-	return hookReq, nil
+	return requestRecord, nil
 }
 
 func (s *UrlService) CreateGuestUrl(c context.Context) (db.Endpoint, *UrlError) {
