@@ -28,11 +28,12 @@ const (
 	ProUser     string = "pro_user"
 	BasicUser   string = "basic_user"
 
-	GuestEndpoint   string = "guest_endpoint"
-	FreeEndpoint    string = "free_endpoint"
-	ProEndpoint     string = "pro_endpoint"
-	BasicEndpoint   string = "basic_endpoint"
-	UnknownEndpoint string = "unknown_endpoint"
+	GuestEndpoint    string = "guest_endpoint"
+	FreeEndpoint     string = "free_endpoint"
+	ProEndpoint      string = "pro_endpoint"
+	BasicEndpoint    string = "basic_endpoint"
+	UnknownEndpoint  string = "unknown_endpoint"
+	ExistingEndpoint string = "non_existing_endpoint"
 )
 
 func (us MockUserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
@@ -140,7 +141,7 @@ func (us MockUrlStore) InsertEndpoint(ctx context.Context, arg db.InsertEndpoint
 }
 
 func (us MockUrlStore) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
-	return (endpoint == ProEndpoint || endpoint == GuestEndpoint || endpoint == BasicEndpoint || endpoint == FreeEndpoint), nil
+	return endpoint == ExistingEndpoint, nil
 }
 
 // TODO: Remove this
@@ -162,7 +163,7 @@ func (us MockUrlStore) GetRequestById(ctx context.Context, reqId int64) (db.Requ
 }
 
 func TestCheckEndpointExists(t *testing.T) {
-	exists, err := service.CheckEndpointExists(context.Background(), ProEndpoint)
+	exists, err := service.CheckEndpointExists(context.Background(), ExistingEndpoint)
 	assert.Nil(t, err)
 	assert.True(t, exists)
 }
@@ -180,9 +181,9 @@ func TestCreateUrlForFreeUserWhenUserNotFound(t *testing.T) {
 func TestCreateUrlForFreeUser(t *testing.T) {
 	ctx := context.WithValue(context.TODO(), NumUrls, 0)
 	endpoint, err := service.CreateUrl(ctx, FreeUser, FreeEndpoint)
-
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
+	assert.Equal(t, "https://free_endpoint.checkpost.io", endpoint.Endpoint)
 }
 
 func TestCreateUrlForGuestUser(t *testing.T) {
@@ -192,29 +193,30 @@ func TestCreateUrlForGuestUser(t *testing.T) {
 }
 
 func TestCreateUrlWhenAlreadyExists(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), ProUser, ProEndpoint)
+	endpoint, err := service.CreateUrl(context.TODO(), ProUser, ExistingEndpoint)
 	assert.NotNil(t, err)
+	assert.Equal(t, http.StatusConflict, err.Code)
 	assert.Empty(t, endpoint)
 }
 
 func TestCreateUrlForProUser(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), ProUser, "createurl")
+	endpoint, err := service.CreateUrl(context.TODO(), ProUser, ProEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://createurl.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://pro_endpoint.checkpost.io", endpoint.Endpoint)
 }
 
 func TestCreateUrlForBasicUser(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), BasicUser, "createurl")
+	endpoint, err := service.CreateUrl(context.TODO(), BasicUser, BasicEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://createurl.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://basic_endpoint.checkpost.io", endpoint.Endpoint)
 }
 
 func TestCreateUrlWhenFreeUserHasExistingEndpoint(t *testing.T) {
 	ctx := context.WithValue(context.TODO(), NumUrls, 1)
 	url, err := service.CreateUrl(ctx, FreeUser, FreeEndpoint)
-	assert.Equal(t, err.Code, http.StatusBadRequest)
+	assert.Equal(t, http.StatusBadRequest, err.Code)
 	assert.Empty(t, url)
 }
 
@@ -222,7 +224,7 @@ func TestCreateUrlWhenBasicUserHasExistingEndpoint(t *testing.T) {
 	ctx := context.WithValue(context.TODO(), NumUrls, 1)
 	url, err := service.CreateUrl(ctx, BasicUser, FreeEndpoint)
 	assert.Error(t, err)
-	assert.Equal(t, err.Code, http.StatusBadRequest)
+	assert.Equal(t, http.StatusBadRequest, err.Code)
 	assert.Empty(t, url)
 }
 
