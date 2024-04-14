@@ -183,8 +183,6 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	slog.Info("Generate url request received", "username", username)
-
 	endpoint, err := uc.service.CreateUrl(c.Context(), username, req.Endpoint)
 	if err != nil {
 		return &fiber.Error{
