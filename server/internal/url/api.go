@@ -2,8 +2,10 @@ package url
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
+	"net/http"
 	"strconv"
 	"sync"
 	"time"
@@ -28,25 +30,7 @@ func (uc *UrlController) AddRequestListener(endpoint string, conn *websocket.Con
 		uc.conns.Store(endpoint, c)
 	}
 
-	slog.Info("Ws connection added", "endpoint", endpoint)
-}
-
-func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
-	slog.Info("Broadcasting JSON", "endpoint", endpoint)
-	connAny, ok := uc.conns.Load(endpoint)
-	if !ok {
-		slog.Info("No active listeners found", "endpoint", endpoint)
-		return
-	}
-
-	conns := connAny.([]*websocket.Conn)
-
-	for _, c := range conns {
-		err := c.WriteJSON(data)
-		if err != nil {
-			slog.Error("Unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
-		}
-	}
+	slog.Info("Listener connection added", "endpoint", endpoint)
 }
 
 func NewUrlController(service *UrlService) *UrlController {
@@ -61,7 +45,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, bl, pl, 
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
 	urlGroup.Get("/generate/random", genRandLim, uc.GenerateGuestUrlHandler)
 
-	urlGroup.All("/hook/:endpoint/:path?", gl, fl, bl, pl, uc.HookHandler)
+	urlGroup.All("/hook/:endpoint/+", gl, fl, bl, pl, uc.HookHandler)
 
 	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
 	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
@@ -83,15 +67,26 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, bl, pl, 
 }
 
 func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
-	endpoint := c.Params("endpoint")
+	endpoint := c.Params("endpoint", "")
+	if endpoint == "" {
+		slog.Info("No endpoint found", "endpoint", endpoint)
+		c.WriteJSON(fiber.Error{
+			Code:    fiber.StatusNotFound,
+			Message: "URL has either expired or not yet created.",
+		})
+		c.Close()
+	}
+
 	// Check if endpoint exists
 	// TODO: Revisit this context
-
 	exists, err := uc.service.urlq.CheckEndpointExists(context.TODO(), endpoint)
 	if !exists {
 		slog.Info("No endpoint found", "endpoint", endpoint)
-		// TODO: Format this into response
-		c.WriteMessage(websocket.TextMessage, []byte("Endpoint does not exist or has expired"))
+
+		c.WriteJSON(fiber.Error{
+			Code:    fiber.StatusNotFound,
+			Message: "URL has either expired or not yet created.",
+		})
 		c.Close()
 		return
 	}
@@ -212,16 +207,53 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 
 	// Print the Content-Type
 	fmt.Println("Content-Type:", contentType)
-	req, err := uc.service.StoreRequestDetails(c)
-	if err != nil {
+
+	endpoint := c.Params("endpoint", "")
+
+	if endpoint == "" {
 		return &fiber.Error{
-			Code:    err.Code,
-			Message: err.Message,
+			Code:    http.StatusNotFound,
+			Message: "URL has either expired or not created",
 		}
 	}
 
-	endpoint := c.Params("endpoint", "")
-	uc.BroadcastJSON(endpoint, req)
+	var req any
+	_ = c.BodyParser(&req)
+
+	strBytes, _ := json.Marshal(req)
+	body := string(strBytes)
+	// Note: key is string and value is []string
+	headers := c.GetReqHeaders()
+	ip := c.IP()
+	path := c.Params("+", "/")
+
+	method := c.Method()
+	query := c.Queries()
+
+	hookReq := HookRequest{
+		Endpoint:     endpoint,
+		Path:         path,
+		Headers:      headers,
+		Query:        query,
+		SourceIp:     ip,
+		Method:       method,
+		Content:      body,
+		ContentSize:  len(body),
+		ResponseCode: http.StatusOK,
+	}
+
+	requestRecord, urlErr := uc.service.StoreRequestDetails(c.Context(), hookReq)
+	if urlErr != nil {
+		return &fiber.Error{
+			Code:    urlErr.Code,
+			Message: urlErr.Message,
+		}
+	}
+
+	hookReq.ExpiresAt = requestRecord.ExpiresAt.Time
+	hookReq.CreatedAt = requestRecord.CreatedAt.Time
+
+	uc.BroadcastJSON(endpoint, hookReq)
 
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -304,4 +336,21 @@ func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
 		})
 	}
 
+}
+func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
+	slog.Info("Broadcasting JSON", "endpoint", endpoint)
+	connAny, ok := uc.conns.Load(endpoint)
+	if !ok {
+		slog.Info("No active listeners found", "endpoint", endpoint)
+		return
+	}
+
+	conns := connAny.([]*websocket.Conn)
+
+	for _, c := range conns {
+		err := c.WriteJSON(data)
+		if err != nil {
+			slog.Error("Unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
+		}
+	}
 }
