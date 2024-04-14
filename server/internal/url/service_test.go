@@ -145,7 +145,16 @@ func (us MockUrlStore) CheckEndpointExists(ctx context.Context, endpoint string)
 
 // TODO: Remove this
 func (us MockUrlStore) CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error) {
-	return db.Request{}, nil
+	return db.Request{
+		Method:       params.Method,
+		QueryParams:  params.QueryParams,
+		Headers:      params.Headers,
+		Content:      params.Content,
+		ContentSize:  params.ContentSize,
+		Path:         params.Path,
+		ResponseCode: params.ResponseCode,
+		SourceIp:     params.SourceIp,
+	}, nil
 }
 
 func (us MockUrlStore) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
@@ -243,4 +252,57 @@ func TestGetEndpointStatsUnknownUrl(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, http.StatusNotFound, err.Code)
 	assert.Empty(t, stats)
+}
+
+func TestStoreRequestDetails(t *testing.T) {
+	hookReq := HookRequest{
+		Endpoint: GuestEndpoint,
+		Path:     "/",
+		Method:   string(db.HttpMethodPost),
+		Headers: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+		Query: map[string]string{
+			"hello": "there",
+		},
+		SourceIp:     "17.1.1.1",
+		Content:      "{\"message\":\"hello world\"}",
+		ContentSize:  25,
+		ResponseCode: 200,
+	}
+	req, err := service.StoreRequestDetails(context.TODO(), hookReq)
+	assert.Nil(t, err)
+	assert.NotEmpty(t, req)
+
+	assert.Equal(t, pgtype.Text{String: hookReq.Content, Valid: true}, req.Content)
+	assert.Equal(t, hookReq.Path, req.Path)
+	assert.Equal(t, int32(hookReq.ContentSize), req.ContentSize)
+	assert.Equal(t, hookReq.Method, string(req.Method))
+}
+
+func TestStoreRequestDetailsWhenEndpointNotFound(t *testing.T) {
+	hookReq := HookRequest{
+		Endpoint: UnknownEndpoint,
+		Path:     "/",
+		Method:   string(db.HttpMethodPost),
+		Headers: map[string][]string{
+			"Content-Type": {"application/json"},
+		},
+		Query: map[string]string{
+			"hello": "there",
+		},
+		SourceIp:     "17.1.1.1",
+		Content:      "{\"message\":\"hello world\"}",
+		ContentSize:  25,
+		ResponseCode: 200,
+	}
+	req, err := service.StoreRequestDetails(context.TODO(), hookReq)
+	assert.NotNil(t, err)
+	assert.Equal(t, err.Code, http.StatusNotFound)
+	assert.Empty(t, req)
+}
+
+// TODO: Implement this
+func TestGetEndpointRequestHistory(t *testing.T) {
+
 }
