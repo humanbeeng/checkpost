@@ -324,16 +324,15 @@ func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
 		return c.JSON(CheckEndpointExistsResponse{
 			Endpoint: endpoint,
 			Exists:   exists,
-			Message:  "Its available 🐱. Sign up and make it yours!",
-		})
-	} else {
-		return c.JSON(CheckEndpointExistsResponse{
-			Endpoint: endpoint,
-			Exists:   exists,
 			Message:  "That endpoint is already taken 😿. Try something else. Maybe your workplace name?",
 		})
 	}
 
+	return c.JSON(CheckEndpointExistsResponse{
+		Endpoint: endpoint,
+		Exists:   exists,
+		Message:  "Its available 🐱. Sign up and make it yours!",
+	})
 }
 func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
 	slog.Info("Broadcasting JSON", "endpoint", endpoint)
