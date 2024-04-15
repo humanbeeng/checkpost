@@ -47,10 +47,10 @@ const (
 
 func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (db.Endpoint, *UrlError) {
 	// Check subdomain length
-	if len(endpoint) < 4 {
+	if len(endpoint) < 4 || len(endpoint) > 10 {
 		return db.Endpoint{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Subdomain should be atleast 4 characters.",
+			Message: "Subdomain should be 4 to 10 characters.",
 		}
 	}
 
