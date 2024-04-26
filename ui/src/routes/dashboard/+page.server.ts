@@ -1,14 +1,9 @@
-import { error } from "@sveltejs/kit";
-import type { PageServerLoad } from "../$types";
+import { redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from '../$types';
 
-export const load: PageServerLoad = async ({ request, fetch }) => {
-	const res = await fetch('http://localhost:3000/admin/dashboard')
-
-	if (res.ok) {
-		const data = await res.json()
-		console.log(data)
-	} else {
-		error(400)
+export const load: PageServerLoad = async ({ cookies }) => {
+	console.log(cookies.get('token'));
+	if (!cookies.get('token')) {
+		redirect(301, '/');
 	}
-
-}
+};
