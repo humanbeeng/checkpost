@@ -21,6 +21,7 @@ type Querier interface {
 	GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error)
 	GetRequestById(ctx context.Context, id int64) (Request, error)
 	GetUser(ctx context.Context, id int64) (User, error)
+	GetUserEndpoints(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error)
 	GetUserFromEmail(ctx context.Context, email string) (User, error)
 	GetUserFromUsername(ctx context.Context, username string) (User, error)
 	InsertEndpoint(ctx context.Context, arg InsertEndpointParams) (Endpoint, error)

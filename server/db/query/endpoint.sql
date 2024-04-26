@@ -1,49 +1,68 @@
 -- name: GetEndpoint :one
-select *
-from "endpoint"
-where
+SELECT
+    *
+FROM
+    "endpoint"
+WHERE
     endpoint = $1
-    and is_deleted = false
-limit 1;
+    AND is_deleted = FALSE
+LIMIT
+    1;
+
+-- name: GetUserEndpoints :many
+SELECT
+    *
+FROM
+    "endpoint"
+WHERE
+    user_id = $1
+    AND is_deleted = FALSE;
 
 -- name: CheckEndpointExists :one
-select exists (
-        select *
-        from endpoint
-        where
+SELECT
+    EXISTS (
+        SELECT
+            *
+        FROM
+            endpoint
+        WHERE
             endpoint = $1
-            and expires_at > now()
-            and is_deleted = false
-        limit 1
+            AND expires_at > NOW()
+            AND is_deleted = FALSE
+        LIMIT
+            1
     );
 
 -- name: GetNonExpiredEndpointsOfUser :many
-select *
-from "endpoint"
-where
+SELECT
+    *
+FROM
+    "endpoint"
+WHERE
     user_id = $1
-    and expires_at > now()
-    and is_deleted = false;
+    AND expires_at > NOW()
+    AND is_deleted = FALSE;
 
 -- name: InsertEndpoint :one
-insert into
-    endpoint (
-        endpoint, user_id, plan, expires_at
-    )
-values ($1, $2, $3, $4)
-returning
+INSERT INTO
+    endpoint (endpoint, user_id, plan, expires_at)
+VALUES
+    ($1, $2, $3, $4)
+RETURNING
     *;
 
 -- name: InsertGuestEndpoint :one
-insert into
+INSERT INTO
     endpoint (endpoint, expires_at, plan)
-values ($1, $2, 'guest')
-returning
+VALUES
+    ($1, $2, 'guest')
+RETURNING
     *;
 
 -- name: InsertFreeEndpoint :one
-insert into
+INSERT INTO
     endpoint (endpoint, user_id, plan, expires_at)
-values ($1, $2, 'free', $3)
-returning
+VALUES
+    ($1, $2, 'free', $3)
+RETURNING
     *;

@@ -14,6 +14,7 @@ type EndpointStats struct {
 	ExpiresAt    string `json:"expires_at"`
 	Plan         string `json:"plan"`
 }
+
 type UrlError struct {
 	Code    int
 	Message string
@@ -51,4 +52,10 @@ type HookRequest struct {
 	ResponseCode int                 `json:"response_code"`
 	CreatedAt    time.Time           `json:"created_at"`
 	ExpiresAt    time.Time           `json:"expires_at"`
+}
+
+type Endpoint struct {
+	Endpoint  string    `json:"endpoint"`
+	ExpiresAt time.Time `json:"expires_at"`
+	Plan      string    `json:"plan"`
 }

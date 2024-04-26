@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
 // TODO: Add better error messages
@@ -39,6 +40,8 @@ func NewUrlController(service *UrlService) *UrlController {
 
 func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, bl, pl, genLim, genRandLim, endpointCheckLim, cache fiber.Handler) {
 	urlGroup := app.Group("/url")
+
+	urlGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
 
 	urlGroup.Get("/exists/:endpoint", endpointCheckLim, cache, uc.CheckEndpointExistsHandler)
 
@@ -122,7 +125,6 @@ func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 		}
 	}
 	return c.JSON(stats)
-
 }
 
 // TODO: Implement this
@@ -174,7 +176,10 @@ func (uc *UrlController) GenerateGuestUrlHandler(c *fiber.Ctx) error {
 func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 	var req GenerateUrlRequest
 
+	fmt.Println(string(c.Body()))
+
 	if err := c.BodyParser(&req); err != nil {
+		slog.Error("Malformed request payload", "err", err)
 		return fiber.ErrBadRequest
 	}
 
@@ -256,6 +261,32 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 	return c.SendStatus(fiber.StatusOK)
 }
 
+type GetUserEndpointsResponse struct {
+	Endpoints []Endpoint `json:"endpoints"`
+}
+
+func (uc *UrlController) GetUserEndpointsHandler(c *fiber.Ctx) error {
+	userId, ok := c.Locals("userId").(int64)
+	if !ok {
+		return fiber.ErrBadRequest
+	}
+	slog.Info("Requesting user endpoints", "userId", userId)
+
+	endpoints, err := uc.service.GetUserEndpoints(c.Context(), userId)
+	if err != nil {
+		return &fiber.Error{
+			Code:    err.Code,
+			Message: err.Message,
+		}
+	}
+
+	res := GetUserEndpointsResponse{
+		Endpoints: endpoints,
+	}
+
+	return c.JSON(res)
+}
+
 type GetEndpointsHistoryResponse struct {
 	Requests []Request `json:"requests"`
 }
@@ -305,11 +336,20 @@ func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
 	if endpoint == "" {
 		return fiber.ErrBadRequest
 	}
-	if len(endpoint) < 4 {
+
+	if len(endpoint) < 4 || len(endpoint) > 10 {
 		return &fiber.Error{
-			Code:    fiber.StatusBadRequest,
-			Message: "Must be atleast 4 characters",
+			Code:    http.StatusBadRequest,
+			Message: "Subdomain should be 4 to 10 characters.",
 		}
+	}
+
+	if _, ok := core.ReservedSubdomains[endpoint]; ok {
+		return c.JSON(CheckEndpointExistsResponse{
+			Endpoint: endpoint,
+			Exists:   true,
+			Message:  fmt.Sprintf("Subdomain %s is reserved.", endpoint),
+		})
 	}
 
 	exists, err := uc.service.CheckEndpointExists(c.Context(), endpoint)
@@ -324,7 +364,7 @@ func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
 		return c.JSON(CheckEndpointExistsResponse{
 			Endpoint: endpoint,
 			Exists:   exists,
-			Message:  "That endpoint is already taken 😿. Try something else. Maybe your workplace name?",
+			Message:  "That subdomain is already taken 😿. Try something else?",
 		})
 	}
 
@@ -334,6 +374,7 @@ func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
 		Message:  "Its available 🐱. Sign up and make it yours!",
 	})
 }
+
 func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
 	slog.Info("Broadcasting JSON", "endpoint", endpoint)
 	connAny, ok := uc.conns.Load(endpoint)

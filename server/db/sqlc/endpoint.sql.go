@@ -12,14 +12,18 @@ import (
 )
 
 const checkEndpointExists = `-- name: CheckEndpointExists :one
-select exists (
-        select id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-        from endpoint
-        where
+SELECT
+    EXISTS (
+        SELECT
+            id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+        FROM
+            endpoint
+        WHERE
             endpoint = $1
-            and expires_at > now()
-            and is_deleted = false
-        limit 1
+            AND expires_at > NOW()
+            AND is_deleted = FALSE
+        LIMIT
+            1
     )
 `
 
@@ -31,12 +35,15 @@ func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (boo
 }
 
 const getEndpoint = `-- name: GetEndpoint :one
-select id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-from "endpoint"
-where
+SELECT
+    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+FROM
+    "endpoint"
+WHERE
     endpoint = $1
-    and is_deleted = false
-limit 1
+    AND is_deleted = FALSE
+LIMIT
+    1
 `
 
 func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error) {
@@ -55,12 +62,14 @@ func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, e
 }
 
 const getNonExpiredEndpointsOfUser = `-- name: GetNonExpiredEndpointsOfUser :many
-select id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-from "endpoint"
-where
+SELECT
+    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+FROM
+    "endpoint"
+WHERE
     user_id = $1
-    and expires_at > now()
-    and is_deleted = false
+    AND expires_at > NOW()
+    AND is_deleted = FALSE
 `
 
 func (q *Queries) GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error) {
@@ -91,13 +100,50 @@ func (q *Queries) GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtyp
 	return items, nil
 }
 
+const getUserEndpoints = `-- name: GetUserEndpoints :many
+SELECT
+    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
+FROM
+    "endpoint"
+WHERE
+    user_id = $1
+    AND is_deleted = FALSE
+`
+
+func (q *Queries) GetUserEndpoints(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error) {
+	rows, err := q.db.Query(ctx, getUserEndpoints, userID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	items := []Endpoint{}
+	for rows.Next() {
+		var i Endpoint
+		if err := rows.Scan(
+			&i.ID,
+			&i.Endpoint,
+			&i.UserID,
+			&i.Plan,
+			&i.CreatedAt,
+			&i.ExpiresAt,
+			&i.IsDeleted,
+		); err != nil {
+			return nil, err
+		}
+		items = append(items, i)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+	return items, nil
+}
+
 const insertEndpoint = `-- name: InsertEndpoint :one
-insert into
-    endpoint (
-        endpoint, user_id, plan, expires_at
-    )
-values ($1, $2, $3, $4)
-returning
+INSERT INTO
+    endpoint (endpoint, user_id, plan, expires_at)
+VALUES
+    ($1, $2, $3, $4)
+RETURNING
     id, endpoint, user_id, plan, created_at, expires_at, is_deleted
 `
 
@@ -129,10 +175,11 @@ func (q *Queries) InsertEndpoint(ctx context.Context, arg InsertEndpointParams) 
 }
 
 const insertFreeEndpoint = `-- name: InsertFreeEndpoint :one
-insert into
+INSERT INTO
     endpoint (endpoint, user_id, plan, expires_at)
-values ($1, $2, 'free', $3)
-returning
+VALUES
+    ($1, $2, 'free', $3)
+RETURNING
     id, endpoint, user_id, plan, created_at, expires_at, is_deleted
 `
 
@@ -158,10 +205,11 @@ func (q *Queries) InsertFreeEndpoint(ctx context.Context, arg InsertFreeEndpoint
 }
 
 const insertGuestEndpoint = `-- name: InsertGuestEndpoint :one
-insert into
+INSERT INTO
     endpoint (endpoint, expires_at, plan)
-values ($1, $2, 'guest')
-returning
+VALUES
+    ($1, $2, 'guest')
+RETURNING
     id, endpoint, user_id, plan, created_at, expires_at, is_deleted
 `
 
