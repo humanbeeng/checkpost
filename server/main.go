@@ -89,6 +89,9 @@ func main() {
 	cachemw := middleware.NewCacheMiddleware()
 	endpointCheckLim := middleware.NewEndpointCheckLimiter()
 
+	userc := user.NewUserController(userStore)
+	userc.RegisterRoutes(app, authmw)
+
 	adc.RegisterRoutes(app, &pmw)
 	ac.RegisterRoutes(app)
 	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, genLim, genRandLim, endpointCheckLim, cachemw)
