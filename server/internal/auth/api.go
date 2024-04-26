@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -119,7 +118,6 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	}
 	pasetoToken, err := a.pasetoVerifier.CreateToken(args, time.Hour*24*30)
 	if err != nil {
-		fmt.Println("err", err)
 		return err
 	}
 
