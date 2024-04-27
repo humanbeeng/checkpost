@@ -2,6 +2,7 @@ package url
 
 import (
 	"context"
+	"strings"
 
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/jackc/pgx/v5/pgtype"
@@ -60,6 +61,7 @@ func (us UrlStore) GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgty
 }
 
 func (us UrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
+	params.Endpoint = strings.ToLower(params.Endpoint)
 	return us.q.InsertFreeEndpoint(ctx, params)
 }
 
@@ -68,6 +70,7 @@ func (us UrlStore) InsertGuestEndpoint(ctx context.Context, params db.InsertGues
 }
 
 func (us UrlStore) InsertEndpoint(ctx context.Context, params db.InsertEndpointParams) (db.Endpoint, error) {
+	params.Endpoint = strings.ToLower(params.Endpoint)
 	return us.q.InsertEndpoint(ctx, params)
 }
 
