@@ -5,6 +5,7 @@
 	import * as Card from '$lib/components/ui/card/index.js';
 	import Header from '@/components/Header.svelte';
 
+	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { debounce } from '@/debounce';
 	import { Reload } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from './types';
@@ -28,7 +29,7 @@
 			return;
 		}
 
-		const res = await fetch(`http://api.checkpost.local:3000/url/exists/${subdomain}`);
+		const res = await fetch(`${PUBLIC_SERVER_URL}/url/exists/${subdomain}`);
 
 		switch (res.status) {
 			case 200: {
