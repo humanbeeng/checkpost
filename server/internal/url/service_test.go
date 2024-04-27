@@ -71,6 +71,10 @@ var service = UrlService{
 	userq: userStore,
 }
 
+func (us MockUrlStore) GetUserEndpoints(ctx context.Context, userId int64) ([]db.Endpoint, error) {
+	return []db.Endpoint{}, nil
+}
+
 func (us MockUrlStore) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
 	if endpoint == BasicEndpoint || endpoint == ProEndpoint || endpoint == FreeEndpoint || endpoint == GuestEndpoint {
 		return db.GetEndpointRequestCountRow{
@@ -230,7 +234,6 @@ func TestCreateUrlWhenBasicUserHasExistingEndpoint(t *testing.T) {
 
 func TestCreateUrlForReservedDomains(t *testing.T) {
 	url, err := service.CreateUrl(context.TODO(), ProUser, "dash")
-	fmt.Println(err)
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusConflict, err.Code)
 	assert.Empty(t, url)

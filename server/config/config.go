@@ -1,7 +1,6 @@
 package config
 
 import (
-	"fmt"
 	"log/slog"
 	"os"
 	"strings"
@@ -41,10 +40,8 @@ func GetAppConfig() (*AppConfig, error) {
 	k := koanf.New(".")
 	if err := k.Load(file.Provider("config.toml"), toml.Parser()); os.IsNotExist(err) {
 		if err := k.Load(env.Provider(CheckpostConfigPrefix, ".", func(s string) string {
-			fmt.Println(s)
 			str := strings.Replace(strings.ToLower(
 				strings.TrimPrefix(s, CheckpostConfigPrefix)), "_", ".", -1)
-			fmt.Println(str)
 			return str
 		}), nil); err != nil {
 			slog.Error("Unable to load config", "err", err)
@@ -56,7 +53,7 @@ func GetAppConfig() (*AppConfig, error) {
 
 	err := k.Unmarshal("", &appConfig)
 	if err != nil {
-		fmt.Println("unmarshal err", err)
+		slog.Error("Unable to unmarshal config", "err", err)
 		return nil, err
 	}
 	return &appConfig, nil

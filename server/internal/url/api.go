@@ -176,8 +176,6 @@ func (uc *UrlController) GenerateGuestUrlHandler(c *fiber.Ctx) error {
 func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 	var req GenerateUrlRequest
 
-	fmt.Println(string(c.Body()))
-
 	if err := c.BodyParser(&req); err != nil {
 		slog.Error("Malformed request payload", "err", err)
 		return fiber.ErrBadRequest

@@ -96,10 +96,11 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			user, err = a.q.CreateUser(c.Context(), db.CreateUserParams{
-				Name:     githubUser.Name,
-				Username: githubUser.Username,
-				Plan:     db.PlanFree,
-				Email:    githubUser.Email,
+				Name:      githubUser.Name,
+				AvatarUrl: githubUser.AvatarUrl,
+				Username:  githubUser.Username,
+				Plan:      db.PlanFree,
+				Email:     githubUser.Email,
 			})
 			if err != nil {
 				slog.Error("Unable to create new user", "err", err)

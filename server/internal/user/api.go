@@ -16,17 +16,19 @@ func NewUserController(store *UserStore) *UserController {
 	}
 }
 
-func (uc *UserController) RegisterRoutes(app *fiber.App, authmw fiber.Handler) {
+func (uc *UserController) RegisterRoutes(app *fiber.App, defaultLim, authmw fiber.Handler) {
 	urlGroup := app.Group("/user")
 
-	urlGroup.Get("/", authmw, uc.GetUserDetailsHandler)
+	urlGroup.Get("/", defaultLim, authmw, uc.GetUserDetailsHandler)
 }
 
 type UserDetailsResponse struct {
-	Name     string `json:"name"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-	Plan     string `json:"plan"`
+	Id        int64  `json:"id"`
+	Name      string `json:"name"`
+	AvatarUrl string `json:"avatar_url"`
+	Username  string `json:"username"`
+	Email     string `json:"email"`
+	Plan      string `json:"plan"`
 }
 
 func (uc *UserController) GetUserDetailsHandler(c *fiber.Ctx) error {
@@ -39,10 +41,12 @@ func (uc *UserController) GetUserDetailsHandler(c *fiber.Ctx) error {
 	}
 
 	res := UserDetailsResponse{
-		Name:     user.Name,
-		Username: user.Username,
-		Email:    user.Email,
-		Plan:     string(user.Plan),
+		Id:        user.ID,
+		Name:      user.Name,
+		Username:  user.Username,
+		Email:     user.Email,
+		Plan:      string(user.Plan),
+		AvatarUrl: user.AvatarUrl,
 	}
 
 	return c.JSON(res)
