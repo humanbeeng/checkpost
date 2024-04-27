@@ -3,6 +3,7 @@
 	import Reload from 'svelte-radix/Reload.svelte';
 
 	import { enhance } from '$app/forms';
+	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { Button } from '@/components/ui/button';
 	import { debounce } from '@/debounce';
 	import { Link1, LinkBreak2 } from 'svelte-radix';
@@ -30,7 +31,7 @@
 			return;
 		}
 
-		const res = await fetch(`http://api.checkpost.local:3000/url/exists/${subdomain}`);
+		const res = await fetch(`${PUBLIC_SERVER_URL}/url/exists/${subdomain}`);
 
 		switch (res.status) {
 			case 200: {
