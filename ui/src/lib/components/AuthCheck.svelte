@@ -7,3 +7,4 @@
 {:else}
 	<p>Not signed in</p>
 {/if}
+userStore

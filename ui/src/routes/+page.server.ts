@@ -1,5 +1,8 @@
-import { fail, redirect, type Actions } from '@sveltejs/kit';
+import { PUBLIC_SERVER_URL } from '$env/static/public';
+import type { User } from '@/types';
+import { error, fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
+import type { UserEndpointsResponse } from './onboarding/types';
 
 type EndpointExistsResponse = {
 	endpoint: string;
@@ -7,10 +10,50 @@ type EndpointExistsResponse = {
 	message: string;
 };
 
-export const load: PageServerLoad = async ({ cookies }) => {
+export const load: PageServerLoad = async ({ cookies, fetch }) => {
+	// TODO: Add error returns
 	let cookie = cookies.get('token');
 	if (cookie) {
-		redirect(301, '/dashboard');
+		const fetchUser = async () => {
+			const res = await fetch(`${PUBLIC_SERVER_URL}/user`).catch((err) => {
+				throw error(500);
+			});
+
+			if (!res.ok) {
+				throw error(res.status, { message: await res.text() });
+			}
+
+			const user = (await res.json().catch((err) => {
+				console.log('Unable to parse user response', err);
+				throw error(500, { message: 'Something went wrong' });
+			})) as User;
+
+			return user;
+		};
+
+		const fetchUserUrls = async () => {
+			const res = await fetch(`${PUBLIC_SERVER_URL}/url`).catch((err) => {
+				throw error(500);
+			});
+
+			if (!res.ok) {
+				throw error(res.status, { message: await res.text() });
+			}
+
+			const urls = (await res.json().catch((err) => {
+				console.log('Unable to parse user urls response', err);
+				throw error(500, { message: 'Something went wrong' });
+			})) as UserEndpointsResponse;
+
+			return urls;
+		};
+
+		const user = await fetchUser();
+		const urls = await fetchUserUrls();
+
+		if (user && urls && urls.endpoints) {
+			return redirect(301, '/waitlist');
+		}
 	}
 };
 

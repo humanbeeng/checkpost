@@ -4,13 +4,14 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import * as Card from '$lib/components/ui/card/index.js';
 	import Header from '@/components/Header.svelte';
+
 	import { debounce } from '@/debounce';
 	import { Reload } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from './types';
 
 	let error: string | null;
-	let data: EndpointExistsResponse | null;
-	let subdomain: string = '';
+	let existsRes: EndpointExistsResponse | null;
+	let subdomain = '';
 
 	let state: State = 'empty';
 
@@ -22,16 +23,16 @@
 		}
 
 		// Call check api
-		if (subdomain.toString().length < 4 || subdomain.toString().length > 10) {
+		if (subdomain.length < 4 || subdomain.length > 10) {
 			state = 'error';
-			console.log('failing');
+			return;
 		}
 
 		const res = await fetch(`http://api.checkpost.local:3000/url/exists/${subdomain}`);
 
 		switch (res.status) {
 			case 200: {
-				data = (await res.json()) as EndpointExistsResponse;
+				existsRes = (await res.json()) as EndpointExistsResponse;
 				error = null;
 				state = 'success';
 				break;
@@ -39,8 +40,7 @@
 			case 400: {
 				error = await res.text();
 				state = 'error';
-
-				data = null;
+				existsRes = null;
 				break;
 			}
 		}
@@ -65,11 +65,8 @@
 	};
 </script>
 
-<Header>
+<Header user={null}>
 	<a href="/pricing" class="hover:underline">Pricing</a>
-	<a href="/about" class="hidden md:flex hover:underline">About</a>
-	<a href="/admin/dashboard" class="hover:underline">Dashboard</a>
-	<Button class="h-8 hidden shadow-sm md:flex" href="/auth/github" variant="default">Login</Button>
 </Header>
 
 <div class=" w-full min-h-full">
@@ -129,11 +126,11 @@
 								Claim Your Unique Subdomain - For You or Your Team, Absolutely Free
 							</h3>
 						{/if}
-						{#if state === 'success' && data}
-							{#if !data.exists}
-								<p class="text-green-900 py-2">{data?.message}</p>
+						{#if state === 'success' && existsRes}
+							{#if !existsRes.exists}
+								<p class="text-green-900 py-2">{existsRes?.message}</p>
 							{:else}
-								<p class="text-red-500 py-2">{data?.message}</p>
+								<p class="text-red-500 py-2">{existsRes?.message}</p>
 							{/if}
 						{/if}
 						{#if state === 'error'}

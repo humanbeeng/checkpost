@@ -11,11 +11,13 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 
 	// TODO: Handle error case
 
-	const res = await fetch(endpoint);
+	const res = await fetch(endpoint).catch((err) => {
+		console.log('Unable to hit auth callback', err);
+		error(500, { message: 'Something went wrong while callback' });
+	});
 
 	if (res.ok) {
 		const response = await res.json();
-		console.log('response', response);
 		// TODO: Increase security
 		cookies.set('token', response.token, {
 			path: '/',
@@ -24,17 +26,6 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 			maxAge: 60 * 60 * 24 * 1000,
 			secure: process.env.NODE_ENV === 'production'
 		});
-
-		// // TODO: Increase security
-		// cookies.set('token', response.token, {
-		// 	path: '/',
-		// 	httpOnly: true,
-		// 	domain: 'localhost:3000',
-		// 	// TODO: Fetch expiry from response
-		// 	sameSite: 'none',
-		// 	secure: process.env.NODE_ENV === 'production',
-		// 	maxAge: 60 * 60 * 24 * 1000
-		// });
 
 		redirect(302, '/onboarding');
 	} else {

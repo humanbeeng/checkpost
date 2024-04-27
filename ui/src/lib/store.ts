@@ -1,13 +1,6 @@
 import { writable } from 'svelte/store';
-
-type User = {
-	name: string;
-	email: string;
-	plan: Plan;
-};
+import type { User } from './types';
 
 type Plan = 'guest' | 'free' | 'hobby' | 'pro';
 
 export const user = writable<User | null>(null);
-
-export const counter = writable(10);

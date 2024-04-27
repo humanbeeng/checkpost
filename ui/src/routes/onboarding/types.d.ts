@@ -1,22 +1,15 @@
-export type User = {
-	id: number;
-	name: string;
-	email: string;
-	plan: Plan;
-};
-
-export type Plan = 'free' | 'guest' | 'hobby' | 'pro';
+import type { Endpoint } from '@/types';
 
 export type GenerateUrlRequest = {
 	endpoint: string;
 };
 
-export type UserEndpointsResponse = {
-	endpoints: Endpoint[];
+export type GenerateUrlResponse = {
+	url: string;
+	expires_at: string;
+	plan: Plan;
 };
 
-export type Endpoint = {
-	endpoint: string;
-	plan: Plan;
-	expiresAt: string;
+export type UserEndpointsResponse = {
+	endpoints: Endpoint[];
 };

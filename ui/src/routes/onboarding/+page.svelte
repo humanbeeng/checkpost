@@ -1,24 +1,17 @@
 <script lang="ts">
-	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import Header from '@/components/Header.svelte';
 	import Reload from 'svelte-radix/Reload.svelte';
 
 	import { enhance } from '$app/forms';
-	import { user } from '$lib/store';
-	import * as Avatar from '@/components/ui/avatar';
 	import { Button } from '@/components/ui/button';
 	import { debounce } from '@/debounce';
 	import { Link1, LinkBreak2 } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from '../types';
-	import type { User } from './types';
 
-	export let data: User;
-	if (data) {
-		user.set(data);
-	}
-	// export let form;
+	export let form;
+	export let data;
 
-	let error: string | null;
+	let subdomainError: string | null;
 	let endpointExistsResponse: EndpointExistsResponse | null;
 	let subdomain: string = '';
 
@@ -42,12 +35,12 @@
 		switch (res.status) {
 			case 200: {
 				endpointExistsResponse = (await res.json()) as EndpointExistsResponse;
-				error = null;
+				subdomainError = null;
 				state = 'success';
 				break;
 			}
 			case 400: {
-				error = await res.text();
+				subdomainError = await res.text();
 				state = 'error';
 				endpointExistsResponse = null;
 				break;
@@ -70,23 +63,8 @@
 	}
 </script>
 
-<body class="h-screen flex flex-col">
-	<Header>
-		<DropdownMenu.Root>
-			<DropdownMenu.Trigger asChild let:builder>
-				<Button variant="ghost" builders={[builder]} class="relative  rounded-md">
-					<Avatar.Root class="h-8 w-8">
-						<Avatar.Image src="https://placehold.co/32x32.png" alt={data.name} />
-						<Avatar.Fallback>NR</Avatar.Fallback>
-					</Avatar.Root>
-					<p class="px-2" autocapitalize="on">{$user?.name}</p>
-				</Button>
-			</DropdownMenu.Trigger>
-			<DropdownMenu.Content class="w-56" align="end">
-				<DropdownMenu.Item>Log out</DropdownMenu.Item>
-			</DropdownMenu.Content>
-		</DropdownMenu.Root>
-	</Header>
+<body class="h-screen flex flex-col bg-gray-40">
+	<Header user={data.user ?? null} />
 
 	<main class="w-full items-center flex flex-col flex-grow justify-center bg-gray-100/10">
 		<div
@@ -132,7 +110,7 @@
 									{/if}
 								{/if}
 								{#if state === 'error'}
-									<p class="text-red-900 text-xs py-2">{error}</p>
+									<p class="text-red-900 text-xs py-2">{subdomainError}</p>
 								{/if}
 							</span>
 						</div>
@@ -145,6 +123,8 @@
 								Continue
 							{/if}
 						</Button>
+
+						{#if form?.err}<p class="text-red-950 text-xs max-w-72">{form.err.message}</p>{/if}
 					</div>
 				</form>
 			</div>

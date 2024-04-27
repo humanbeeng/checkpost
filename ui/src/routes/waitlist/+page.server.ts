@@ -1,11 +1,10 @@
 import { PUBLIC_SERVER_URL } from '$env/static/public';
-import type { User } from '@/types';
+import type { User } from '@/types.js';
 import { error, redirect } from '@sveltejs/kit';
-import type { PageServerLoad } from '../$types';
 
-export const load: PageServerLoad = async ({ cookies, fetch }) => {
-	console.log(cookies.get('token'));
-	if (!cookies.get('token')) {
+export const load = async ({ fetch, cookies }) => {
+	const token = cookies.get('token');
+	if (!token) {
 		return redirect(301, '/');
 	}
 
@@ -16,7 +15,6 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 
 	if (!res.ok) {
 		// TODO: Better error handling
-		console.log('err', await res.text());
 		return {
 			err: { message: 'Unable to fetch user details' }
 		};
@@ -26,5 +24,6 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		console.error('Unable to parse user response', err);
 	})) as User;
 
+	console.log('User fetched from server', user);
 	return { user };
 };
