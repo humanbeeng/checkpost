@@ -23,3 +23,7 @@ func NewUserStore(q db.Querier) *UserStore {
 func (us UserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
 	return us.q.GetUserFromUsername(ctx, username)
 }
+
+func (us UserStore) GetUserFromUserId(ctx context.Context, userId int64) (db.User, error) {
+	return us.q.GetUser(ctx, userId)
+}

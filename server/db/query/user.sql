@@ -1,19 +1,52 @@
 -- name: CreateUser :one
-insert into "user" (
-	name, username, plan ,email
-	) values ($1, $2, $3, $4) returning *;
+INSERT INTO
+	"user" (NAME, avatar_url, username, plan, email)
+VALUES
+	($1, $2, $3, $4, $5)
+RETURNING
+	*;
 
 -- name: GetUser :one
-select * from "user" where id = $1 limit 1; 
+SELECT
+	*
+FROM
+	"user"
+WHERE
+	id = $1
+LIMIT
+	1;
 
 -- name: GetUserFromEmail :one
-select * from "user" where email = $1 limit 1;
+SELECT
+	*
+FROM
+	"user"
+WHERE
+	email = $1
+LIMIT
+	1;
 
 -- name: GetUserFromUsername :one
-select * from "user" where username = $1 limit 1;
+SELECT
+	*
+FROM
+	"user"
+WHERE
+	username = $1
+LIMIT
+	1;
 
 -- name: ListUsers :many
-select * from "user" limit $1 offset $2;
+SELECT
+	*
+FROM
+	"user"
+LIMIT
+	$1
+OFFSET
+	$2;
 
 -- name: DeleteUser :exec
-delete from "user" where id = $1;
+DELETE FROM "user"
+WHERE
+	id = $1;

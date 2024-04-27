@@ -12,15 +12,25 @@ import (
 )
 
 const createNewRequest = `-- name: CreateNewRequest :one
-insert into
+INSERT INTO
     request (
-        user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, expires_at
+        user_id,
+        endpoint_id,
+        PATH,
+        response_id,
+        CONTENT,
+        METHOD,
+        source_ip,
+        content_size,
+        response_code,
+        headers,
+        query_params,
+        expires_at
     )
-values (
-        $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-    )
-returning
-    id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+VALUES
+    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+RETURNING
+    id, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
@@ -58,6 +68,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		&i.ID,
 		&i.UserID,
 		&i.EndpointID,
+		&i.Plan,
 		&i.Path,
 		&i.ResponseID,
 		&i.Content,
@@ -75,13 +86,17 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 }
 
 const getEndpointHistory = `-- name: GetEndpointHistory :many
-select request.id, request.user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, request.created_at, request.expires_at, request.is_deleted, endpoint.id, endpoint, endpoint.user_id, plan, endpoint.created_at, endpoint.expires_at, endpoint.is_deleted
-from request
-    left join endpoint on request.endpoint_id = endpoint.id
-where
+SELECT
+    request.id, request.user_id, endpoint_id, request.plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, request.created_at, request.expires_at, request.is_deleted, endpoint.id, endpoint, endpoint.user_id, endpoint.plan, endpoint.created_at, endpoint.expires_at, endpoint.is_deleted
+FROM
+    request
+    LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
+WHERE
     endpoint.endpoint = $1
-limit $2
-offset
+    AND request.is_deleted = FALSE
+LIMIT
+    $2
+OFFSET
     $3
 `
 
@@ -95,6 +110,7 @@ type GetEndpointHistoryRow struct {
 	ID           int64            `json:"id"`
 	UserID       pgtype.Int8      `json:"user_id"`
 	EndpointID   int64            `json:"endpoint_id"`
+	Plan         Plan             `json:"plan"`
 	Path         string           `json:"path"`
 	ResponseID   pgtype.Int8      `json:"response_id"`
 	Content      pgtype.Text      `json:"content"`
@@ -110,7 +126,7 @@ type GetEndpointHistoryRow struct {
 	ID_2         pgtype.Int8      `json:"id_2"`
 	Endpoint     pgtype.Text      `json:"endpoint"`
 	UserID_2     pgtype.Int8      `json:"user_id_2"`
-	Plan         NullPlan         `json:"plan"`
+	Plan_2       NullPlan         `json:"plan_2"`
 	CreatedAt_2  pgtype.Timestamp `json:"created_at_2"`
 	ExpiresAt_2  pgtype.Timestamp `json:"expires_at_2"`
 	IsDeleted_2  pgtype.Bool      `json:"is_deleted_2"`
@@ -129,6 +145,7 @@ func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistory
 			&i.ID,
 			&i.UserID,
 			&i.EndpointID,
+			&i.Plan,
 			&i.Path,
 			&i.ResponseID,
 			&i.Content,
@@ -144,7 +161,7 @@ func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistory
 			&i.ID_2,
 			&i.Endpoint,
 			&i.UserID_2,
-			&i.Plan,
+			&i.Plan_2,
 			&i.CreatedAt_2,
 			&i.ExpiresAt_2,
 			&i.IsDeleted_2,
@@ -172,10 +189,12 @@ SELECT
             WHEN response_code != 200 THEN 1
         END
     ) AS failure_count
-FROM request r
-    LEFT JOIN endpoint e on r.endpoint_id = e.id
-where
+FROM
+    request r
+    LEFT JOIN endpoint e ON r.endpoint_id = e.id
+WHERE
     endpoint = $1
+    AND is_deleted = FALSE
 `
 
 type GetEndpointRequestCountRow struct {
@@ -192,7 +211,15 @@ func (q *Queries) GetEndpointRequestCount(ctx context.Context, endpoint string) 
 }
 
 const getRequestById = `-- name: GetRequestById :one
-select id, user_id, endpoint_id, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted from request where id = $1 limit 1
+SELECT
+    id, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+FROM
+    request
+WHERE
+    id = $1
+    AND is_deleted = FALSE
+LIMIT
+    1
 `
 
 func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error) {
@@ -202,6 +229,7 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 		&i.ID,
 		&i.UserID,
 		&i.EndpointID,
+		&i.Plan,
 		&i.Path,
 		&i.ResponseID,
 		&i.Content,

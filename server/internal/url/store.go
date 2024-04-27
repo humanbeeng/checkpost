@@ -10,6 +10,7 @@ import (
 type UrlQuerier interface {
 	GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error)
 	GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error)
+	GetUserEndpoints(ctx context.Context, userId int64) ([]db.Endpoint, error)
 	GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error)
 	GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgtype.Int8) ([]db.Endpoint, error)
 
@@ -44,6 +45,10 @@ func (us UrlStore) CheckEndpointExists(ctx context.Context, endpoint string) (bo
 
 func (us UrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error) {
 	return us.q.GetEndpoint(ctx, endpoint)
+}
+
+func (us UrlStore) GetUserEndpoints(ctx context.Context, userId int64) ([]db.Endpoint, error) {
+	return us.q.GetUserEndpoints(ctx, pgtype.Int8{Int64: userId, Valid: true})
 }
 
 func (us UrlStore) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {

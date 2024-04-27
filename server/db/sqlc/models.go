@@ -127,6 +127,7 @@ type Request struct {
 	ID         int64       `json:"id"`
 	UserID     pgtype.Int8 `json:"user_id"`
 	EndpointID int64       `json:"endpoint_id"`
+	Plan       Plan        `json:"plan"`
 	Path       string      `json:"path"`
 	ResponseID pgtype.Int8 `json:"response_id"`
 	Content    pgtype.Text `json:"content"`
@@ -155,6 +156,7 @@ type Response struct {
 type User struct {
 	ID        int64            `json:"id"`
 	Name      string           `json:"name"`
+	AvatarUrl string           `json:"avatar_url"`
 	Username  string           `json:"username"`
 	Plan      Plan             `json:"plan"`
 	Email     string           `json:"email"`

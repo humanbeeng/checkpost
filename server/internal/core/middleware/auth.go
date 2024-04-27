@@ -13,6 +13,7 @@ func NewAuthRequiredMiddleware(pv *core.PasetoVerifier) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Cookies("token", "")
 		if token == "" {
+			slog.Info("Received empty token")
 			return fiber.ErrUnauthorized
 		}
 

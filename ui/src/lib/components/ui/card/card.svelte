@@ -1,6 +1,6 @@
 <script lang="ts">
-	import type { HTMLAttributes } from "svelte/elements";
 	import { cn } from "$lib/utils.js.js";
+	import type { HTMLAttributes } from "svelte/elements";
 
 	type $$Props = HTMLAttributes<HTMLDivElement>;
 
@@ -10,7 +10,7 @@
 
 <!-- svelte-ignore a11y-no-static-element-interactions -->
 <div
-	class={cn("rounded-xl border bg-card text-card-foreground shadow", className)}
+	class={cn("rounded-md border bg-card text-card-foreground shadow", className)}
 	{...$$restProps}
 	on:click
 	on:focusin

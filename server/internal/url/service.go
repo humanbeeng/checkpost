@@ -47,10 +47,10 @@ const (
 
 func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (db.Endpoint, *UrlError) {
 	// Check subdomain length
-	if len(endpoint) < 4 {
+	if len(endpoint) < 4 || len(endpoint) > 10 {
 		return db.Endpoint{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Subdomain should be atleast 4 characters.",
+			Message: "Subdomain should be 4 to 10 characters.",
 		}
 	}
 
@@ -138,8 +138,28 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	return endpointRecord, nil
 }
 
-func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookRequest) (db.Request, *UrlError) {
+func (s *UrlService) GetUserEndpoints(ctx context.Context, userId int64) ([]Endpoint, *UrlError) {
+	endpointsRec, err := s.urlq.GetUserEndpoints(ctx, userId)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return []Endpoint{}, nil
+		}
+		slog.Error("Unable to fetch user endpoints", "userId", userId, "err", err)
+		return []Endpoint{}, NewInternalServerError()
+	}
+	var endpoints []Endpoint
 
+	for _, e := range endpointsRec {
+		endpoints = append(endpoints, Endpoint{
+			Endpoint:  e.Endpoint,
+			ExpiresAt: e.ExpiresAt.Time,
+			Plan:      string(e.Plan),
+		})
+	}
+	return endpoints, nil
+}
+
+func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookRequest) (db.Request, *UrlError) {
 	endpoint := hookReq.Endpoint
 
 	endpointRecord, err := s.urlq.GetEndpoint(ctx, endpoint)
@@ -184,7 +204,6 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 				InfinityModifier: pgtype.Finite,
 				Valid:            true,
 			}
-
 		}
 	case db.PlanPro, db.PlanBasic:
 		{
@@ -361,7 +380,6 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 }
 
 func (s *UrlService) CheckEndpointExists(c context.Context, endpoint string) (bool, *UrlError) {
-
 	slog.Info("Checking if endpoint exists", "endpoint", endpoint)
 
 	exists, err := s.urlq.CheckEndpointExists(c, endpoint)

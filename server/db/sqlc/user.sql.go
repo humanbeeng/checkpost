@@ -10,21 +10,26 @@ import (
 )
 
 const createUser = `-- name: CreateUser :one
-insert into "user" (
-	name, username, plan ,email
-	) values ($1, $2, $3, $4) returning id, name, username, plan, email, created_at, is_deleted
+INSERT INTO
+	"user" (NAME, avatar_url, username, plan, email)
+VALUES
+	($1, $2, $3, $4, $5)
+RETURNING
+	id, name, avatar_url, username, plan, email, created_at, is_deleted
 `
 
 type CreateUserParams struct {
-	Name     string `json:"name"`
-	Username string `json:"username"`
-	Plan     Plan   `json:"plan"`
-	Email    string `json:"email"`
+	Name      string `json:"name"`
+	AvatarUrl string `json:"avatar_url"`
+	Username  string `json:"username"`
+	Plan      Plan   `json:"plan"`
+	Email     string `json:"email"`
 }
 
 func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, error) {
 	row := q.db.QueryRow(ctx, createUser,
 		arg.Name,
+		arg.AvatarUrl,
 		arg.Username,
 		arg.Plan,
 		arg.Email,
@@ -33,6 +38,7 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.AvatarUrl,
 		&i.Username,
 		&i.Plan,
 		&i.Email,
@@ -43,7 +49,9 @@ func (q *Queries) CreateUser(ctx context.Context, arg CreateUserParams) (User, e
 }
 
 const deleteUser = `-- name: DeleteUser :exec
-delete from "user" where id = $1
+DELETE FROM "user"
+WHERE
+	id = $1
 `
 
 func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
@@ -52,7 +60,14 @@ func (q *Queries) DeleteUser(ctx context.Context, id int64) error {
 }
 
 const getUser = `-- name: GetUser :one
-select id, name, username, plan, email, created_at, is_deleted from "user" where id = $1 limit 1
+SELECT
+	id, name, avatar_url, username, plan, email, created_at, is_deleted
+FROM
+	"user"
+WHERE
+	id = $1
+LIMIT
+	1
 `
 
 func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
@@ -61,6 +76,7 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.AvatarUrl,
 		&i.Username,
 		&i.Plan,
 		&i.Email,
@@ -71,7 +87,14 @@ func (q *Queries) GetUser(ctx context.Context, id int64) (User, error) {
 }
 
 const getUserFromEmail = `-- name: GetUserFromEmail :one
-select id, name, username, plan, email, created_at, is_deleted from "user" where email = $1 limit 1
+SELECT
+	id, name, avatar_url, username, plan, email, created_at, is_deleted
+FROM
+	"user"
+WHERE
+	email = $1
+LIMIT
+	1
 `
 
 func (q *Queries) GetUserFromEmail(ctx context.Context, email string) (User, error) {
@@ -80,6 +103,7 @@ func (q *Queries) GetUserFromEmail(ctx context.Context, email string) (User, err
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.AvatarUrl,
 		&i.Username,
 		&i.Plan,
 		&i.Email,
@@ -90,7 +114,14 @@ func (q *Queries) GetUserFromEmail(ctx context.Context, email string) (User, err
 }
 
 const getUserFromUsername = `-- name: GetUserFromUsername :one
-select id, name, username, plan, email, created_at, is_deleted from "user" where username = $1 limit 1
+SELECT
+	id, name, avatar_url, username, plan, email, created_at, is_deleted
+FROM
+	"user"
+WHERE
+	username = $1
+LIMIT
+	1
 `
 
 func (q *Queries) GetUserFromUsername(ctx context.Context, username string) (User, error) {
@@ -99,6 +130,7 @@ func (q *Queries) GetUserFromUsername(ctx context.Context, username string) (Use
 	err := row.Scan(
 		&i.ID,
 		&i.Name,
+		&i.AvatarUrl,
 		&i.Username,
 		&i.Plan,
 		&i.Email,
@@ -109,7 +141,14 @@ func (q *Queries) GetUserFromUsername(ctx context.Context, username string) (Use
 }
 
 const listUsers = `-- name: ListUsers :many
-select id, name, username, plan, email, created_at, is_deleted from "user" limit $1 offset $2
+SELECT
+	id, name, avatar_url, username, plan, email, created_at, is_deleted
+FROM
+	"user"
+LIMIT
+	$1
+OFFSET
+	$2
 `
 
 type ListUsersParams struct {
@@ -129,6 +168,7 @@ func (q *Queries) ListUsers(ctx context.Context, arg ListUsersParams) ([]User, e
 		if err := rows.Scan(
 			&i.ID,
 			&i.Name,
+			&i.AvatarUrl,
 			&i.Username,
 			&i.Plan,
 			&i.Email,

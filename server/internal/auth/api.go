@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -97,10 +96,11 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			user, err = a.q.CreateUser(c.Context(), db.CreateUserParams{
-				Name:     githubUser.Name,
-				Username: githubUser.Username,
-				Plan:     db.PlanFree,
-				Email:    githubUser.Email,
+				Name:      githubUser.Name,
+				AvatarUrl: githubUser.AvatarUrl,
+				Username:  githubUser.Username,
+				Plan:      db.PlanFree,
+				Email:     githubUser.Email,
 			})
 			if err != nil {
 				slog.Error("Unable to create new user", "err", err)
@@ -119,7 +119,6 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	}
 	pasetoToken, err := a.pasetoVerifier.CreateToken(args, time.Hour*24*30)
 	if err != nil {
-		fmt.Println("err", err)
 		return err
 	}
 

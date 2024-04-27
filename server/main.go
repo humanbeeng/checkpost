@@ -47,8 +47,9 @@ func main() {
 	}
 
 	payloadmw := middleware.NewExtractPayloadMiddleware(pv)
-	genRandLim := middleware.NewGenerateRandomUrlLimiter()
-	genLim := middleware.NewGenerateUrlLimiter()
+	randUrlGenLim := middleware.NewGenerateRandomUrlLimiter()
+	urlGenLim := middleware.NewGenerateUrlLimiter()
+	defaultLim := middleware.NewDefaultLimiter()
 
 	pmw := middleware.NewAuthRequiredMiddleware(pv)
 	gl := middleware.NewGuestPlanLimiter()
@@ -89,9 +90,12 @@ func main() {
 	cachemw := middleware.NewCacheMiddleware()
 	endpointCheckLim := middleware.NewEndpointCheckLimiter()
 
+	userc := user.NewUserController(userStore)
+	userc.RegisterRoutes(app, defaultLim, authmw)
+
 	adc.RegisterRoutes(app, &pmw)
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, genLim, genRandLim, endpointCheckLim, cachemw)
+	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, urlGenLim, randUrlGenLim, endpointCheckLim, cachemw)
 
 	app.Listen(":3000")
 }
