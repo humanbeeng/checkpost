@@ -3,12 +3,17 @@
 	import { Check, Copy } from 'svelte-radix';
 
 	export let data;
-	export let url: string = 'https://google.checkpost.io/';
+	let user = data.user;
+	let urls = data.url;
+	let url = '';
+	if (urls.endpoints && urls.endpoints.length) {
+		url = urls.endpoints[0].endpoint;
+	}
 	let copied = false;
 
 	const copy = () => {
 		navigator.clipboard
-			.writeText(url)
+			.writeText(urls.endpoints[0].endpoint)
 			.then(() => {
 				copied = true;
 			})
@@ -19,7 +24,7 @@
 </script>
 
 <body class="h-screen flex flex-col bg-gray-50">
-	<Header user={data.user ?? null} />
+	<Header {user} />
 	<div class="flex flex-col items-center justify-center w-full h-full gap-4 align-middle mb-36">
 		<div class=" shadow-sm bg-zinc-200/70 rounded-sm border-lg flex py-2 px-3 gap-2">
 			<button on:click={copy} class="hover:shadow-lg rounded-lg">
@@ -30,7 +35,7 @@
 				{/if}
 			</button>
 			<p class="justify-center self-center">
-				{url}
+				https://{urls?.endpoints[0]?.endpoint}.checkpost.io/
 			</p>
 		</div>
 		<div class="flex flex-col items-center gap-4">

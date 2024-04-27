@@ -48,7 +48,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, bl, pl, 
 	urlGroup.Post("/generate", authmw, genLim, uc.GenerateUrlHandler)
 	urlGroup.Get("/generate/random", genRandLim, uc.GenerateGuestUrlHandler)
 
-	urlGroup.All("/hook/:endpoint/+", gl, fl, bl, pl, uc.HookHandler)
+	urlGroup.All("/hook/:endpoint/*", gl, fl, bl, pl, uc.HookHandler)
 
 	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
 	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
