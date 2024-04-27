@@ -25,6 +25,7 @@
 
 		// Call check api
 		if (subdomain.length < 4 || subdomain.length > 10) {
+			error = 'Subdomain length should be between 3 and 10';
 			state = 'error';
 			return;
 		}
@@ -55,9 +56,11 @@
 			e.preventDefault();
 			return;
 		}
-		if ((subdomain = e.target.value)) {
-			state = 'loading';
+		subdomain = e.target.value;
+		if (subdomain.length < 4) {
+			state = 'error';
 		}
+		state = 'loading';
 		debouncedHandleChange(e);
 	}
 
@@ -128,10 +131,10 @@
 							</h3>
 						{/if}
 						{#if state === 'success' && existsRes}
-							{#if !existsRes.exists}
+							{#if existsRes && !existsRes.exists}
 								<p class="text-green-900 py-2">{existsRes?.message}</p>
-							{:else}
-								<p class="text-red-500 py-2">{existsRes?.message}</p>
+							{:else if existsRes}
+								<p class="text-red-500 py-2">{existsRes.message}</p>
 							{/if}
 						{/if}
 						{#if state === 'error'}
