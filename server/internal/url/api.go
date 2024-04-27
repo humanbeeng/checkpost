@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 
@@ -71,6 +72,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, gl, fl, bl, pl, 
 
 func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 	endpoint := c.Params("endpoint", "")
+	endpoint = strings.ToLower(endpoint)
 	if endpoint == "" {
 		slog.Info("No endpoint found", "endpoint", endpoint)
 		c.WriteJSON(fiber.Error{
@@ -113,6 +115,7 @@ func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 // Returns status of a given endpoint
 func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
+	endpoint = strings.ToLower(endpoint)
 	if endpoint == "" {
 		return fiber.ErrBadRequest
 	}

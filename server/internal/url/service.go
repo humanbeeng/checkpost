@@ -53,6 +53,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 			Message: "Subdomain should be 4 to 10 characters.",
 		}
 	}
+	endpoint = strings.ToLower(endpoint)
 
 	url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
 
@@ -350,6 +351,7 @@ func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request,
 }
 
 func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (EndpointStats, *UrlError) {
+	endpoint = strings.ToLower(endpoint)
 	slog.Info("Request endpoint stats", "endpoint", endpoint)
 
 	endpointDetails, err := s.urlq.GetEndpoint(c, endpoint)
@@ -380,6 +382,8 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 }
 
 func (s *UrlService) CheckEndpointExists(c context.Context, endpoint string) (bool, *UrlError) {
+	endpoint = strings.ToLower(endpoint)
+
 	slog.Info("Checking if endpoint exists", "endpoint", endpoint)
 
 	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
