@@ -74,7 +74,7 @@ export const actions = {
 				error: 'Subdomain length should be between 4 and 10.'
 			});
 		}
-		const res = await fetch(`http://api.checkpost.local:3000/url/exists/${subdomain}`, {
+		const res = await fetch(`${PUBLIC_SERVER_URL}/url/exists/${subdomain}`, {
 			method: 'GET'
 		});
 
