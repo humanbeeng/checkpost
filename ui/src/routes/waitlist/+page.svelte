@@ -5,15 +5,17 @@
 	export let data;
 	let user = data.user;
 	let urls = data.url;
+	let endpoint = '';
 	let url = '';
 	if (urls.endpoints && urls.endpoints.length) {
-		url = urls.endpoints[0].endpoint;
+		endpoint = urls.endpoints[0].endpoint;
+		url = `https://${endpoint}.checkpost.io/`;
 	}
 	let copied = false;
 
 	const copy = () => {
 		navigator.clipboard
-			.writeText(urls.endpoints[0].endpoint)
+			.writeText(url)
 			.then(() => {
 				copied = true;
 			})
@@ -38,9 +40,9 @@
 				https://{urls?.endpoints[0]?.endpoint}.checkpost.io/
 			</p>
 		</div>
-		<div class="flex flex-col items-center gap-4">
-			<h1 class="font-medium tracking-tight text-2xl mt-2">Yay! Its yours🥳🎉</h1>
-			<div class="flex flex-col items-center">
+		<div class="flex flex-col items-center gap-4 px-2">
+			<h1 class="font-medium tracking-tight text-xl md:text-2xl mt-2">Yay! Its yours🥳🎉</h1>
+			<div class="flex flex-col items-center text-sm md:text-lg text-center gap-2">
 				<p>
 					We are launching very soon! Stay tuned - we'll be notifying via mail you the moment it
 					goes live.
