@@ -25,7 +25,7 @@
 
 		// Call check api
 		if (subdomain.length < 4 || subdomain.length > 10) {
-			error = 'Subdomain length should be between 3 and 10';
+			error = 'Subdomain length should be between 4 and 10';
 			state = 'error';
 			return;
 		}
