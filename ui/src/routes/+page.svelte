@@ -7,7 +7,7 @@
 
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { debounce } from '@/debounce';
-	import { Reload } from 'svelte-radix';
+	import { ChevronRight, Reload } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from './types';
 
 	let error: string | null;
@@ -116,9 +116,8 @@
 						<Button variant="default" class="h-10" disabled={state !== 'success'} on:click={signin}>
 							{#if state === 'loading'}
 								<Reload class="mr-1 h-4  animate-spin" />
-								Checking
 							{:else}
-								Continue
+								<ChevronRight />
 							{/if}
 						</Button>
 					</div>
