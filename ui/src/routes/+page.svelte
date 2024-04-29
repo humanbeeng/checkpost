@@ -115,7 +115,7 @@
 						</div>
 						<Button variant="default" class="h-10" disabled={state !== 'success'} on:click={signin}>
 							{#if state === 'loading'}
-								<Reload class="mr-1 h-4  animate-spin" />
+								<Reload class="h-4  animate-spin" />
 							{:else}
 								<ChevronRight />
 							{/if}
