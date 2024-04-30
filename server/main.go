@@ -47,12 +47,10 @@ func main() {
 	}
 
 	payloadmw := middleware.NewExtractPayloadMiddleware(pv)
-	randUrlGenLim := middleware.NewGenerateRandomUrlLimiter()
 	urlGenLim := middleware.NewGenerateUrlLimiter()
 	defaultLim := middleware.NewDefaultLimiter()
 
 	pmw := middleware.NewAuthRequiredMiddleware(pv)
-	gl := middleware.NewGuestPlanLimiter()
 	fl := middleware.NewFreePlanLimiter()
 	nbl := middleware.NewHobbyPlanLimiter()
 	pl := middleware.NewProPlanLimiter()
@@ -95,7 +93,7 @@ func main() {
 
 	adc.RegisterRoutes(app, &pmw)
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, urlGenLim, randUrlGenLim, endpointCheckLim, cachemw)
+	urlHandler.RegisterRoutes(app, authmw, fl, nbl, pl, urlGenLim, endpointCheckLim, cachemw)
 
 	app.Listen(":3000")
 }

@@ -8,17 +8,6 @@ import (
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 )
 
-func NewGuestPlanLimiter() fiber.Handler {
-	return limiter.New(limiter.Config{
-		Next: func(c *fiber.Ctx) bool {
-			return c.Locals("plan").(string) != string(db.PlanGuest)
-		},
-		Max:               2,
-		Expiration:        time.Second,
-		LimiterMiddleware: limiter.SlidingWindow{},
-	})
-}
-
 func NewFreePlanLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
@@ -83,17 +72,6 @@ func NewGenerateUrlLimiter() fiber.Handler {
 		KeyGenerator: func(c *fiber.Ctx) string {
 			return c.Locals("username").(string)
 		},
-	})
-}
-
-func NewGenerateRandomUrlLimiter() fiber.Handler {
-	return limiter.New(limiter.Config{
-		Next: func(c *fiber.Ctx) bool {
-			return c.BaseURL() == "http://api.checkpost.local:3000"
-		},
-		Max:               1,
-		Expiration:        time.Minute,
-		LimiterMiddleware: limiter.SlidingWindow{},
 	})
 }
 

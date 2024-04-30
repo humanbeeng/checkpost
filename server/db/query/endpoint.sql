@@ -51,14 +51,6 @@ VALUES
 RETURNING
     *;
 
--- name: InsertGuestEndpoint :one
-INSERT INTO
-    endpoint (endpoint, expires_at, plan)
-VALUES
-    ($1, $2, 'guest')
-RETURNING
-    *;
-
 -- name: InsertFreeEndpoint :one
 INSERT INTO
     endpoint (endpoint, user_id, plan, expires_at)

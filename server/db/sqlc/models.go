@@ -63,7 +63,6 @@ func (ns NullHttpMethod) Value() (driver.Value, error) {
 type Plan string
 
 const (
-	PlanGuest Plan = "guest"
 	PlanFree  Plan = "free"
 	PlanBasic Plan = "basic"
 	PlanPro   Plan = "pro"

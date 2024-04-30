@@ -203,32 +203,3 @@ func (q *Queries) InsertFreeEndpoint(ctx context.Context, arg InsertFreeEndpoint
 	)
 	return i, err
 }
-
-const insertGuestEndpoint = `-- name: InsertGuestEndpoint :one
-INSERT INTO
-    endpoint (endpoint, expires_at, plan)
-VALUES
-    ($1, $2, 'guest')
-RETURNING
-    id, endpoint, user_id, plan, created_at, expires_at, is_deleted
-`
-
-type InsertGuestEndpointParams struct {
-	Endpoint  string           `json:"endpoint"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-}
-
-func (q *Queries) InsertGuestEndpoint(ctx context.Context, arg InsertGuestEndpointParams) (Endpoint, error) {
-	row := q.db.QueryRow(ctx, insertGuestEndpoint, arg.Endpoint, arg.ExpiresAt)
-	var i Endpoint
-	err := row.Scan(
-		&i.ID,
-		&i.Endpoint,
-		&i.UserID,
-		&i.Plan,
-		&i.CreatedAt,
-		&i.ExpiresAt,
-		&i.IsDeleted,
-	)
-	return i, err
-}

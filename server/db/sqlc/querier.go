@@ -26,7 +26,6 @@ type Querier interface {
 	GetUserFromUsername(ctx context.Context, username string) (User, error)
 	InsertEndpoint(ctx context.Context, arg InsertEndpointParams) (Endpoint, error)
 	InsertFreeEndpoint(ctx context.Context, arg InsertFreeEndpointParams) (Endpoint, error)
-	InsertGuestEndpoint(ctx context.Context, arg InsertGuestEndpointParams) (Endpoint, error)
 	ListUsers(ctx context.Context, arg ListUsersParams) ([]User, error)
 }
 

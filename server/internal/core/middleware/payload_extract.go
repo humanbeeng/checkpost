@@ -5,7 +5,6 @@ import (
 	"strconv"
 
 	"github.com/gofiber/fiber/v2"
-	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
@@ -13,8 +12,7 @@ func NewExtractPayloadMiddleware(pv *core.PasetoVerifier) fiber.Handler {
 	return func(c *fiber.Ctx) error {
 		token := c.Cookies("token", "")
 		if token == "" {
-			c.Locals("plan", string(db.PlanGuest))
-			return c.Next()
+			return fiber.ErrUnauthorized
 		}
 
 		payload, err := pv.VerifyToken(token)
