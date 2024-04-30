@@ -18,7 +18,7 @@ type PasetoVerifier struct {
 
 func NewPasetoVerifier(symmetricKey string) (*PasetoVerifier, error) {
 	if len(symmetricKey) != chacha20poly1305.KeySize {
-		return nil, fmt.Errorf("Invalid key size. Must be exactly %d chars", chacha20poly1305.KeySize)
+		return nil, fmt.Errorf("invalid key size. Must be exactly %d chars", chacha20poly1305.KeySize)
 	}
 
 	return &PasetoVerifier{
@@ -68,7 +68,7 @@ func (p *PasetoVerifier) VerifyToken(token string) (paseto.JSONToken, error) {
 	}
 
 	if time.Now().After(jt.Expiration) {
-		return jt, fmt.Errorf("Token has expired")
+		return jt, fmt.Errorf("token has expired")
 	}
 
 	return jt, nil
