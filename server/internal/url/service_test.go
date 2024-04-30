@@ -28,12 +28,11 @@ const (
 	ProUser     string = "pro_user"
 	BasicUser   string = "basic_user"
 
-	GuestEndpoint    string = "guest_endpoint"
-	FreeEndpoint     string = "free_endpoint"
-	ProEndpoint      string = "pro_endpoint"
-	BasicEndpoint    string = "basic_endpoint"
-	UnknownEndpoint  string = "unknown_endpoint"
-	ExistingEndpoint string = "non_existing_endpoint"
+	FreeEndpoint     string = "freeurl"
+	ProEndpoint      string = "prourl"
+	BasicEndpoint    string = "basicurl"
+	UnknownEndpoint  string = "unknownurl"
+	ExistingEndpoint string = "nonexist"
 )
 
 func (us MockUserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
@@ -76,7 +75,7 @@ func (us MockUrlStore) GetUserEndpoints(ctx context.Context, userId int64) ([]db
 }
 
 func (us MockUrlStore) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
-	if endpoint == BasicEndpoint || endpoint == ProEndpoint || endpoint == FreeEndpoint || endpoint == GuestEndpoint {
+	if endpoint == BasicEndpoint || endpoint == ProEndpoint || endpoint == FreeEndpoint {
 		return db.GetEndpointRequestCountRow{
 			SuccessCount: 100,
 			FailureCount: 100,
@@ -133,13 +132,6 @@ func (us MockUrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertF
 	}, nil
 }
 
-func (us MockUrlStore) InsertGuestEndpoint(ctx context.Context, params db.InsertGuestEndpointParams) (db.Endpoint, error) {
-	return db.Endpoint{
-		Endpoint: GuestEndpoint,
-		Plan:     db.PlanGuest,
-	}, nil
-}
-
 func (us MockUrlStore) InsertEndpoint(ctx context.Context, arg db.InsertEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{Endpoint: arg.Endpoint}, nil
 }
@@ -187,13 +179,7 @@ func TestCreateUrlForFreeUser(t *testing.T) {
 	endpoint, err := service.CreateUrl(ctx, FreeUser, FreeEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://free_endpoint.checkpost.io", endpoint.Endpoint)
-}
-
-func TestCreateUrlForGuestUser(t *testing.T) {
-	endpoint, err := service.CreateGuestUrl(context.TODO())
-	assert.Nil(t, err)
-	assert.NotEmpty(t, endpoint.Endpoint)
+	assert.Equal(t, "https://freeurl.checkpost.io", endpoint.Endpoint)
 }
 
 func TestCreateUrlWhenAlreadyExists(t *testing.T) {
@@ -207,14 +193,14 @@ func TestCreateUrlForProUser(t *testing.T) {
 	endpoint, err := service.CreateUrl(context.TODO(), ProUser, ProEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://pro_endpoint.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://prourl.checkpost.io", endpoint.Endpoint)
 }
 
 func TestCreateUrlForBasicUser(t *testing.T) {
 	endpoint, err := service.CreateUrl(context.TODO(), BasicUser, BasicEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://basic_endpoint.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://basicurl.checkpost.io", endpoint.Endpoint)
 }
 
 func TestCreateUrlWhenFreeUserHasExistingEndpoint(t *testing.T) {
@@ -261,7 +247,7 @@ func TestGetEndpointStatsUnknownUrl(t *testing.T) {
 
 func TestStoreRequestDetails(t *testing.T) {
 	hookReq := HookRequest{
-		Endpoint: GuestEndpoint,
+		Endpoint: FreeEndpoint,
 		Path:     "/",
 		Method:   string(db.HttpMethodPost),
 		Headers: map[string][]string{
