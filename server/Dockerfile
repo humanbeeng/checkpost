@@ -36,4 +36,4 @@ EXPOSE 3000
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the Go application
-CMD ["/app"]
+CMD ["app"]
