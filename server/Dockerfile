@@ -32,4 +32,8 @@ RUN apk -U upgrade \
 # Exposes port 3000 because our program listens on that port
 EXPOSE 3000
 
-ENTRYPOINT ["/usr/bin/dumb-init", "/go/src/checkpost-server/app/app"]
+# Set the entrypoint to dumb-init
+ENTRYPOINT ["dumb-init", "--"]
+
+# Start the Go application
+CMD ["/app"]
