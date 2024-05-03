@@ -63,7 +63,6 @@ func (ns NullHttpMethod) Value() (driver.Value, error) {
 type Plan string
 
 const (
-	PlanGuest Plan = "guest"
 	PlanFree  Plan = "free"
 	PlanBasic Plan = "basic"
 	PlanPro   Plan = "pro"
@@ -125,6 +124,7 @@ type FileAttachment struct {
 
 type Request struct {
 	ID         int64       `json:"id"`
+	Uuid       string      `json:"uuid"`
 	UserID     pgtype.Int8 `json:"user_id"`
 	EndpointID int64       `json:"endpoint_id"`
 	Plan       Plan        `json:"plan"`

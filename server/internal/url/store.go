@@ -16,7 +16,6 @@ type UrlQuerier interface {
 	GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgtype.Int8) ([]db.Endpoint, error)
 
 	InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error)
-	InsertGuestEndpoint(ctx context.Context, params db.InsertGuestEndpointParams) (db.Endpoint, error)
 	InsertEndpoint(ctx context.Context, params db.InsertEndpointParams) (db.Endpoint, error)
 
 	CheckEndpointExists(ctx context.Context, endpoint string) (bool, error)
@@ -63,10 +62,6 @@ func (us UrlStore) GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgty
 func (us UrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
 	params.Endpoint = strings.ToLower(params.Endpoint)
 	return us.q.InsertFreeEndpoint(ctx, params)
-}
-
-func (us UrlStore) InsertGuestEndpoint(ctx context.Context, params db.InsertGuestEndpointParams) (db.Endpoint, error) {
-	return us.q.InsertGuestEndpoint(ctx, params)
 }
 
 func (us UrlStore) InsertEndpoint(ctx context.Context, params db.InsertEndpointParams) (db.Endpoint, error) {

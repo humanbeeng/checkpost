@@ -16,10 +16,11 @@ func NewUserController(store *UserStore) *UserController {
 	}
 }
 
-func (uc *UserController) RegisterRoutes(app *fiber.App, defaultLim, authmw fiber.Handler) {
+func (uc *UserController) RegisterRoutes(app *fiber.App, authmw fiber.Handler) {
 	urlGroup := app.Group("/user")
 
-	urlGroup.Get("/", defaultLim, authmw, uc.GetUserDetailsHandler)
+	urlGroup.Get("/", authmw, uc.GetUserDetailsHandler)
+	urlGroup.Get("/another", authmw, uc.GetUserDetailsHandler)
 }
 
 type UserDetailsResponse struct {

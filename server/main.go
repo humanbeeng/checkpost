@@ -14,7 +14,6 @@ import (
 
 	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
-	"github.com/humanbeeng/checkpost/server/internal/admin"
 	"github.com/humanbeeng/checkpost/server/internal/auth"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/humanbeeng/checkpost/server/internal/core/middleware"
@@ -33,7 +32,6 @@ func main() {
 	app.Use(requestid.New())
 
 	// TODO: Revisit this configuration and slog configuration
-
 	app.Use(logger.New(logger.Config{
 		// For more options, see the Config section
 		TimeFormat: "2006/03/01 15:04:05",
@@ -41,25 +39,25 @@ func main() {
 	}))
 
 	key := config.Paseto.Key
-	pv, err := core.NewPasetoVerifier(key)
+
+	pasetoVerifier, err := core.NewPasetoVerifier(key)
 	if err != nil {
 		slog.Error("Unable to create new paseto verifier", "err", err)
 	}
 
-	payloadmw := middleware.NewExtractPayloadMiddleware(pv)
-	randUrlGenLim := middleware.NewGenerateRandomUrlLimiter()
+	// General limiters
 	urlGenLim := middleware.NewGenerateUrlLimiter()
-	defaultLim := middleware.NewDefaultLimiter()
+	globalLim := middleware.NewGlobalLimiter()
+	authmw := middleware.NewAuthRequiredMiddleware(pasetoVerifier)
+	routermw := middleware.NewSubdomainRouterMiddleware()
 
-	pmw := middleware.NewAuthRequiredMiddleware(pv)
-	gl := middleware.NewGuestPlanLimiter()
-	fl := middleware.NewFreePlanLimiter()
-	nbl := middleware.NewHobbyPlanLimiter()
-	pl := middleware.NewProPlanLimiter()
-	rmw := middleware.NewSubdomainRouterMiddleware()
+	// Plan based limiters
+	freeLim := middleware.NewFreePlanLimiter()
+	basicLim := middleware.NewBasicPlanLimiter()
+	proLim := middleware.NewProPlanLimiter()
 
-	app.Use(payloadmw)
-	app.Use(rmw)
+	app.Use(globalLim)
+	app.Use(routermw)
 
 	ctx := context.Background()
 
@@ -79,9 +77,6 @@ func main() {
 		log.Fatalf("Unable to init auth controller. %v", err)
 	}
 
-	authmw := middleware.NewAuthRequiredMiddleware(pv)
-	adc := admin.NewAdminController()
-
 	urlStore := url.NewUrlStore(queries)
 	userStore := user.NewUserStore(queries)
 	endpointService := url.NewUrlService(urlStore, userStore)
@@ -91,11 +86,10 @@ func main() {
 	endpointCheckLim := middleware.NewEndpointCheckLimiter()
 
 	userc := user.NewUserController(userStore)
-	userc.RegisterRoutes(app, defaultLim, authmw)
+	userc.RegisterRoutes(app, authmw)
 
-	adc.RegisterRoutes(app, &pmw)
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, authmw, gl, fl, nbl, pl, urlGenLim, randUrlGenLim, endpointCheckLim, cachemw)
+	urlHandler.RegisterRoutes(app, authmw, freeLim, basicLim, proLim, urlGenLim, endpointCheckLim, cachemw)
 
 	app.Listen(":3000")
 }

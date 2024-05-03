@@ -30,6 +30,8 @@ type Request struct {
 	Path    string        `json:"path"`
 	Content pgtype.Text   `json:"content"`
 	Method  db.HttpMethod `json:"method"`
+	UUID    string        `json:"uuid"`
+
 	// IPv4
 	SourceIp     string           `json:"source_ip"`
 	ContentSize  int32            `json:"content_size"`
@@ -42,6 +44,7 @@ type Request struct {
 
 type HookRequest struct {
 	Endpoint     string              `json:"endpoint"`
+	UUID         string              `json:"uuid"`
 	Path         string              `json:"path"`
 	Headers      map[string][]string `json:"headers"`
 	Query        map[string]string   `json:"queries"`

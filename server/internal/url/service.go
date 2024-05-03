@@ -16,7 +16,6 @@ import (
 	"github.com/humanbeeng/checkpost/server/internal/user"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgtype"
-	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 type UrlService struct {
@@ -198,7 +197,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 
 	var expiresAt pgtype.Timestamp
 	switch endpointRecord.Plan {
-	case db.PlanGuest, db.PlanFree:
+	case db.PlanFree:
 		{
 			expiresAt = pgtype.Timestamp{
 				Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
@@ -229,6 +228,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		Method:     db.HttpMethod(strings.ToLower(hookReq.Method)),
 		Content:    pgtype.Text{String: hookReq.Content, Valid: true},
 		Path:       hookReq.Path,
+		Uuid:       hookReq.UUID,
 
 		// TODO: Fetch response from configured response
 		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
@@ -248,36 +248,6 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId.Int64)
 
 	return requestRecord, nil
-}
-
-func (s *UrlService) CreateGuestUrl(c context.Context) (db.Endpoint, *UrlError) {
-	slog.Info("Creating random URL")
-
-	randomEndpoint, err := gonanoid.Generate("0123456789abcdefghijklmnopqrstuvwxyz", RandomUrlLength)
-	if err != nil {
-		slog.Error("Unable to generate nano id", "err", err)
-		return db.Endpoint{}, NewInternalServerError()
-	}
-
-	randomUrl := fmt.Sprintf("https://%s.checkpost.io", randomEndpoint)
-
-	// Inserting into db assuming that no endpoint with that random url existed. We can add
-	// a check later on if needed.
-	record, err := s.urlq.InsertGuestEndpoint(c, db.InsertGuestEndpointParams{
-		Endpoint: randomEndpoint,
-		ExpiresAt: pgtype.Timestamp{
-			Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
-			Valid:            true,
-			InfinityModifier: pgtype.Finite,
-		},
-	})
-	if err != nil {
-		slog.Error("Unable to insert endpoint", "endpoint", randomUrl, "err", err)
-		return db.Endpoint{}, NewInternalServerError()
-	}
-
-	slog.Info("Random url generated", "url", randomUrl)
-	return record, nil
 }
 
 func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint string, limit int32, offset int32) ([]Request, *UrlError) {
