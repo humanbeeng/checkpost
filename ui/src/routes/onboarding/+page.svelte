@@ -72,7 +72,7 @@
 			class="border py-3 px-4 rounded-xl mb-52 flex flex-col items-center justify-center gap-6 bg-white/90 shadow-md hover:isolate"
 		>
 			<div class="w-full">
-				<h3 class="self-start font-medium text-lg px-1">Create your endpoint</h3>
+				<h3 class="self-start font-medium text-lg px-1">Confirm your endpoint</h3>
 				<hr class="mt-1" />
 			</div>
 			<div class="flex gap-2 p-1">
