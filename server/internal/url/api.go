@@ -39,14 +39,14 @@ func NewUrlController(service *UrlService) *UrlController {
 	return &UrlController{conns: &sync.Map{}, service: service}
 }
 
-func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, freeLim, basicLim, proLim, generateUrlLim, endpointCheckLim, cache fiber.Handler) {
+func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, freeLim, basicLim, proLim, urlGenLim, endpointCheckLim, cache fiber.Handler) {
 	urlGroup := app.Group("/url")
 
 	urlGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
 
 	urlGroup.Get("/exists/:endpoint", endpointCheckLim, cache, uc.CheckEndpointExistsHandler)
 
-	urlGroup.Post("/generate", authmw, generateUrlLim, uc.GenerateUrlHandler)
+	urlGroup.Post("/generate", authmw, urlGenLim, uc.GenerateUrlHandler)
 
 	urlGroup.All("/hook/:endpoint/*", freeLim, basicLim, proLim, uc.HookHandler)
 
@@ -223,6 +223,7 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 
 	hookReq := HookRequest{
 		Endpoint:     endpoint,
+		UUID:         c.Locals("requestid").(string),
 		Path:         path,
 		Headers:      headers,
 		Query:        query,
@@ -285,6 +286,8 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 		slog.Info("No endpoint found in path params")
 		return fiber.ErrBadRequest
 	}
+
+	slog.Info("Is from local", "val", c.IsFromLocal())
 
 	limitStr := c.Query("limit", "20")
 	limit, err := strconv.ParseInt(limitStr, 10, 32)

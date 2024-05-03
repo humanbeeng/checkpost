@@ -124,6 +124,7 @@ type FileAttachment struct {
 
 type Request struct {
 	ID         int64       `json:"id"`
+	Uuid       string      `json:"uuid"`
 	UserID     pgtype.Int8 `json:"user_id"`
 	EndpointID int64       `json:"endpoint_id"`
 	Plan       Plan        `json:"plan"`

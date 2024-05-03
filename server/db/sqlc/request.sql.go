@@ -20,6 +20,7 @@ INSERT INTO
         response_id,
         CONTENT,
         METHOD,
+        UUID,
         source_ip,
         content_size,
         response_code,
@@ -28,9 +29,23 @@ INSERT INTO
         expires_at
     )
 VALUES
-    ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12)
+    (
+        $1,
+        $2,
+        $3,
+        $4,
+        $5,
+        $6,
+        $7,
+        $8,
+        $9,
+        $10,
+        $11,
+        $12,
+        $13
+    )
 RETURNING
-    id, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
@@ -40,6 +55,7 @@ type CreateNewRequestParams struct {
 	ResponseID   pgtype.Int8      `json:"response_id"`
 	Content      pgtype.Text      `json:"content"`
 	Method       HttpMethod       `json:"method"`
+	Uuid         string           `json:"uuid"`
 	SourceIp     string           `json:"source_ip"`
 	ContentSize  int32            `json:"content_size"`
 	ResponseCode pgtype.Int4      `json:"response_code"`
@@ -56,6 +72,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		arg.ResponseID,
 		arg.Content,
 		arg.Method,
+		arg.Uuid,
 		arg.SourceIp,
 		arg.ContentSize,
 		arg.ResponseCode,
@@ -66,6 +83,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 	var i Request
 	err := row.Scan(
 		&i.ID,
+		&i.Uuid,
 		&i.UserID,
 		&i.EndpointID,
 		&i.Plan,
@@ -87,7 +105,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 
 const getEndpointHistory = `-- name: GetEndpointHistory :many
 SELECT
-    request.id, request.user_id, endpoint_id, request.plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, request.created_at, request.expires_at, request.is_deleted, endpoint.id, endpoint, endpoint.user_id, endpoint.plan, endpoint.created_at, endpoint.expires_at, endpoint.is_deleted
+    request.id, uuid, request.user_id, endpoint_id, request.plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, request.created_at, request.expires_at, request.is_deleted, endpoint.id, endpoint, endpoint.user_id, endpoint.plan, endpoint.created_at, endpoint.expires_at, endpoint.is_deleted
 FROM
     request
     LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
@@ -108,6 +126,7 @@ type GetEndpointHistoryParams struct {
 
 type GetEndpointHistoryRow struct {
 	ID           int64            `json:"id"`
+	Uuid         string           `json:"uuid"`
 	UserID       pgtype.Int8      `json:"user_id"`
 	EndpointID   int64            `json:"endpoint_id"`
 	Plan         Plan             `json:"plan"`
@@ -143,6 +162,7 @@ func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistory
 		var i GetEndpointHistoryRow
 		if err := rows.Scan(
 			&i.ID,
+			&i.Uuid,
 			&i.UserID,
 			&i.EndpointID,
 			&i.Plan,
@@ -212,7 +232,7 @@ func (q *Queries) GetEndpointRequestCount(ctx context.Context, endpoint string) 
 
 const getRequestById = `-- name: GetRequestById :one
 SELECT
-    id, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
 FROM
     request
 WHERE
@@ -227,6 +247,7 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 	var i Request
 	err := row.Scan(
 		&i.ID,
+		&i.Uuid,
 		&i.UserID,
 		&i.EndpointID,
 		&i.Plan,
