@@ -5,58 +5,49 @@ import (
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/limiter"
-	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 )
 
+// TODO: Implement endpoint plan based rate limiting
 func NewFreePlanLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
-		Next: func(c *fiber.Ctx) bool {
-			return c.Locals("plan").(string) != string(db.PlanFree)
-		},
-		Max:               5,
+		// Next: func(c *fiber.Ctx) bool {
+		// 	return c.IsFromLocal()
+		// },
+		Max:               3,
 		Expiration:        time.Second,
-		LimiterMiddleware: limiter.SlidingWindow{},
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.Locals("username").(string)
-		},
+		LimiterMiddleware: limiter.FixedWindow{},
 	})
 }
 
-func NewHobbyPlanLimiter() fiber.Handler {
+func NewBasicPlanLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return c.Locals("plan").(string) != string(db.PlanFree)
+			return c.IsFromLocal()
 		},
 		Max:               10,
 		Expiration:        time.Second,
-		LimiterMiddleware: limiter.SlidingWindow{},
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.Locals("username").(string)
-		},
+		LimiterMiddleware: limiter.FixedWindow{},
 	})
 }
 
 func NewProPlanLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return c.Locals("plan").(string) != string(db.PlanFree)
+			return c.IsFromLocal()
 		},
 		Max:               20,
 		Expiration:        time.Second,
-		LimiterMiddleware: limiter.SlidingWindow{},
-		KeyGenerator: func(c *fiber.Ctx) string {
-			return c.Locals("username").(string)
-		},
+		LimiterMiddleware: limiter.FixedWindow{},
 	})
 }
 
-func NewDefaultLimiter() fiber.Handler {
+func NewGlobalLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
-		Next: func(c *fiber.Ctx) bool {
-			return c.BaseURL() == "http://api.checkpost.local:3000"
-		},
-		Max:               60,
-		Expiration:        time.Minute,
+		// Next: func(c *fiber.Ctx) bool {
+		// 	return c.IsFromLocal()
+		// },
+		Max:               20,
+		Expiration:        10 * time.Second,
 		LimiterMiddleware: limiter.SlidingWindow{},
 	})
 }
@@ -64,7 +55,7 @@ func NewDefaultLimiter() fiber.Handler {
 func NewGenerateUrlLimiter() fiber.Handler {
 	return limiter.New(limiter.Config{
 		Next: func(c *fiber.Ctx) bool {
-			return c.BaseURL() == "http://api.checkpost.local:3000"
+			return c.IsFromLocal()
 		},
 		Max:               100,
 		Expiration:        time.Minute,

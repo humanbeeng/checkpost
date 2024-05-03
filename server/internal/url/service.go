@@ -228,6 +228,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		Method:     db.HttpMethod(strings.ToLower(hookReq.Method)),
 		Content:    pgtype.Text{String: hookReq.Content, Valid: true},
 		Path:       hookReq.Path,
+		Uuid:       hookReq.UUID,
 
 		// TODO: Fetch response from configured response
 		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
