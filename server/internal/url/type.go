@@ -28,7 +28,7 @@ func (u *UrlError) Error() string {
 type Request struct {
 	ID      int64         `json:"id"`
 	Path    string        `json:"path"`
-	Content pgtype.Text   `json:"content"`
+	Content string        `json:"content"`
 	Method  db.HttpMethod `json:"method"`
 	UUID    string        `json:"uuid"`
 
