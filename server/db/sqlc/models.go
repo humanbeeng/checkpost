@@ -104,22 +104,22 @@ func (ns NullPlan) Value() (driver.Value, error) {
 }
 
 type Endpoint struct {
-	ID        int64            `json:"id"`
-	Endpoint  string           `json:"endpoint"`
-	UserID    pgtype.Int8      `json:"user_id"`
-	Plan      Plan             `json:"plan"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
-	IsDeleted pgtype.Bool      `json:"is_deleted"`
+	ID        int64              `json:"id"`
+	Endpoint  string             `json:"endpoint"`
+	UserID    pgtype.Int8        `json:"user_id"`
+	Plan      Plan               `json:"plan"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
+	IsDeleted pgtype.Bool        `json:"is_deleted"`
 }
 
 type FileAttachment struct {
-	ID         int64            `json:"id"`
-	Uri        string           `json:"uri"`
-	EndpointID int64            `json:"endpoint_id"`
-	UserID     pgtype.Int8      `json:"user_id"`
-	CreatedAt  pgtype.Timestamp `json:"created_at"`
-	IsDeleted  pgtype.Bool      `json:"is_deleted"`
+	ID         int64              `json:"id"`
+	Uri        string             `json:"uri"`
+	EndpointID int64              `json:"endpoint_id"`
+	UserID     pgtype.Int8        `json:"user_id"`
+	CreatedAt  pgtype.Timestamptz `json:"created_at"`
+	IsDeleted  pgtype.Bool        `json:"is_deleted"`
 }
 
 type Request struct {
@@ -133,33 +133,33 @@ type Request struct {
 	Content    pgtype.Text `json:"content"`
 	Method     HttpMethod  `json:"method"`
 	// IPv4
-	SourceIp     string           `json:"source_ip"`
-	ContentSize  int32            `json:"content_size"`
-	ResponseCode pgtype.Int4      `json:"response_code"`
-	Headers      []byte           `json:"headers"`
-	QueryParams  []byte           `json:"query_params"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
-	IsDeleted    pgtype.Bool      `json:"is_deleted"`
+	SourceIp     string             `json:"source_ip"`
+	ContentSize  int32              `json:"content_size"`
+	ResponseCode pgtype.Int4        `json:"response_code"`
+	Headers      []byte             `json:"headers"`
+	QueryParams  []byte             `json:"query_params"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	IsDeleted    pgtype.Bool        `json:"is_deleted"`
 }
 
 type Response struct {
-	ID           int64            `json:"id"`
-	UserID       pgtype.Int8      `json:"user_id"`
-	EndpointID   int64            `json:"endpoint_id"`
-	ResponseCode int32            `json:"response_code"`
-	Content      pgtype.Text      `json:"content"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	IsDeleted    pgtype.Bool      `json:"is_deleted"`
+	ID           int64              `json:"id"`
+	UserID       pgtype.Int8        `json:"user_id"`
+	EndpointID   int64              `json:"endpoint_id"`
+	ResponseCode int32              `json:"response_code"`
+	Content      pgtype.Text        `json:"content"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	IsDeleted    pgtype.Bool        `json:"is_deleted"`
 }
 
 type User struct {
-	ID        int64            `json:"id"`
-	Name      string           `json:"name"`
-	AvatarUrl string           `json:"avatar_url"`
-	Username  string           `json:"username"`
-	Plan      Plan             `json:"plan"`
-	Email     string           `json:"email"`
-	CreatedAt pgtype.Timestamp `json:"created_at"`
-	IsDeleted pgtype.Bool      `json:"is_deleted"`
+	ID        int64              `json:"id"`
+	Name      string             `json:"name"`
+	AvatarUrl string             `json:"avatar_url"`
+	Username  string             `json:"username"`
+	Plan      Plan               `json:"plan"`
+	Email     string             `json:"email"`
+	CreatedAt pgtype.Timestamptz `json:"created_at"`
+	IsDeleted pgtype.Bool        `json:"is_deleted"`
 }
