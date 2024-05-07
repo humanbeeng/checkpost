@@ -92,7 +92,7 @@ func (us MockUrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.End
 	if endpoint != UnknownEndpoint {
 		return db.Endpoint{
 			Endpoint: endpoint,
-			ExpiresAt: pgtype.Timestamp{
+			ExpiresAt: pgtype.Timestamptz{
 				Time:             time.Now().Add(time.Hour),
 				Valid:            true,
 				InfinityModifier: pgtype.Infinity,
@@ -102,6 +102,10 @@ func (us MockUrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.End
 		}, nil
 	}
 	return db.Endpoint{}, pgx.ErrNoRows
+}
+
+func (us MockUrlStore) ExpireRequests(ctx context.Context) error {
+	return nil
 }
 
 func (us MockUrlStore) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {
@@ -126,7 +130,7 @@ func (us MockUrlStore) GetNonExpiredEndpointsOfUser(ctx context.Context, userId 
 func (us MockUrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{
 		Endpoint: params.Endpoint,
-		ExpiresAt: pgtype.Timestamp{
+		ExpiresAt: pgtype.Timestamptz{
 			Time: time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
 		},
 	}, nil
@@ -140,7 +144,7 @@ func (us MockUrlStore) CheckEndpointExists(ctx context.Context, endpoint string)
 	return endpoint == ExistingEndpoint, nil
 }
 
-// TODO: Remove this
+// TODO: Move below mocks to request tests
 func (us MockUrlStore) CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error) {
 	return db.Request{
 		Method:       params.Method,
@@ -155,6 +159,9 @@ func (us MockUrlStore) CreateNewRequest(ctx context.Context, params db.CreateNew
 }
 
 func (us MockUrlStore) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
+	return db.Request{}, nil
+}
+func (us MockUrlStore) GetRequestByUUID(ctx context.Context, uuid string) (db.Request, error) {
 	return db.Request{}, nil
 }
 
