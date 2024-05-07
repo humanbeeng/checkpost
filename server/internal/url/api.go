@@ -2,7 +2,6 @@ package url
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -224,11 +223,8 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	var req any
-	_ = c.BodyParser(&req)
+	body := c.Body()
 
-	strBytes, _ := json.Marshal(req)
-	body := string(strBytes)
 	// Note: key is string and value is []string
 	headers := c.GetReqHeaders()
 	var ip string
@@ -253,7 +249,7 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		Query:        query,
 		SourceIp:     ip,
 		Method:       method,
-		Content:      body,
+		Content:      string(body),
 		ContentSize:  len(body),
 		ResponseCode: http.StatusOK,
 	}
@@ -310,8 +306,6 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 		slog.Info("No endpoint found in path params")
 		return fiber.ErrBadRequest
 	}
-
-	slog.Info("Is from local", "val", c.IsFromLocal())
 
 	limitStr := c.Query("limit", "20")
 	limit, err := strconv.ParseInt(limitStr, 10, 32)
