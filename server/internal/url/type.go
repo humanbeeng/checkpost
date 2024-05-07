@@ -33,13 +33,13 @@ type Request struct {
 	UUID    string        `json:"uuid"`
 
 	// IPv4
-	SourceIp     string           `json:"source_ip"`
-	ContentSize  int32            `json:"content_size"`
-	ResponseCode pgtype.Int4      `json:"response_code"`
-	Headers      map[string]any   `json:"headers"`
-	QueryParams  map[string]any   `json:"query_params"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
+	SourceIp     string             `json:"source_ip"`
+	ContentSize  int32              `json:"content_size"`
+	ResponseCode pgtype.Int4        `json:"response_code"`
+	Headers      map[string]any     `json:"headers"`
+	QueryParams  map[string]any     `json:"query_params"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
 }
 
 type HookRequest struct {
