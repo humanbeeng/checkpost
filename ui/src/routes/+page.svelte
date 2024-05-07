@@ -207,7 +207,7 @@
 						<li><span class="flex gap-2"><Check />Password protected endpoint</span></li>
 					</ul>
 				</Card.Content>
-				<Card.Footer class="bottom-0 ">
+				<Card.Footer>
 					<Button class="w-full bg-black">Coming soon</Button>
 				</Card.Footer>
 			</Card.Root>

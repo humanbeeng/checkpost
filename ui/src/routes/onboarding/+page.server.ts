@@ -58,13 +58,11 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 
 export const actions = {
 	default: async ({ request, fetch }) => {
-		console.log('form submit');
 		const formData = await request.formData();
 		const endpoint = formData.get('subdomain');
 		if (!endpoint || endpoint == '') {
 			return fail(400, { err: { field: 'subdomain', message: 'Empty subdomain' } });
 		}
-		console.log(endpoint);
 		const req = {
 			endpoint: endpoint
 		};
