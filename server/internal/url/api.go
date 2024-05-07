@@ -50,10 +50,10 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, freeLim, basicLi
 
 	urlGroup.All("/hook/:endpoint/*", freeLim, basicLim, proLim, uc.HookHandler)
 
-	urlGroup.Get("/history/:endpoint", uc.GetEndpointHistoryHandler)
-	urlGroup.Get("/request/:requestid", uc.RequestDetailsHandler)
+	urlGroup.Get("/history/:endpoint", authmw, uc.GetEndpointHistoryHandler)
+	urlGroup.Get("/request/:requestid", authmw, uc.RequestDetailsHandler)
 
-	urlGroup.Get("/stats/:endpoint", uc.StatsHandler)
+	urlGroup.Get("/stats/:endpoint", authmw, uc.StatsHandler)
 
 	// TODO: Add rate/conn limiter
 	urlGroup.Use("/inspect", func(c *fiber.Ctx) error {
@@ -66,7 +66,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, freeLim, basicLi
 		return fiber.ErrUpgradeRequired
 	})
 
-	urlGroup.Get("/inspect/:endpoint", websocket.New(uc.InspectRequestsHandler))
+	urlGroup.Get("/inspect/:endpoint", authmw, websocket.New(uc.InspectRequestsHandler))
 }
 
 func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
