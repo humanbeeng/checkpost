@@ -7,7 +7,7 @@
 
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { debounce } from '@/debounce';
-	import { ChevronRight, Reload } from 'svelte-radix';
+	import { Check, ChevronRight, Cross2, Reload } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from './types';
 
 	let error: string | null;
@@ -147,92 +147,97 @@
 		<div class="hidden md:w-auto md:block"></div>
 	</div>
 
-	<section class="h-screen border-t bg-gray-50">
+	<section class="h-screen border-t bg-gray-50 px-24">
 		<h1 class="text-3xl font-bold tracking-tight text-center py-10 md:py-12">Plans</h1>
-		<div class="w-full px-6 lg:px-32 grid grid-cols-1 gap-3 md:grid-cols-4">
-			<!-- Guest -->
-			<Card.Root>
-				<Card.Header>
-					<Card.Title tag="h1" class="text-xl">Guest</Card.Title>
-					<Card.Description>Non signed in users</Card.Description>
-				</Card.Header>
-				<Card.Content>
-					<ul class="list-disc mx-5">
-						<li>
-							One random endpoint. <br />Example: <a href="/"><u>https://xyzxa.checkpost.io</u></a>
-						</li>
-						<li>Expires in 1 day.</li>
-						<li>Request history retained for 1 day.</li>
-						<li>Request payload limit 32Kb.</li>
-						<li>Rate limit 2 rps.</li>
-					</ul>
-				</Card.Content>
-			</Card.Root>
-
+		<div class="w-full px-6 lg:px-32 grid grid-cols-1 gap-3 lg:grid-cols-3">
 			<!-- Free -->
-			<Card.Root>
+			<Card.Root class="mx-2 ">
 				<Card.Header>
-					<Card.Title tag="h1" class="text-xl">Guest</Card.Title>
-					<Card.Description>Non signed in users</Card.Description>
+					<Card.Title tag="h1" class="text-xl">Free</Card.Title>
+					<Card.Description>Signed in users</Card.Description>
 				</Card.Header>
 				<Card.Content>
-					<ul class="list-disc mx-5">
+					<ul class="flex flex-col gap-2 list-none mx-5">
+						<li><span class="flex gap-2"><Check />1 custom endpoint</span></li>
+						<li><span class="flex gap-2"><Check />50 incoming requests/day</span></li>
+						<li><span class="flex gap-2"><Check />4 hour request history retention</span></li>
+						<li><span class="flex gap-2"><Check />Port forwarding (Coming soon)</span></li>
+						<li><span class="flex gap-2"><Check />File attachments upto 10MB</span></li>
+						<li><span class="flex gap-2"><Check />Request payload limit 10KB</span></li>
+						<li><span class="flex gap-2"><Check />Rate limit: 3 rps</span></li>
+						<li><span class="flex gap-2"><Check />Discord access - Community</span></li>
 						<li>
-							One random endpoint. <br />Example: <a href="/"><u>https://xyzxa.checkpost.io</u></a>
+							<span class="flex gap-2"
+								><Cross2 />
+								<p>Proxy middleware</p></span
+							>
 						</li>
-						<li>Expires in 1 day.</li>
-						<li>Request history retained for 1 day.</li>
-						<li>Request payload limit 32Kb.</li>
-						<li>Rate limit 2 rps.</li>
+						<li>
+							<span class="flex gap-2"
+								><Cross2 />
+								<p>Password protected endpoint</p></span
+							>
+						</li>
 					</ul>
 				</Card.Content>
 			</Card.Root>
 
 			<!-- Basic -->
-			<Card.Root>
+			<Card.Root class="outline-primary outline">
 				<Card.Header>
 					<Card.Title tag="h1" class="text-xl">Basic</Card.Title>
-					<Card.Description>$4/month</Card.Description>
+					<Card.Description
+						><span class="font-medium text-black underline">$49/year</span>
+						or <span class="font-medium text-xs">$5/mo</span></Card.Description
+					>
 				</Card.Header>
 				<Card.Content>
-					<ul class="list-disc mx-5">
+					<ul class="mx-5 list-none flex flex-col gap-2">
+						<li><span class="flex gap-2"><Check />1 custom endpoint</span></li>
+						<li><span class="flex gap-2"><Check />Unlimited incoming reqs/day</span></li>
+						<li><span class="flex gap-2"><Check />30 day request history retention</span></li>
+						<li><span class="flex gap-2"><Check />Port forwarding (Coming soon)</span></li>
 						<li>
-							One random endpoint. <br />Example: <a href="/"><u>https://xyzxa.checkpost.io</u></a>
+							<span class="flex gap-2"><Check />File attachments upto 20MB (Coming soon)</span>
 						</li>
-						<li>Expires in 2 days.</li>
-						<li>Request history retained for 2 days.</li>
-						<li>Request payload limit 32Kb.</li>
-						<li>Rate limit: 3 rps.</li>
-						<li>Discord Access - Community channel.</li>
+						<li><span class="flex gap-2"><Check />Request payload limit 510Kb</span></li>
+						<li><span class="flex gap-2"><Check />Rate limit: 10 rps</span></li>
+						<li><span class="flex gap-2"><Check />Discord access - Private</span></li>
+						<li><span class="flex gap-2"><Check />1 proxy middleware</span></li>
+						<li><span class="flex gap-2"><Check />Password protected endpoint</span></li>
 					</ul>
 				</Card.Content>
-				<!-- <Card.Footer> -->
-				<!-- 	<Button class="w-full">Generate endpoint</Button> -->
-				<!-- </Card.Footer> -->
+				<Card.Footer class="bottom-0 ">
+					<Button class="w-full bg-black">Coming soon</Button>
+				</Card.Footer>
 			</Card.Root>
 
 			<!--Pro-->
-			<Card.Root>
+			<Card.Root class="mx-2 ">
 				<Card.Header>
-					<Card.Title tag="h1" class="underline text-xl">Pro</Card.Title>
-					<Card.Description>$5/month | $55/year</Card.Description>
+					<Card.Title tag="h1" class="text-xl">Team</Card.Title>
+
+					<Card.Description
+						><span class="font-medium text-md text-black">$49/year</span>
+						or <span class="font-medium text-xs">$5/mo</span></Card.Description
+					>
 				</Card.Header>
 				<Card.Content>
 					<ul class="list-disc mx-5">
-						<li>
-							10 custom endpoints. <br /><a href="/"
-								><u>Example: https://yourname.checkpost.io</u></a
-							>
-						</li>
+						<li>5 custom endpoints.</li>
 						<li>Request history is stored upto 180 days.</li>
-						<li>10 Web CRONs.</li>
+						<li>Auto cleanup of request history (Opt in)</li>
+						<li>Port forwarding</li>
 						<li>Request payload limit 510Kb.</li>
+						<li>Sharable request details.</li>
+						<li>Upto 5 collaborators.</li>
 						<li>Password protected endpoints.</li>
-						<li>File attachments support.</li>
-						<li>Port forwarding for local servers.</li>
-						<li>1 proxy middleware.</li>
-						<li>Rate limit: 30 rps.</li>
-						<li>Discord Access - Private Channel</li>
+						<li>Unlimited middlewares. With freeze and edit before forward request.</li>
+						<li>Rate limit: 15 rps.</li>
+						<li>Discord access - Private Channel.</li>
+						<li>Priority support.</li>
+						<li>File attachments</li>
+						<li>Font switcher for code view.</li>
 					</ul>
 				</Card.Content>
 				<Card.Footer>
