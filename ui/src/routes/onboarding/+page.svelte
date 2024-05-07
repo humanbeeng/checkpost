@@ -1,16 +1,16 @@
 <script lang="ts">
 	import Header from '@/components/Header.svelte';
-	import Reload from 'svelte-radix/Reload.svelte';
 
 	import { enhance } from '$app/forms';
 	import { PUBLIC_SERVER_URL } from '$env/static/public';
 	import { Button } from '@/components/ui/button';
 	import { debounce } from '@/debounce';
-	import { Link1, LinkBreak2 } from 'svelte-radix';
+	import { Link1, LinkBreak2, Reload } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from '../types';
 
 	export let form;
 	export let data;
+	let submitBtnText = 'Continue';
 
 	let subdomainError: string | null;
 	let endpointExistsResponse: EndpointExistsResponse | null;
@@ -59,6 +59,7 @@
 		}
 		if ((subdomain = e.target.value)) {
 			state = 'loading';
+			submitBtnText = 'Continue';
 		}
 		debouncedHandleChange(e);
 	}
@@ -76,7 +77,17 @@
 				<hr class="mt-1" />
 			</div>
 			<div class="flex gap-2 p-1">
-				<form method="POST" use:enhance>
+				<form
+					method="POST"
+					use:enhance={() => {
+						state = 'loading';
+						submitBtnText = 'Confirming';
+						return async ({ update }) => {
+							await update();
+							state = 'empty';
+						};
+					}}
+				>
 					<div class="flex flex-col gap-2">
 						<div class="flex flex-col">
 							<span class="flex gap-1">
@@ -119,10 +130,8 @@
 						<Button class="w-full" disabled={state !== 'success'} variant="default" type="submit">
 							{#if state === 'loading'}
 								<Reload class="mr-2 h-4 w-4 animate-spin" />
-								Checking
-							{:else}
-								Continue
 							{/if}
+							{submitBtnText}
 						</Button>
 
 						{#if form?.err}<p class="text-red-950 text-xs max-w-72">{form.err.message}</p>{/if}
