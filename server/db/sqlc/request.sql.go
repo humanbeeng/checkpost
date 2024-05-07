@@ -49,19 +49,19 @@ RETURNING
 `
 
 type CreateNewRequestParams struct {
-	UserID       pgtype.Int8      `json:"user_id"`
-	EndpointID   int64            `json:"endpoint_id"`
-	Path         string           `json:"path"`
-	ResponseID   pgtype.Int8      `json:"response_id"`
-	Content      pgtype.Text      `json:"content"`
-	Method       HttpMethod       `json:"method"`
-	Uuid         string           `json:"uuid"`
-	SourceIp     string           `json:"source_ip"`
-	ContentSize  int32            `json:"content_size"`
-	ResponseCode pgtype.Int4      `json:"response_code"`
-	Headers      []byte           `json:"headers"`
-	QueryParams  []byte           `json:"query_params"`
-	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
+	UserID       pgtype.Int8        `json:"user_id"`
+	EndpointID   int64              `json:"endpoint_id"`
+	Path         string             `json:"path"`
+	ResponseID   pgtype.Int8        `json:"response_id"`
+	Content      pgtype.Text        `json:"content"`
+	Method       HttpMethod         `json:"method"`
+	Uuid         string             `json:"uuid"`
+	SourceIp     string             `json:"source_ip"`
+	ContentSize  int32              `json:"content_size"`
+	ResponseCode pgtype.Int4        `json:"response_code"`
+	Headers      []byte             `json:"headers"`
+	QueryParams  []byte             `json:"query_params"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestParams) (Request, error) {
@@ -103,15 +103,42 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 	return i, err
 }
 
+const deleteExpiredRequests = `-- name: DeleteExpiredRequests :exec
+DELETE FROM request
+WHERE
+    expires_at < NOW()
+`
+
+func (q *Queries) DeleteExpiredRequests(ctx context.Context) error {
+	_, err := q.db.Exec(ctx, deleteExpiredRequests)
+	return err
+}
+
 const getEndpointHistory = `-- name: GetEndpointHistory :many
 SELECT
-    request.id, uuid, request.user_id, endpoint_id, request.plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, request.created_at, request.expires_at, request.is_deleted, endpoint.id, endpoint, endpoint.user_id, endpoint.plan, endpoint.created_at, endpoint.expires_at, endpoint.is_deleted
+    request.id,
+    request.uuid,
+    request.user_id,
+    request.plan,
+    request.path,
+    request.response_id,
+    request.response_code,
+    request.content,
+    request.method,
+    request.source_ip,
+    request.content_size,
+    request.headers,
+    request.query_params,
+    request.created_at,
+    request.expires_at,
+    endpoint.endpoint AS endpoint
 FROM
     request
     LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
 WHERE
     endpoint.endpoint = $1
     AND request.is_deleted = FALSE
+    AND request.expires_at > NOW()
 LIMIT
     $2
 OFFSET
@@ -125,30 +152,22 @@ type GetEndpointHistoryParams struct {
 }
 
 type GetEndpointHistoryRow struct {
-	ID           int64            `json:"id"`
-	Uuid         string           `json:"uuid"`
-	UserID       pgtype.Int8      `json:"user_id"`
-	EndpointID   int64            `json:"endpoint_id"`
-	Plan         Plan             `json:"plan"`
-	Path         string           `json:"path"`
-	ResponseID   pgtype.Int8      `json:"response_id"`
-	Content      pgtype.Text      `json:"content"`
-	Method       HttpMethod       `json:"method"`
-	SourceIp     string           `json:"source_ip"`
-	ContentSize  int32            `json:"content_size"`
-	ResponseCode pgtype.Int4      `json:"response_code"`
-	Headers      []byte           `json:"headers"`
-	QueryParams  []byte           `json:"query_params"`
-	CreatedAt    pgtype.Timestamp `json:"created_at"`
-	ExpiresAt    pgtype.Timestamp `json:"expires_at"`
-	IsDeleted    pgtype.Bool      `json:"is_deleted"`
-	ID_2         pgtype.Int8      `json:"id_2"`
-	Endpoint     pgtype.Text      `json:"endpoint"`
-	UserID_2     pgtype.Int8      `json:"user_id_2"`
-	Plan_2       NullPlan         `json:"plan_2"`
-	CreatedAt_2  pgtype.Timestamp `json:"created_at_2"`
-	ExpiresAt_2  pgtype.Timestamp `json:"expires_at_2"`
-	IsDeleted_2  pgtype.Bool      `json:"is_deleted_2"`
+	ID           int64              `json:"id"`
+	Uuid         string             `json:"uuid"`
+	UserID       pgtype.Int8        `json:"user_id"`
+	Plan         Plan               `json:"plan"`
+	Path         string             `json:"path"`
+	ResponseID   pgtype.Int8        `json:"response_id"`
+	ResponseCode pgtype.Int4        `json:"response_code"`
+	Content      pgtype.Text        `json:"content"`
+	Method       HttpMethod         `json:"method"`
+	SourceIp     string             `json:"source_ip"`
+	ContentSize  int32              `json:"content_size"`
+	Headers      []byte             `json:"headers"`
+	QueryParams  []byte             `json:"query_params"`
+	CreatedAt    pgtype.Timestamptz `json:"created_at"`
+	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`
+	Endpoint     pgtype.Text        `json:"endpoint"`
 }
 
 func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistoryParams) ([]GetEndpointHistoryRow, error) {
@@ -164,27 +183,19 @@ func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistory
 			&i.ID,
 			&i.Uuid,
 			&i.UserID,
-			&i.EndpointID,
 			&i.Plan,
 			&i.Path,
 			&i.ResponseID,
+			&i.ResponseCode,
 			&i.Content,
 			&i.Method,
 			&i.SourceIp,
 			&i.ContentSize,
-			&i.ResponseCode,
 			&i.Headers,
 			&i.QueryParams,
 			&i.CreatedAt,
 			&i.ExpiresAt,
-			&i.IsDeleted,
-			&i.ID_2,
 			&i.Endpoint,
-			&i.UserID_2,
-			&i.Plan_2,
-			&i.CreatedAt_2,
-			&i.ExpiresAt_2,
-			&i.IsDeleted_2,
 		); err != nil {
 			return nil, err
 		}
@@ -215,6 +226,7 @@ FROM
 WHERE
     endpoint = $1
     AND is_deleted = FALSE
+    AND expires_at > NOW()
 `
 
 type GetEndpointRequestCountRow struct {
@@ -238,12 +250,51 @@ FROM
 WHERE
     id = $1
     AND is_deleted = FALSE
+    AND expires_at > NOW()
 LIMIT
     1
 `
 
 func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error) {
 	row := q.db.QueryRow(ctx, getRequestById, id)
+	var i Request
+	err := row.Scan(
+		&i.ID,
+		&i.Uuid,
+		&i.UserID,
+		&i.EndpointID,
+		&i.Plan,
+		&i.Path,
+		&i.ResponseID,
+		&i.Content,
+		&i.Method,
+		&i.SourceIp,
+		&i.ContentSize,
+		&i.ResponseCode,
+		&i.Headers,
+		&i.QueryParams,
+		&i.CreatedAt,
+		&i.ExpiresAt,
+		&i.IsDeleted,
+	)
+	return i, err
+}
+
+const getRequestByUUID = `-- name: GetRequestByUUID :one
+SELECT
+    id, uuid, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+FROM
+    request
+WHERE
+    UUID = $1
+    AND is_deleted = FALSE
+    AND expires_at > NOW()
+LIMIT
+    1
+`
+
+func (q *Queries) GetRequestByUUID(ctx context.Context, uuid string) (Request, error) {
+	row := q.db.QueryRow(ctx, getRequestByUUID, uuid)
 	var i Request
 	err := row.Scan(
 		&i.ID,

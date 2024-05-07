@@ -11,16 +11,19 @@ import (
 	"github.com/gofiber/fiber/v2/middleware/logger"
 	"github.com/gofiber/fiber/v2/middleware/requestid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/robfig/cron/v3"
 
 	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/auth"
 	"github.com/humanbeeng/checkpost/server/internal/core"
+	"github.com/humanbeeng/checkpost/server/internal/core/jobs"
 	"github.com/humanbeeng/checkpost/server/internal/core/middleware"
 	"github.com/humanbeeng/checkpost/server/internal/url"
 	"github.com/humanbeeng/checkpost/server/internal/user"
 )
 
+// TODO: Implement graceful shutdown
 func main() {
 	config, err := config.GetAppConfig()
 	if err != nil {
@@ -90,6 +93,9 @@ func main() {
 
 	ac.RegisterRoutes(app)
 	urlHandler.RegisterRoutes(app, authmw, freeLim, basicLim, proLim, urlGenLim, endpointCheckLim, cachemw)
+
+	re := jobs.NewExpiredRequestsRemover(cron.New(), *urlStore)
+	re.Start()
 
 	app.Listen(":3000")
 }

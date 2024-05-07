@@ -119,7 +119,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		Plan:     user.Plan,
 
 		// Never expires
-		ExpiresAt: pgtype.Timestamp{
+		ExpiresAt: pgtype.Timestamptz{
 			Time:             time.Now().Add(time.Hour * 24),
 			InfinityModifier: pgtype.Infinity,
 			Valid:            true,
@@ -175,6 +175,50 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 
 	slog.Info("Storing request details", "endpoint", endpoint)
 
+	var expiresAt pgtype.Timestamptz
+	switch endpointRecord.Plan {
+	case db.PlanFree:
+		{
+
+			// Checking if request body exceeds 10KB
+			if hookReq.ContentSize > 10_000 {
+				return db.Request{}, &UrlError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Content size limit exceeded",
+				}
+			}
+
+			expiresAt = pgtype.Timestamptz{
+				// Use time.Duration for arithmetic operations on time.
+				Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
+				InfinityModifier: pgtype.Finite,
+				Valid:            true,
+			}
+		}
+	case db.PlanPro, db.PlanBasic:
+		{
+			// Checking if request body exceeds 512KB
+			if hookReq.ContentSize > 512_000 {
+				return db.Request{}, &UrlError{
+					Code:    http.StatusRequestEntityTooLarge,
+					Message: "Content size limit exceeded",
+				}
+			}
+			expiresAt = pgtype.Timestamptz{
+				Time:             time.Now(),
+				InfinityModifier: pgtype.Infinity,
+				Valid:            true,
+			}
+		}
+	default:
+		{
+			return db.Request{}, &UrlError{
+				Code:    http.StatusBadRequest,
+				Message: "Invalid user plan",
+			}
+		}
+	}
+
 	userId := endpointRecord.UserID
 
 	queryBytes, err := json.Marshal(hookReq.Query)
@@ -195,33 +239,6 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		}
 	}
 
-	var expiresAt pgtype.Timestamp
-	switch endpointRecord.Plan {
-	case db.PlanFree:
-		{
-			expiresAt = pgtype.Timestamp{
-				Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
-				InfinityModifier: pgtype.Finite,
-				Valid:            true,
-			}
-		}
-	case db.PlanPro, db.PlanBasic:
-		{
-			expiresAt = pgtype.Timestamp{
-				Time:             time.Now(),
-				InfinityModifier: pgtype.Infinity,
-				Valid:            true,
-			}
-		}
-	default:
-		{
-			return db.Request{}, &UrlError{
-				Code:    http.StatusBadRequest,
-				Message: "Invalid user plan",
-			}
-		}
-	}
-
 	requestRecord, err := s.urlq.CreateNewRequest(ctx, db.CreateNewRequestParams{
 		UserID:     userId,
 		EndpointID: endpointRecord.ID,
@@ -237,7 +254,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		SourceIp:     hookReq.SourceIp,
 
 		// TODO: Add request body limiting
-		ContentSize: int32(len(hookReq.Content)),
+		ContentSize: int32(hookReq.ContentSize),
 		ExpiresAt:   expiresAt,
 	})
 	if err != nil {
@@ -253,7 +270,6 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint string, limit int32, offset int32) ([]Request, *UrlError) {
 	slog.Info("Fetch endpoint request history", "endpoint", endpoint)
 
-	// TODO: Add a check to see if the user is authorized to access this endpoint history
 	var reqHistory []Request
 
 	reqs, err := s.urlq.GetEndpointHistory(c, db.GetEndpointHistoryParams{Endpoint: endpoint, Limit: limit, Offset: offset})
@@ -269,7 +285,7 @@ func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint strin
 		rh := Request{
 			ID:           req.ID,
 			Path:         req.Path,
-			Content:      req.Content,
+			Content:      req.Content.String,
 			Method:       req.Method,
 			SourceIp:     req.SourceIp,
 			ContentSize:  req.ContentSize,
@@ -304,10 +320,11 @@ func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request,
 
 	req := Request{
 		ID:           reqRecord.ID,
+		UUID:         reqRecord.Uuid,
 		Path:         reqRecord.Path,
 		Method:       reqRecord.Method,
 		SourceIp:     reqRecord.SourceIp,
-		Content:      reqRecord.Content,
+		Content:      reqRecord.Content.String,
 		ContentSize:  reqRecord.ContentSize,
 		ResponseCode: reqRecord.ResponseCode,
 		CreatedAt:    reqRecord.CreatedAt,
@@ -362,4 +379,49 @@ func (s *UrlService) CheckEndpointExists(c context.Context, endpoint string) (bo
 		return false, NewInternalServerError()
 	}
 	return exists, nil
+}
+
+func (s *UrlService) GetRequestByUUID(c context.Context, uuid string) (Request, *UrlError) {
+
+	reqRecord, err := s.urlq.GetRequestByUUID(c, uuid)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return Request{}, &UrlError{
+				Code:    http.StatusNotFound,
+				Message: fmt.Sprintf("No request found for uuid: %v", uuid),
+			}
+		} else {
+			slog.Error("Unable to fetch request details", "uuid", uuid, "err", err)
+			return Request{}, NewInternalServerError()
+		}
+	}
+
+	req := Request{
+		ID:           reqRecord.ID,
+		UUID:         reqRecord.Uuid,
+		Path:         reqRecord.Path,
+		Method:       reqRecord.Method,
+		SourceIp:     reqRecord.SourceIp,
+		Content:      reqRecord.Content.String,
+		ContentSize:  reqRecord.ContentSize,
+		ResponseCode: reqRecord.ResponseCode,
+		CreatedAt:    reqRecord.CreatedAt,
+		ExpiresAt:    reqRecord.ExpiresAt,
+	}
+
+	json.Unmarshal(reqRecord.Headers, &req.Headers)
+	json.Unmarshal(reqRecord.QueryParams, &req.QueryParams)
+
+	return req, nil
+}
+
+func (s *UrlService) ExpireRequests(c context.Context) error {
+	slog.Info("Deleting expired requests", "date", time.Now().Local().String())
+	err := s.urlq.ExpireRequests(c)
+	if err != nil {
+		slog.Error("Unable to delete expired requests", "date", time.Now().Local().String(), "err", err)
+		return err
+	}
+
+	return nil
 }

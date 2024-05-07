@@ -148,10 +148,10 @@ RETURNING
 `
 
 type InsertEndpointParams struct {
-	Endpoint  string           `json:"endpoint"`
-	UserID    pgtype.Int8      `json:"user_id"`
-	Plan      Plan             `json:"plan"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+	Endpoint  string             `json:"endpoint"`
+	UserID    pgtype.Int8        `json:"user_id"`
+	Plan      Plan               `json:"plan"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) InsertEndpoint(ctx context.Context, arg InsertEndpointParams) (Endpoint, error) {
@@ -184,9 +184,9 @@ RETURNING
 `
 
 type InsertFreeEndpointParams struct {
-	Endpoint  string           `json:"endpoint"`
-	UserID    pgtype.Int8      `json:"user_id"`
-	ExpiresAt pgtype.Timestamp `json:"expires_at"`
+	Endpoint  string             `json:"endpoint"`
+	UserID    pgtype.Int8        `json:"user_id"`
+	ExpiresAt pgtype.Timestamptz `json:"expires_at"`
 }
 
 func (q *Queries) InsertFreeEndpoint(ctx context.Context, arg InsertFreeEndpointParams) (Endpoint, error) {

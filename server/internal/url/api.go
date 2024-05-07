@@ -2,7 +2,6 @@ package url
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
@@ -51,7 +50,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, freeLim, basicLi
 	urlGroup.All("/hook/:endpoint/*", freeLim, basicLim, proLim, uc.HookHandler)
 
 	urlGroup.Get("/history/:endpoint", authmw, uc.GetEndpointHistoryHandler)
-	urlGroup.Get("/request/:requestid", authmw, uc.RequestDetailsHandler)
+	urlGroup.Get("/request/:uuid", authmw, uc.RequestDetailsUUIDHandler)
 
 	urlGroup.Get("/stats/:endpoint", authmw, uc.StatsHandler)
 
@@ -129,7 +128,6 @@ func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 	return c.JSON(stats)
 }
 
-// TODO: Implement this
 func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 	reqIdStr := c.Params("requestid", "")
 	if reqIdStr == "" {
@@ -146,6 +144,23 @@ func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 	}
 
 	req, err := uc.service.GetRequestDetails(c.Context(), reqId)
+	if err != nil {
+		return &fiber.Error{Code: err.Code, Message: err.Message}
+	}
+
+	return c.JSON(req)
+}
+
+func (uc *UrlController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
+	uuid := c.Params("uuid", "")
+	if uuid == "" {
+		return fiber.NewError(
+			fiber.StatusNotFound,
+			"No uuid found",
+		)
+	}
+
+	req, err := uc.service.GetRequestByUUID(c.Context(), uuid)
 	if err != nil {
 		return &fiber.Error{Code: err.Code, Message: err.Message}
 	}
@@ -208,15 +223,20 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	var req any
-	_ = c.BodyParser(&req)
+	body := c.Body()
 
-	strBytes, _ := json.Marshal(req)
-	body := string(strBytes)
 	// Note: key is string and value is []string
 	headers := c.GetReqHeaders()
-	ip := c.IP()
-	path := c.Params("+", "/")
+	var ip string
+
+	// Specific to railway.app deployment
+	envoyAddr, ok := headers["X-Envoy-External-Address"]
+	if ok {
+		ip = envoyAddr[0]
+	} else {
+		ip = c.IP()
+	}
+	path := c.Params("*", "/")
 
 	method := c.Method()
 	query := c.Queries()
@@ -229,7 +249,7 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		Query:        query,
 		SourceIp:     ip,
 		Method:       method,
-		Content:      body,
+		Content:      string(body),
 		ContentSize:  len(body),
 		ResponseCode: http.StatusOK,
 	}
@@ -286,8 +306,6 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 		slog.Info("No endpoint found in path params")
 		return fiber.ErrBadRequest
 	}
-
-	slog.Info("Is from local", "val", c.IsFromLocal())
 
 	limitStr := c.Query("limit", "20")
 	limit, err := strconv.ParseInt(limitStr, 10, 32)

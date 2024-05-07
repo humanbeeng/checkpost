@@ -13,6 +13,7 @@ require (
 	github.com/knadh/koanf/v2 v2.1.1
 	github.com/matoous/go-nanoid/v2 v2.0.0
 	github.com/o1egl/paseto v1.0.0
+	github.com/robfig/cron/v3 v3.0.1
 	github.com/stretchr/testify v1.9.0
 	golang.org/x/oauth2 v0.19.0
 )

@@ -20,7 +20,7 @@ CREATE TABLE
     "username" TEXT UNIQUE NOT NULL,
     "plan" plan NOT NULL,
     "email" VARCHAR(60) UNIQUE NOT NULL,
-    "created_at" TIMESTAMP DEFAULT (NOW()),
+    "created_at" timestamptz DEFAULT (NOW()),
     "is_deleted" bool DEFAULT FALSE
   );
 
@@ -30,8 +30,8 @@ CREATE TABLE
     "endpoint" TEXT UNIQUE NOT NULL,
     "user_id" BIGINT,
     "plan" plan NOT NULL DEFAULT 'free',
-    "created_at" TIMESTAMP DEFAULT (NOW()),
-    "expires_at" TIMESTAMP NOT NULL,
+    "created_at" timestamptz DEFAULT (NOW()),
+    "expires_at" timestamptz NOT NULL,
     "is_deleted" bool DEFAULT FALSE
   );
 
@@ -51,8 +51,8 @@ CREATE TABLE
     "response_code" INT,
     "headers" jsonb,
     "query_params" jsonb,
-    "created_at" TIMESTAMP DEFAULT (NOW()),
-    "expires_at" TIMESTAMP NOT NULL,
+    "created_at" timestamptz DEFAULT (NOW()),
+    "expires_at" timestamptz NOT NULL,
     "is_deleted" bool DEFAULT FALSE
   );
 
@@ -62,7 +62,7 @@ CREATE TABLE
     "uri" TEXT NOT NULL,
     "endpoint_id" BIGINT NOT NULL,
     "user_id" BIGINT,
-    "created_at" TIMESTAMP DEFAULT (NOW()),
+    "created_at" timestamptz DEFAULT (NOW()),
     "is_deleted" bool DEFAULT FALSE
   );
 
@@ -73,7 +73,7 @@ CREATE TABLE
     "endpoint_id" BIGINT NOT NULL,
     "response_code" INT NOT NULL DEFAULT 200,
     "content" TEXT,
-    "created_at" TIMESTAMP DEFAULT (NOW()),
+    "created_at" timestamptz DEFAULT (NOW()),
     "is_deleted" bool DEFAULT FALSE
   );
 
