@@ -9,6 +9,8 @@ import (
 )
 
 type UrlQuerier interface {
+	CheckEndpointExists(ctx context.Context, endpoint string) (bool, error)
+
 	GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error)
 	GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error)
 	GetUserEndpoints(ctx context.Context, userId int64) ([]db.Endpoint, error)
@@ -18,11 +20,13 @@ type UrlQuerier interface {
 	InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error)
 	InsertEndpoint(ctx context.Context, params db.InsertEndpointParams) (db.Endpoint, error)
 
-	CheckEndpointExists(ctx context.Context, endpoint string) (bool, error)
-
-	// TODO: Remove this
+	// TODO: Move these to requests querier
 	CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error)
+
 	GetRequestById(ctx context.Context, reqId int64) (db.Request, error)
+	GetRequestByUUID(ctx context.Context, uuid string) (db.Request, error)
+
+	ExpireRequests(ctx context.Context) error
 }
 
 type UrlStore struct {
@@ -76,4 +80,12 @@ func (us UrlStore) CreateNewRequest(ctx context.Context, params db.CreateNewRequ
 
 func (us UrlStore) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
 	return us.q.GetRequestById(ctx, reqId)
+}
+
+func (us UrlStore) GetRequestByUUID(ctx context.Context, uuid string) (db.Request, error) {
+	return us.q.GetRequestByUUID(ctx, uuid)
+}
+
+func (us UrlStore) ExpireRequests(ctx context.Context) error {
+	return us.q.DeleteExpiredRequests(ctx)
 }
