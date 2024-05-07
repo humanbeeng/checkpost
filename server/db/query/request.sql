@@ -36,13 +36,29 @@ RETURNING
 
 -- name: GetEndpointHistory :many
 SELECT
-    *
+    request.id,
+    request.uuid,
+    request.user_id,
+    request.plan,
+    request.path,
+    request.response_id,
+    request.response_code,
+    request.content,
+    request.method,
+    request.source_ip,
+    request.content_size,
+    request.headers,
+    request.query_params,
+    request.created_at,
+    request.expires_at,
+    endpoint.endpoint AS endpoint
 FROM
     request
     LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
 WHERE
     endpoint.endpoint = $1
     AND request.is_deleted = FALSE
+    AND request.expires_at > NOW()
 LIMIT
     $2
 OFFSET
@@ -56,6 +72,7 @@ FROM
 WHERE
     id = $1
     AND is_deleted = FALSE
+    AND expires_at > NOW()
 LIMIT
     1;
 
@@ -77,4 +94,22 @@ FROM
     LEFT JOIN endpoint e ON r.endpoint_id = e.id
 WHERE
     endpoint = $1
-    AND is_deleted = FALSE;
+    AND is_deleted = FALSE
+    AND expires_at > NOW();
+
+-- name: GetRequestByUUID :one
+SELECT
+    *
+FROM
+    request
+WHERE
+    UUID = $1
+    AND is_deleted = FALSE
+    AND expires_at > NOW()
+LIMIT
+    1;
+
+-- name: DeleteExpiredRequests :exec
+DELETE FROM request
+WHERE
+    expires_at < NOW();
