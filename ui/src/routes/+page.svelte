@@ -147,8 +147,8 @@
 		<div class="hidden md:w-auto md:block"></div>
 	</div>
 
-	<section class="h-screen border-t bg-gray-50 px-24">
-		<h1 class="text-3xl font-bold tracking-tight text-center py-10 md:py-12">Plans</h1>
+	<section class="h-screen border-t bg-gray-50 lg:px-24">
+		<h1 class="text-3xl font-bold tracking-tight text-center py-10 lg:py-12">Plans</h1>
 		<div class="w-full px-6 lg:px-32 grid grid-cols-1 gap-3 lg:grid-cols-3">
 			<!-- Free -->
 			<Card.Root class="mx-2 ">
