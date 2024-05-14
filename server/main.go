@@ -49,17 +49,10 @@ func main() {
 	}
 
 	// General limiters
-	urlGenLim := middleware.NewGenerateUrlLimiter()
-	globalLim := middleware.NewGlobalLimiter()
+
 	authmw := middleware.NewAuthRequiredMiddleware(pasetoVerifier)
 	routermw := middleware.NewSubdomainRouterMiddleware()
 
-	// Plan based limiters
-	freeLim := middleware.NewFreePlanLimiter()
-	basicLim := middleware.NewBasicPlanLimiter()
-	proLim := middleware.NewProPlanLimiter()
-
-	app.Use(globalLim)
 	app.Use(routermw)
 
 	ctx := context.Background()
@@ -86,13 +79,12 @@ func main() {
 	urlHandler := url.NewUrlController(endpointService)
 
 	cachemw := middleware.NewCacheMiddleware()
-	endpointCheckLim := middleware.NewEndpointCheckLimiter()
 
 	userc := user.NewUserController(userStore)
 	userc.RegisterRoutes(app, authmw)
 
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, authmw, freeLim, basicLim, proLim, urlGenLim, endpointCheckLim, cachemw)
+	urlHandler.RegisterRoutes(app, authmw, cachemw)
 
 	re := jobs.NewExpiredRequestsRemover(cron.New(), *urlStore)
 	re.Start()
