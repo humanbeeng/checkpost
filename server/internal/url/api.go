@@ -38,16 +38,16 @@ func NewUrlController(service *UrlService) *UrlController {
 	return &UrlController{conns: &sync.Map{}, service: service}
 }
 
-func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, freeLim, basicLim, proLim, urlGenLim, endpointCheckLim, cache fiber.Handler) {
+func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
 	urlGroup := app.Group("/url")
 
 	urlGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
 
-	urlGroup.Get("/exists/:endpoint", endpointCheckLim, cache, uc.CheckEndpointExistsHandler)
+	urlGroup.Get("/exists/:endpoint", cache, uc.CheckEndpointExistsHandler)
 
-	urlGroup.Post("/generate", authmw, urlGenLim, uc.GenerateUrlHandler)
+	urlGroup.Post("/generate", authmw, uc.GenerateUrlHandler)
 
-	urlGroup.All("/hook/:endpoint/*", freeLim, basicLim, proLim, uc.HookHandler)
+	urlGroup.All("/hook/:endpoint/*", uc.HookHandler)
 
 	urlGroup.Get("/history/:endpoint", authmw, uc.GetEndpointHistoryHandler)
 	urlGroup.Get("/request/:uuid", authmw, uc.RequestDetailsUUIDHandler)
