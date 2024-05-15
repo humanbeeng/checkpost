@@ -48,8 +48,6 @@ func main() {
 		slog.Error("unable to create new paseto verifier", "err", err)
 	}
 
-	// General limiters
-
 	authmw := middleware.NewAuthRequiredMiddleware(pasetoVerifier)
 	routermw := middleware.NewSubdomainRouterMiddleware()
 
