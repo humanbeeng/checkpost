@@ -19,7 +19,7 @@ func NewAuthRequiredMiddleware(pv *core.PasetoVerifier) fiber.Handler {
 
 		payload, err := pv.VerifyToken(token)
 		if err != nil {
-			slog.Error("Unable to verify token", "err", err)
+			slog.Error("unable to verify token", "err", err)
 			return fiber.ErrUnauthorized
 		}
 		userId, err := strconv.ParseInt(payload.Subject, 10, 64)

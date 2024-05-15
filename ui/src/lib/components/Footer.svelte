@@ -1,6 +1,6 @@
-<footer class="py-4 md:px-8 md:py-0 bottom-0">
-	<div class="container flex flex-col items-center justify-start gap-4 md:h-24 md:flex-row">
-		<div class="flex flex-col items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
+<footer class="py-4 md:px-8 md:py-0 bottom-0 w-screen">
+	<div class="container flex items-center justify-start gap-1 md:gap-4 md:h-24 md:flex-row">
+		<div class="flex flex-row items-center gap-4 px-8 md:flex-row md:gap-2 md:px-0">
 			<p class="text-center text-sm leading-loose text-muted-foreground md:text-left">
 				<a
 					href="/terms"

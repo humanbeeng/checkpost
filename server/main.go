@@ -45,10 +45,8 @@ func main() {
 
 	pasetoVerifier, err := core.NewPasetoVerifier(key)
 	if err != nil {
-		slog.Error("Unable to create new paseto verifier", "err", err)
+		slog.Error("unable to create new paseto verifier", "err", err)
 	}
-
-	// General limiters
 
 	authmw := middleware.NewAuthRequiredMiddleware(pasetoVerifier)
 	routermw := middleware.NewSubdomainRouterMiddleware()
@@ -70,7 +68,7 @@ func main() {
 
 	ac, err := auth.NewGithubAuthHandler(config, queries)
 	if err != nil {
-		log.Fatalf("Unable to init auth controller. %v", err)
+		log.Fatalf("unable to init auth controller. %v", err)
 	}
 
 	urlStore := url.NewUrlStore(queries)

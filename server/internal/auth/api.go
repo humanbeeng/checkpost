@@ -88,7 +88,7 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 
 	githubUser, err := a.exchangeCodeForUser(c, code)
 	if err != nil {
-		slog.Error("Unable to exchange code for github user", "err", err)
+		slog.Error("unable to exchange code for github user", "err", err)
 		return fiber.ErrInternalServerError
 	}
 
@@ -103,11 +103,11 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 				Email:     githubUser.Email,
 			})
 			if err != nil {
-				slog.Error("Unable to create new user", "err", err)
+				slog.Error("unable to create new user", "err", err)
 				return fiber.ErrInternalServerError
 			}
 		} else {
-			slog.Error("Unable to fetch existing user", "err", err)
+			slog.Error("unable to fetch existing user", "err", err)
 		}
 	}
 

@@ -3,7 +3,7 @@
 </script>
 
 <body class="bg-gray-50 w-full min-h-full">
-	<div class="flex flex-col justify-center mx-64">
+	<div class="flex flex-col justify-center mx-10 lg:mx-64">
 		<h1 class="text-4xl font-bold tracking-tight my-16 text-center">Privacy Policy</h1>
 
 		<div class="w-full text-md flex flex-col gap-7">

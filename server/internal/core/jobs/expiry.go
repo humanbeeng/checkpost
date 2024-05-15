@@ -26,7 +26,7 @@ func (re *ExpiredRequestsRemover) Start() error {
 
 	_, err := re.cron.AddFunc("@daily", re.deleteExpiredRequests)
 	if err != nil {
-		slog.Error("Unable to register expire requests expirer", "err", err)
+		slog.Error("unable to register expire requests expirer", "err", err)
 		return err
 	}
 
