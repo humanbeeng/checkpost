@@ -95,7 +95,7 @@ func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 	}
 
 	if err != nil {
-		slog.Error("Unable to check if endpoint exists", "err", err)
+		slog.Error("unable to check if endpoint exists", "err", err)
 		c.WriteMessage(websocket.TextMessage, []byte("Oops! Something went wrong."))
 		c.Close()
 	}
@@ -139,7 +139,7 @@ func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 
 	reqId, parseErr := strconv.ParseInt(reqIdStr, 10, 64)
 	if parseErr != nil {
-		slog.Error("Unable to convert request id from path to int", "err", parseErr)
+		slog.Error("unable to convert request id from path to int", "err", parseErr)
 		return fiber.ErrBadRequest
 	}
 
@@ -397,7 +397,7 @@ func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
 	for _, c := range conns {
 		err := c.WriteJSON(data)
 		if err != nil {
-			slog.Error("Unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
+			slog.Error("unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
 		}
 	}
 }

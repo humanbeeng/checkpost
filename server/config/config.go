@@ -44,7 +44,7 @@ func GetAppConfig() (*AppConfig, error) {
 				strings.TrimPrefix(s, CheckpostConfigPrefix)), "_", ".", -1)
 			return str
 		}), nil); err != nil {
-			slog.Error("Unable to load config", "err", err)
+			slog.Error("unable to load config", "err", err)
 			return nil, err
 		}
 	}
@@ -53,7 +53,7 @@ func GetAppConfig() (*AppConfig, error) {
 
 	err := k.Unmarshal("", &appConfig)
 	if err != nil {
-		slog.Error("Unable to unmarshal config", "err", err)
+		slog.Error("unable to unmarshal config", "err", err)
 		return nil, err
 	}
 	return &appConfig, nil

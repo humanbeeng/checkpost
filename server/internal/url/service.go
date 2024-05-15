@@ -75,7 +75,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	// Check if the requested endpoint already exists
 	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
 	if err != nil {
-		slog.Error("Unable to check if endpoint already exists", "endpoint", endpoint, "username", username, "err", err)
+		slog.Error("unable to check if endpoint already exists", "endpoint", endpoint, "username", username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 	if exists {
@@ -93,14 +93,14 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 				Message: fmt.Sprintf("No user found with username: %s", username),
 			}
 		}
-		slog.Error("Unable to get user from username", "username", username, "err", err)
+		slog.Error("unable to get user from username", "username", username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 
 	// Check if user has exceeded number of urls that can be generated
 	urls, err := s.urlq.GetNonExpiredEndpointsOfUser(c, pgtype.Int8{Int64: user.ID, Valid: true})
 	if err != nil {
-		slog.Error("Unable to get non expired endpoints", "username", user.Username, "err", err)
+		slog.Error("unable to get non expired endpoints", "username", user.Username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 
@@ -126,7 +126,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		},
 	})
 	if err != nil {
-		slog.Error("Unable to insert new url into db", "endpoint", endpoint, "username", user.Username, "err", err)
+		slog.Error("unable to insert new url into db", "endpoint", endpoint, "username", user.Username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 
@@ -144,7 +144,7 @@ func (s *UrlService) GetUserEndpoints(ctx context.Context, userId int64) ([]Endp
 		if errors.Is(err, pgx.ErrNoRows) {
 			return []Endpoint{}, nil
 		}
-		slog.Error("Unable to fetch user endpoints", "userId", userId, "err", err)
+		slog.Error("unable to fetch user endpoints", "userId", userId, "err", err)
 		return []Endpoint{}, NewInternalServerError()
 	}
 	var endpoints []Endpoint
@@ -223,19 +223,19 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 
 	queryBytes, err := json.Marshal(hookReq.Query)
 	if err != nil {
-		slog.Error("Unable to marshal query params", "err", err)
+		slog.Error("unable to marshal query params", "err", err)
 		return db.Request{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Unable to parse query params.",
+			Message: "unable to parse query params.",
 		}
 	}
 
 	headerBytes, err := json.Marshal(hookReq.Headers)
 	if err != nil {
-		slog.Error("Unable to marshal headers", "err", err)
+		slog.Error("unable to marshal headers", "err", err)
 		return db.Request{}, &UrlError{
 			Code:    http.StatusBadRequest,
-			Message: "Unable to parse headers",
+			Message: "unable to parse headers",
 		}
 	}
 
@@ -258,7 +258,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		ExpiresAt:   expiresAt,
 	})
 	if err != nil {
-		slog.Error("Unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
+		slog.Error("unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
 		return db.Request{}, NewInternalServerError()
 	}
 
@@ -277,7 +277,7 @@ func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint strin
 		if errors.Is(err, pgx.ErrNoRows) {
 			return reqHistory, nil
 		}
-		slog.Error("Unable to fetch endpoint request history", "endpoint", endpoint, "err", err)
+		slog.Error("unable to fetch endpoint request history", "endpoint", endpoint, "err", err)
 		return nil, NewInternalServerError()
 	}
 
@@ -313,7 +313,7 @@ func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request,
 				Message: fmt.Sprintf("No request found for request id: %v", reqId),
 			}
 		} else {
-			slog.Error("Unable to fetch request details", "reqId", reqId, "err", err)
+			slog.Error("unable to fetch request details", "reqId", reqId, "err", err)
 			return Request{}, NewInternalServerError()
 		}
 	}
@@ -349,13 +349,13 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 				Message: fmt.Sprintf("Endpoint %v not found", endpoint),
 			}
 		}
-		slog.Error("Unable to fetch endpoint details", "endpoint", endpoint, "err", err)
+		slog.Error("unable to fetch endpoint details", "endpoint", endpoint, "err", err)
 		return EndpointStats{}, NewInternalServerError()
 	}
 
 	stats, err := s.urlq.GetEndpointRequestCount(c, endpoint)
 	if err != nil {
-		slog.Error("Unable to fetch endpoint request count", "endpoint", endpoint, "err", err)
+		slog.Error("unable to fetch endpoint request count", "endpoint", endpoint, "err", err)
 		return EndpointStats{}, NewInternalServerError()
 	}
 
@@ -375,7 +375,7 @@ func (s *UrlService) CheckEndpointExists(c context.Context, endpoint string) (bo
 
 	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
 	if err != nil {
-		slog.Error("Unable to check if endpoint exists", "endpoint", endpoint, "err", err)
+		slog.Error("unable to check if endpoint exists", "endpoint", endpoint, "err", err)
 		return false, NewInternalServerError()
 	}
 	return exists, nil
@@ -391,7 +391,7 @@ func (s *UrlService) GetRequestByUUID(c context.Context, uuid string) (Request, 
 				Message: fmt.Sprintf("No request found for uuid: %v", uuid),
 			}
 		} else {
-			slog.Error("Unable to fetch request details", "uuid", uuid, "err", err)
+			slog.Error("unable to fetch request details", "uuid", uuid, "err", err)
 			return Request{}, NewInternalServerError()
 		}
 	}
@@ -419,7 +419,7 @@ func (s *UrlService) ExpireRequests(c context.Context) error {
 	slog.Info("Deleting expired requests", "date", time.Now().Local().String())
 	err := s.urlq.ExpireRequests(c)
 	if err != nil {
-		slog.Error("Unable to delete expired requests", "date", time.Now().Local().String(), "err", err)
+		slog.Error("unable to delete expired requests", "date", time.Now().Local().String(), "err", err)
 		return err
 	}
 
