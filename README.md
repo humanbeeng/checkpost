@@ -29,7 +29,7 @@ Checkpost.io is released under the [AGPL v3 License](https://www.gnu.org/license
 - Hosting: Cloudflare Page, Railway.app
 
 ### Contributing
-Contributions to Checkpost.io are welcome! If you encounter any issues or have suggestions for improvements, please open an issue on the [repository](https://github.com/humanbeeng/checkpost). If you'd like to contribute code, follow these steps:
+Contributions to Checkpost.io are welcome! If you encounter any issues or have suggestions for improvements, please open an issue on the [repository](https://github.com/humanbeeng/checkpost/issues). If you'd like to contribute code, follow these steps:
 
 1. Fork the repository.
 2. Create a new branch for your feature or bug fix.
