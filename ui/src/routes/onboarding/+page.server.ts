@@ -76,7 +76,7 @@ export const actions = {
 			});
 
 			if (res.ok) {
-				return { url: (await res.json()) as GenerateUrlResponse };
+				return { url: (await res.json()) as GenerateUrlResponse, err: null };
 			} else {
 				const text = await res.text();
 				return fail(res.status, { err: { field: '', message: text } });

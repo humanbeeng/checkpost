@@ -116,7 +116,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		if !strings.Contains(strings.ToLower(user.Email), endpoint) || strings.Contains(strings.ToLower(user.Email), "@gmail.com") {
 			return db.Endpoint{}, &UrlError{
 				Code:    http.StatusBadRequest,
-				Message: fmt.Sprintf("URL %s is reserved.", url),
+				Message: fmt.Sprintf("You cannot use this subdomain. Please try with mail issued by %s", endpoint),
 			}
 		}
 	}
@@ -378,17 +378,53 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 	}, nil
 }
 
-func (s *UrlService) CheckEndpointExists(c context.Context, endpoint string) (bool, *UrlError) {
+type SubdomainExists string
+
+const (
+	Available         SubdomainExists = "Its available. Sign up and make it yours"
+	Taken             SubdomainExists = "That subdomain is already taken. Try something else?"
+	ReservedCompany   SubdomainExists = "Subdomain is reserved. But, you can go ahead if you're using mail issued from that organisation."
+	ReservedSubdomain SubdomainExists = "Subdomain is reserved."
+	BadSubdomain      SubdomainExists = "Bad subdomain."
+	Error             SubdomainExists = "Something went wrong."
+)
+
+func (s *UrlService) CheckSubdomainExists(c context.Context, endpoint string) (SubdomainExists, *UrlError) {
 	endpoint = strings.ToLower(endpoint)
 
 	slog.Info("Checking if endpoint exists", "endpoint", endpoint)
 
+	if len(endpoint) < 4 || len(endpoint) > 10 {
+		return BadSubdomain, &UrlError{
+			Code:    http.StatusBadRequest,
+			Message: "Subdomain should be 4 to 10 characters.",
+		}
+	}
+
+	if _, ok := core.ReservedSubdomains[endpoint]; ok {
+		return ReservedSubdomain, &UrlError{
+			Code:    http.StatusBadRequest,
+			Message: fmt.Sprintf("Subdomain %s is reserved.", endpoint),
+		}
+	}
+
+	// Check reserved companies. If found, check if the mail is from that organisation
+	if _, ok := core.ReservedCompanies[endpoint]; ok {
+		return ReservedCompany, nil
+	}
+
 	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
 	if err != nil {
 		slog.Error("unable to check if endpoint exists", "endpoint", endpoint, "err", err)
-		return false, NewInternalServerError()
+		return Error, NewInternalServerError()
 	}
-	return exists, nil
+
+	if exists {
+		fmt.Println("Exists", exists)
+		return Taken, nil
+	}
+
+	return Available, nil
 }
 
 func (s *UrlService) GetRequestByUUID(c context.Context, uuid string) (Request, *UrlError) {

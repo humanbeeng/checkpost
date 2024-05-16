@@ -12,7 +12,6 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
 // TODO: Add better error messages
@@ -43,7 +42,7 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Hand
 
 	urlGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
 
-	urlGroup.Get("/exists/:endpoint", cache, uc.CheckEndpointExistsHandler)
+	urlGroup.Get("/exists/:endpoint", cache, uc.CheckSubdomainExistsHandler)
 
 	urlGroup.Post("/generate", authmw, uc.GenerateUrlHandler)
 
@@ -333,35 +332,20 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-type CheckEndpointExistsResponse struct {
+type CheckSubdomainExistsResponse struct {
 	Endpoint string `json:"endpoint"`
 	Exists   bool   `json:"exists"`
 	Message  string `json:"message"`
 }
 
-func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
+func (uc *UrlController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 
 	if endpoint == "" {
 		return fiber.ErrBadRequest
 	}
 
-	if len(endpoint) < 4 || len(endpoint) > 10 {
-		return &fiber.Error{
-			Code:    http.StatusBadRequest,
-			Message: "Subdomain should be 4 to 10 characters.",
-		}
-	}
-
-	if _, ok := core.ReservedSubdomains[endpoint]; ok {
-		return c.JSON(CheckEndpointExistsResponse{
-			Endpoint: endpoint,
-			Exists:   true,
-			Message:  fmt.Sprintf("Subdomain %s is reserved.", endpoint),
-		})
-	}
-
-	exists, err := uc.service.CheckEndpointExists(c.Context(), endpoint)
+	subdomainExists, err := uc.service.CheckSubdomainExists(c.Context(), endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -369,19 +353,40 @@ func (uc *UrlController) CheckEndpointExistsHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	if exists {
-		return c.JSON(CheckEndpointExistsResponse{
-			Endpoint: endpoint,
-			Exists:   exists,
-			Message:  "That subdomain is already taken 😿. Try something else?",
-		})
+	switch subdomainExists {
+	case Available:
+		{
+			return c.JSON(CheckSubdomainExistsResponse{
+				Endpoint: endpoint,
+				Exists:   false,
+				Message:  string(Available),
+			})
+		}
+	case Taken:
+		{
+			return c.JSON(CheckSubdomainExistsResponse{
+				Endpoint: endpoint,
+				Exists:   true,
+				Message:  string(Taken),
+			})
+		}
+	case ReservedCompany:
+		{
+			return c.JSON(CheckSubdomainExistsResponse{
+				Endpoint: endpoint,
+				Exists:   false,
+				Message:  string(ReservedCompany),
+			})
+		}
+	default:
+		{
+			return c.JSON(CheckSubdomainExistsResponse{
+				Endpoint: endpoint,
+				Exists:   true,
+				Message:  string(Error),
+			})
+		}
 	}
-
-	return c.JSON(CheckEndpointExistsResponse{
-		Endpoint: endpoint,
-		Exists:   exists,
-		Message:  "Its available 🐱. Sign up and make it yours!",
-	})
 }
 
 func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
