@@ -12,9 +12,10 @@
 	export let data;
 	let submitBtnText = 'Continue';
 
-	let subdomainError: string | null;
+	let subdomainExistsErrMessage: string | null;
 	let endpointExistsResponse: EndpointExistsResponse | null;
 	let subdomain: string = '';
+	$: formErrMessage = form?.err?.message;
 
 	let state: State = 'empty';
 
@@ -36,12 +37,13 @@
 		switch (res.status) {
 			case 200: {
 				endpointExistsResponse = (await res.json()) as EndpointExistsResponse;
-				subdomainError = null;
+				subdomainExistsErrMessage = null;
+				formErrMessage = '';
 				state = 'success';
 				break;
 			}
 			case 400: {
-				subdomainError = await res.text();
+				subdomainExistsErrMessage = await res.text();
 				state = 'error';
 				endpointExistsResponse = null;
 				break;
@@ -52,13 +54,13 @@
 	const debouncedHandleChange = debounce(checkSubdomain, 1000);
 
 	function handleInput(e: any) {
+		state = 'loading';
 		if (e.which === 32) {
 			// 32 is the keycode for space
 			e.preventDefault();
 			return;
 		}
 		if ((subdomain = e.target.value)) {
-			state = 'loading';
 			submitBtnText = 'Continue';
 		}
 		debouncedHandleChange(e);
@@ -122,7 +124,7 @@
 									{/if}
 								{/if}
 								{#if state === 'error'}
-									<p class="text-red-900 text-xs py-2">{subdomainError}</p>
+									<p class="text-red-900 text-xs py-2">{subdomainExistsErrMessage}</p>
 								{/if}
 							</span>
 						</div>
@@ -134,7 +136,9 @@
 							{submitBtnText}
 						</Button>
 
-						{#if form?.err}<p class="text-red-950 text-xs max-w-72">{form.err.message}</p>{/if}
+						{#if form?.err}
+							<p class="text-red-950 text-xs max-w-72">{formErrMessage}</p>
+						{/if}
 					</div>
 				</form>
 			</div>

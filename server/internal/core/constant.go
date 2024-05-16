@@ -100,4 +100,6 @@ var ReservedCompanies = map[string]bool{
 	"mongodb":     true,
 	"zscaler":     true,
 	"sourcegraph": true,
+	"eraser":      true,
+	"supabase":    true,
 }

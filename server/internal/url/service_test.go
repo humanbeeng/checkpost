@@ -166,9 +166,9 @@ func (us MockUrlStore) GetRequestByUUID(ctx context.Context, uuid string) (db.Re
 }
 
 func TestCheckEndpointExists(t *testing.T) {
-	exists, err := service.CheckEndpointExists(context.Background(), ExistingEndpoint)
+	exists, err := service.CheckSubdomainExists(context.Background(), ExistingEndpoint)
 	assert.Nil(t, err)
-	assert.True(t, exists)
+	assert.Equal(t, Taken, exists)
 }
 
 func TestCreateUrlForFreeUserWhenUserNotFound(t *testing.T) {
