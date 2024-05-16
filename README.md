@@ -1,3 +1,3 @@
 # Checkpost
 
-Checkpost is a Realtime HTTP Request Inspection Platform.
+Checkpost is a open source realtime HTTP request inspection platform.
