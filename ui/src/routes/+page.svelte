@@ -7,7 +7,7 @@
 	import { PUBLIC_BASE_URL } from '$env/static/public';
 	import Footer from '@/components/Footer.svelte';
 	import { debounce } from '@/debounce';
-	import { ChevronRight, Reload } from 'svelte-radix';
+	import { ChevronRight, GithubLogo, Reload } from 'svelte-radix';
 	import type { EndpointExistsResponse, State } from './types';
 
 	let error: string | null;
@@ -76,6 +76,9 @@
 			target="_blank"
 			class="hover:underline">Pricing</a
 		>
+		<a href="https://github.com/humanbeeng/checkpost">
+			<GithubLogo />
+		</a>
 	</Header>
 	<img
 		src={background}
