@@ -1,6 +1,6 @@
 # Checkpost
 
-[![go-build](https://github.com/humanbeeng/checkpost/actions/workflows/go.yml/badge.svg)](https://github.com/humanbeeng/checkpost/actions/workflows/go.yml) [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-blue.svg)](https://www.gnu.org/licenses/gpl-3.0)
+[![go-build](https://github.com/humanbeeng/checkpost/actions/workflows/go.yml/badge.svg)](https://github.com/humanbeeng/checkpost/actions/workflows/go.yml) [![License: AGPL v3](https://img.shields.io/badge/License-AGPL_v3-blue.svg)](https://www.gnu.org/licenses/agpl-3.0)
 
 [Checkpost](https://checkpost.io) is an open-source, real-time webhook inspection platform that allows you to easily inspect and debug incoming HTTP requests. With Checkpost, you get your own branded subdomain for free, eliminating the need to remember random UUIDs.
 
@@ -20,7 +20,7 @@
 3. Use your custom subdomain URL to start inspecting incoming HTTP requests.
 
 ### License
-Checkpost.io is released under the [GPL v3 License](https://www.gnu.org/licenses/gpl-3.0.en.html).
+Checkpost.io is released under the [AGPL v3 License](https://www.gnu.org/licenses/agpl-3.0).
 
 ### Tech 
 - Frontend app is built using Sveltekit. 
