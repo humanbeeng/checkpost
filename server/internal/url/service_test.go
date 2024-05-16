@@ -228,8 +228,21 @@ func TestCreateUrlWhenBasicUserHasExistingEndpoint(t *testing.T) {
 func TestCreateUrlForReservedDomains(t *testing.T) {
 	url, err := service.CreateUrl(context.TODO(), ProUser, "dash")
 	assert.Error(t, err)
-	assert.Equal(t, http.StatusConflict, err.Code)
+	assert.Equal(t, http.StatusBadRequest, err.Code)
 	assert.Empty(t, url)
+}
+
+func TestCreateUrlForReservedCompany(t *testing.T) {
+	url, err := service.CreateUrl(context.TODO(), BasicUser, "google")
+	assert.Error(t, err)
+	assert.Equal(t, http.StatusBadRequest, err.Code)
+	assert.Empty(t, url)
+}
+
+func TestCreateUrlForReservedCompanyWhenUserFromSameOrg(t *testing.T) {
+	url, err := service.CreateUrl(context.TODO(), BasicUser, "checkpost")
+	assert.Nil(t, err)
+	assert.Equal(t, url.Endpoint, "https://checkpost.checkpost.io")
 }
 
 func TestCreateUrlWhenEndpointLessThanFourChars(t *testing.T) {
@@ -298,9 +311,4 @@ func TestStoreRequestDetailsWhenEndpointNotFound(t *testing.T) {
 	assert.NotNil(t, err)
 	assert.Equal(t, err.Code, http.StatusNotFound)
 	assert.Empty(t, req)
-}
-
-// TODO: Implement this
-func TestGetEndpointRequestHistory(t *testing.T) {
-
 }

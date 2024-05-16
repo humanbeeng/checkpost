@@ -67,7 +67,7 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	// Check reserved subdomains
 	if _, ok := core.ReservedSubdomains[endpoint]; ok {
 		return db.Endpoint{}, &UrlError{
-			Code:    http.StatusConflict,
+			Code:    http.StatusBadRequest,
 			Message: fmt.Sprintf("URL %s is reserved.", url),
 		}
 	}
@@ -108,6 +108,16 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		return db.Endpoint{}, &UrlError{
 			Code:    http.StatusBadRequest,
 			Message: "Cannot generate more than one url for your current plan. Consider upgrading to Pro.",
+		}
+	}
+
+	// Check reserved companies. If found, check if the mail is from that organisation
+	if _, ok := core.ReservedCompanies[endpoint]; ok {
+		if !strings.Contains(strings.ToLower(user.Email), endpoint) || strings.Contains(strings.ToLower(user.Email), "@gmail.com") {
+			return db.Endpoint{}, &UrlError{
+				Code:    http.StatusBadRequest,
+				Message: fmt.Sprintf("URL %s is reserved.", url),
+			}
 		}
 	}
 
