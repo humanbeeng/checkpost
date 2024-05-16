@@ -11,7 +11,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/humanbeeng/checkpost/server/config"
 	db "github.com/humanbeeng/checkpost/server/db/sqlc"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/humanbeeng/checkpost/server/internal/user"
@@ -20,9 +19,8 @@ import (
 )
 
 type UrlService struct {
-	urlq   UrlQuerier
-	userq  user.UserQuerier
-	config *config.AppConfig
+	urlq  UrlQuerier
+	userq user.UserQuerier
 }
 
 func NewUrlService(urlq UrlQuerier, userq user.UserQuerier) *UrlService {
