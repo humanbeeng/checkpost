@@ -1,4 +1,4 @@
-import { PUBLIC_SERVER_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 import type { User } from '@/types';
 import { error, fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from './$types';
@@ -15,7 +15,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	let cookie = cookies.get('token');
 	if (cookie) {
 		const fetchUser = async () => {
-			const res = await fetch(`${PUBLIC_SERVER_URL}/user`).catch((err) => {
+			const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 				throw error(500);
 			});
 
@@ -32,7 +32,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		};
 
 		const fetchUserUrls = async () => {
-			const res = await fetch(`${PUBLIC_SERVER_URL}/url`).catch((err) => {
+			const res = await fetch(`${PUBLIC_BASE_URL}/url`).catch((err) => {
 				throw error(500);
 			});
 
@@ -74,7 +74,7 @@ export const actions = {
 				error: 'Subdomain length should be between 4 and 10.'
 			});
 		}
-		const res = await fetch(`${PUBLIC_SERVER_URL}/url/exists/${subdomain}`, {
+		const res = await fetch(`${PUBLIC_BASE_URL}/url/exists/${subdomain}`, {
 			method: 'GET'
 		});
 

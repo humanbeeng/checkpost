@@ -4,7 +4,7 @@
 	import { Button } from '$lib/components/ui/button/index.js';
 	import Header from '@/components/Header.svelte';
 
-	import { PUBLIC_SERVER_URL } from '$env/static/public';
+	import { PUBLIC_BASE_URL } from '$env/static/public';
 	import Footer from '@/components/Footer.svelte';
 	import { debounce } from '@/debounce';
 	import { ChevronRight, Reload } from 'svelte-radix';
@@ -30,7 +30,7 @@
 			return;
 		}
 
-		const res = await fetch(`${PUBLIC_SERVER_URL}/url/exists/${subdomain}`);
+		const res = await fetch(`${PUBLIC_BASE_URL}/url/exists/${subdomain}`);
 
 		switch (res.status) {
 			case 200: {

@@ -2,7 +2,7 @@
 	import Header from '@/components/Header.svelte';
 
 	import { enhance } from '$app/forms';
-	import { PUBLIC_SERVER_URL } from '$env/static/public';
+	import { PUBLIC_BASE_URL } from '$env/static/public';
 	import { Button } from '@/components/ui/button';
 	import { debounce } from '@/debounce';
 	import { Link1, LinkBreak2, Reload } from 'svelte-radix';
@@ -32,7 +32,7 @@
 			return;
 		}
 
-		const res = await fetch(`${PUBLIC_SERVER_URL}/url/exists/${subdomain}`);
+		const res = await fetch(`${PUBLIC_BASE_URL}/url/exists/${subdomain}`);
 
 		switch (res.status) {
 			case 200: {

@@ -1,4 +1,4 @@
-import { PUBLIC_SERVER_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 import type { User } from '@/types';
 import { error, fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from '../$types';
@@ -12,7 +12,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	// TODO: Better error handling
 
 	const fetchUser = async () => {
-		const res = await fetch(`${PUBLIC_SERVER_URL}/user`).catch((err) => {
+		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 			throw error(500);
 		});
 
@@ -29,7 +29,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	};
 
 	const fetchUserUrls = async () => {
-		const res = await fetch(`${PUBLIC_SERVER_URL}/url`).catch((err) => {
+		const res = await fetch(`${PUBLIC_BASE_URL}/url`).catch((err) => {
 			throw error(500);
 		});
 
@@ -67,7 +67,7 @@ export const actions = {
 			endpoint: endpoint
 		};
 		try {
-			const res = await fetch(`${PUBLIC_SERVER_URL}/url/generate`, {
+			const res = await fetch(`${PUBLIC_BASE_URL}/url/generate`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'

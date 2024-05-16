@@ -1,4 +1,4 @@
-import { PUBLIC_SERVER_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 import { error, redirect } from '@sveltejs/kit';
 import type { RequestEvent } from '../$types';
 
@@ -8,7 +8,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 	// TODO: Handle edge cases
 
 	// TODO: Replace this url with actual endpoint
-	const endpoint = `${PUBLIC_SERVER_URL}/auth/github/callback?code=${code}`;
+	const endpoint = `${PUBLIC_BASE_URL}/auth/github/callback?code=${code}`;
 
 	// TODO: Handle error case
 

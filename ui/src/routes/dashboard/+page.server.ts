@@ -1,4 +1,4 @@
-import { PUBLIC_SERVER_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 import type { User } from '@/types';
 import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from '../$types';
@@ -9,7 +9,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		return redirect(301, '/');
 	}
 
-	const res = await fetch(`${PUBLIC_SERVER_URL}/user`).catch((err) => {
+	const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 		console.log('Unable to fetch user details', err);
 		return error(500);
 	});

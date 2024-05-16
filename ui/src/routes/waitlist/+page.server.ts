@@ -1,4 +1,4 @@
-import { PUBLIC_SERVER_URL } from '$env/static/public';
+import { PUBLIC_BASE_URL } from '$env/static/public';
 import type { User } from '@/types.js';
 import { error, redirect } from '@sveltejs/kit';
 import type { UserEndpointsResponse } from '../onboarding/types.js';
@@ -10,7 +10,7 @@ export const load = async ({ fetch, cookies }) => {
 	}
 
 	const fetchUser = async () => {
-		const res = await fetch(`${PUBLIC_SERVER_URL}/user`).catch((err) => {
+		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 			console.error('Unable to fetch user details', err);
 			return error(500);
 		});
@@ -27,7 +27,7 @@ export const load = async ({ fetch, cookies }) => {
 	};
 
 	const fetchUrls = async () => {
-		const res = await fetch(`${PUBLIC_SERVER_URL}/url`).catch((err) => {
+		const res = await fetch(`${PUBLIC_BASE_URL}/url`).catch((err) => {
 			console.log('Unable to fetch user details', err);
 			return error(500);
 		});
