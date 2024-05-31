@@ -7,11 +7,11 @@
 🚧 Project is still under construction ([track here](https://github.com/humanbeeng/checkpost/issues/100)). v1 will be released by end of June and you'll be notified via registered mail. Until then, reserve your subdomain fast!
 
 ### Planned Features
-- [ ]  See through proxy middlewares with edit outgoing requests support.
-- [ ]  Team plan with collaboration support across multiple URLs.
 - [ ]  Mock server.
 - [ ]  Local server via port forwarding (similar to ngrok).
 - [ ]  File attachments support.
+- [ ]  See through proxy middlewares with edit outgoing requests support.
+- [ ]  Team plan with collaboration support across multiple URLs.
 - [ ]  URL stats.
 
 ### Getting Started
