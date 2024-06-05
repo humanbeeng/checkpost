@@ -72,10 +72,11 @@
 	::-webkit-scrollbar {
 		@apply w-2;
 		@apply h-2;
+		opacity: 0;
 	}
 
 	::-webkit-scrollbar-track {
-		@apply !bg-gray-100/100;
+		@apply !bg-transparent;
 	}
 	::-webkit-scrollbar-thumb {
 		@apply rounded-sm !bg-black/30;
@@ -102,21 +103,6 @@
 	.antialised {
 		-webkit-font-smoothing: antialiased;
 		-moz-osx-font-smoothing: grayscale;
-	}
-
-	@font-face {
-		font-family: InterVariable;
-		font-style: normal;
-		font-weight: 100 900;
-		font-display: swap;
-		src: url($lib/assets/fonts/InterVariable.woff2) format('woff2');
-	}
-	@font-face {
-		font-family: InterVariable;
-		font-style: italic;
-		font-weight: 100 900;
-		font-display: swap;
-		src: url($lib/assets/fonts/InterVariable-Italic.woff2) format('woff2');
 	}
 }
 

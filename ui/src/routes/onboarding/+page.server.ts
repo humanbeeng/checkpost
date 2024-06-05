@@ -9,8 +9,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	if (!token) {
 		return redirect(301, '/');
 	}
-	// TODO: Better error handling
 
+	// TODO: Better error handling
 	const fetchUser = async () => {
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 			throw error(500);
@@ -82,7 +82,7 @@ export const actions = {
 				return fail(res.status, { err: { field: '', message: text } });
 			}
 		} catch (err) {
-			console.log('Error', err);
+			console.error('Error', err);
 			return fail(500, { err: { field: '', message: 'Something went wrong' } });
 		}
 	}

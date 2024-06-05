@@ -13,11 +13,11 @@
 	}
 	let copied = false;
 
-	const copy = () => {
+	const copy = (content: string) => {
 		navigator.clipboard
-			.writeText(url)
+			.writeText(content)
 			.then(() => {
-				copied = true;
+				return true;
 			})
 			.catch((err: any) => {
 				console.error('Failed to copy text: ', err);
@@ -29,7 +29,7 @@
 	<Header {user} />
 	<div class="flex flex-col items-center justify-center w-full h-full gap-4 align-middle mb-36">
 		<div class=" shadow-sm bg-zinc-200/70 rounded-sm border-lg flex py-2 px-3 gap-2">
-			<button on:click={copy} class="hover:shadow-lg rounded-lg">
+			<button on:click={() => copy(url)} class="hover:shadow-lg rounded-lg">
 				{#if !copied}
 					<Copy class="outline-none border-none p-1" />
 				{:else}

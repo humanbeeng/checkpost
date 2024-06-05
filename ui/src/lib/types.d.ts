@@ -13,3 +13,32 @@ export type Endpoint = {
 	plan: Plan;
 	expires_at: string;
 };
+
+export type HttpMethod =
+	| 'get'
+	| 'post'
+	| 'delete'
+	| 'patch'
+	| 'put'
+	| 'connect'
+	| 'head'
+	| 'options';
+
+export type Request = {
+	endpoint: string;
+	path: string;
+	content: string;
+	method: HttpMethod;
+	uuid: string;
+	source_ip: string;
+	content_size: number;
+	response_code: number;
+	headers: Object;
+	query_params: Object;
+	created_at: string;
+	expires_at: string;
+};
+
+export type UrlHistory = {
+	requests: Request[];
+};
