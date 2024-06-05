@@ -44,6 +44,7 @@ CREATE TABLE
     "plan" plan NOT NULL DEFAULT 'free',
     "path" TEXT NOT NULL DEFAULT '/',
     "response_id" BIGINT,
+    "response_time" INT,
     "content" TEXT,
     "method" http_method NOT NULL,
     "source_ip" TEXT NOT NULL,
