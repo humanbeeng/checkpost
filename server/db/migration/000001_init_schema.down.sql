@@ -1,13 +1,13 @@
-drop table if exists file_attachment;
+DROP TABLE IF EXISTS file_attachment;
 
-drop table if exists request;
+DROP TABLE IF EXISTS request;
 
-drop table if exists response;
+DROP TABLE IF EXISTS response;
 
-drop table if exists endpoint;
+DROP TABLE IF EXISTS endpoint;
 
-drop table if exists "user";
+DROP TABLE IF EXISTS "user";
 
-drop type if exists http_method;
+DROP TYPE IF EXISTS http_method;
 
-drop type if exists plan;
+DROP TYPE IF EXISTS plan;

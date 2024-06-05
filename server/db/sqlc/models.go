@@ -123,15 +123,16 @@ type FileAttachment struct {
 }
 
 type Request struct {
-	ID         int64       `json:"id"`
-	Uuid       string      `json:"uuid"`
-	UserID     pgtype.Int8 `json:"user_id"`
-	EndpointID int64       `json:"endpoint_id"`
-	Plan       Plan        `json:"plan"`
-	Path       string      `json:"path"`
-	ResponseID pgtype.Int8 `json:"response_id"`
-	Content    pgtype.Text `json:"content"`
-	Method     HttpMethod  `json:"method"`
+	ID           int64       `json:"id"`
+	Uuid         string      `json:"uuid"`
+	UserID       pgtype.Int8 `json:"user_id"`
+	EndpointID   int64       `json:"endpoint_id"`
+	Plan         Plan        `json:"plan"`
+	Path         string      `json:"path"`
+	ResponseID   pgtype.Int8 `json:"response_id"`
+	ResponseTime pgtype.Int4 `json:"response_time"`
+	Content      pgtype.Text `json:"content"`
+	Method       HttpMethod  `json:"method"`
 	// IPv4
 	SourceIp     string             `json:"source_ip"`
 	ContentSize  int32              `json:"content_size"`

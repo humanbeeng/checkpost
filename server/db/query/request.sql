@@ -57,12 +57,15 @@ FROM
     LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
 WHERE
     endpoint.endpoint = $1
+    AND request.user_id = $2
     AND request.is_deleted = FALSE
     AND request.expires_at > NOW()
+ORDER BY
+    request.id DESC
 LIMIT
-    $2
+    $3
 OFFSET
-    $3;
+    $4;
 
 -- name: GetRequestById :one
 SELECT

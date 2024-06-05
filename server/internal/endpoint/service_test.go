@@ -1,4 +1,4 @@
-package url
+package endpoint
 
 import (
 	"context"
@@ -13,13 +13,13 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-type MockUrlStore struct{}
+type MockEndpointStore struct{}
 type MockUserStore struct{}
 
 type CtxKey string
 
 const (
-	NumUrls CtxKey = "num_expired"
+	NumEndpoints CtxKey = "num_endpoints"
 )
 
 const (
@@ -28,14 +28,14 @@ const (
 	ProUser     string = "pro_user"
 	BasicUser   string = "basic_user"
 
-	FreeEndpoint     string = "freeurl"
-	ProEndpoint      string = "prourl"
-	BasicEndpoint    string = "basicurl"
-	UnknownEndpoint  string = "unknownurl"
+	FreeEndpoint     string = "free-url"
+	ProEndpoint      string = "pro-url"
+	BasicEndpoint    string = "basic-url"
+	UnknownEndpoint  string = "unknown-url"
 	ExistingEndpoint string = "nonexist"
 )
 
-func (us MockUserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
+func (es MockUserStore) GetUserFromUsername(ctx context.Context, username string) (db.User, error) {
 	if username == UnknownUser {
 		return db.User{}, pgx.ErrNoRows
 	} else if username == FreeUser {
@@ -60,21 +60,21 @@ func (us MockUserStore) GetUserFromUsername(ctx context.Context, username string
 	return db.User{}, fmt.Errorf("not found")
 }
 
-var _ UrlQuerier = (*MockUrlStore)(nil)
+var _ EndpointQuerier = (*MockEndpointStore)(nil)
 
 var userStore = MockUserStore{}
-var urlStore = MockUrlStore{}
+var endpointStore = MockEndpointStore{}
 
-var service = UrlService{
-	urlq:  urlStore,
-	userq: userStore,
+var service = EndpointService{
+	endpointq: endpointStore,
+	userq:     userStore,
 }
 
-func (us MockUrlStore) GetUserEndpoints(ctx context.Context, userId int64) ([]db.Endpoint, error) {
+func (es MockEndpointStore) GetUserEndpoints(ctx context.Context, userId int64) ([]db.Endpoint, error) {
 	return []db.Endpoint{}, nil
 }
 
-func (us MockUrlStore) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
+func (es MockEndpointStore) GetEndpointRequestCount(ctx context.Context, endpoint string) (db.GetEndpointRequestCountRow, error) {
 	if endpoint == BasicEndpoint || endpoint == ProEndpoint || endpoint == FreeEndpoint {
 		return db.GetEndpointRequestCountRow{
 			SuccessCount: 100,
@@ -82,13 +82,13 @@ func (us MockUrlStore) GetEndpointRequestCount(ctx context.Context, endpoint str
 			TotalCount:   200,
 		}, nil
 	}
-	return db.GetEndpointRequestCountRow{}, &UrlError{
+	return db.GetEndpointRequestCountRow{}, &EndpointError{
 		Code:    http.StatusNotFound,
 		Message: "not found",
 	}
 }
 
-func (us MockUrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error) {
+func (es MockEndpointStore) GetEndpoint(ctx context.Context, endpoint string) (db.Endpoint, error) {
 	if endpoint != UnknownEndpoint {
 		return db.Endpoint{
 			Endpoint: endpoint,
@@ -104,30 +104,30 @@ func (us MockUrlStore) GetEndpoint(ctx context.Context, endpoint string) (db.End
 	return db.Endpoint{}, pgx.ErrNoRows
 }
 
-func (us MockUrlStore) ExpireRequests(ctx context.Context) error {
+func (es MockEndpointStore) ExpireRequests(ctx context.Context) error {
 	return nil
 }
 
-func (us MockUrlStore) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {
+func (es MockEndpointStore) GetEndpointHistory(ctx context.Context, params db.GetEndpointHistoryParams) ([]db.GetEndpointHistoryRow, error) {
 	return []db.GetEndpointHistoryRow{}, nil
 }
 
-func (us MockUrlStore) GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgtype.Int8) ([]db.Endpoint, error) {
-	numUrls := ctx.Value(NumUrls)
-	if numUrls == nil {
+func (es MockEndpointStore) GetNonExpiredEndpointsOfUser(ctx context.Context, userId pgtype.Int8) ([]db.Endpoint, error) {
+	numEndpoints := ctx.Value(NumEndpoints)
+	if numEndpoints == nil {
 		return []db.Endpoint{}, nil
 	}
-	var urls []db.Endpoint
-	for range numUrls.(int) {
-		urls = append(urls, db.Endpoint{
+	var endpoints []db.Endpoint
+	for range numEndpoints.(int) {
+		endpoints = append(endpoints, db.Endpoint{
 			Endpoint: FreeEndpoint,
 		})
 	}
-	return urls, nil
+	return endpoints, nil
 }
 
 // TODO: Rename this
-func (us MockUrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
+func (es MockEndpointStore) InsertFreeEndpoint(ctx context.Context, params db.InsertFreeEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{
 		Endpoint: params.Endpoint,
 		ExpiresAt: pgtype.Timestamptz{
@@ -136,16 +136,16 @@ func (us MockUrlStore) InsertFreeEndpoint(ctx context.Context, params db.InsertF
 	}, nil
 }
 
-func (us MockUrlStore) InsertEndpoint(ctx context.Context, arg db.InsertEndpointParams) (db.Endpoint, error) {
+func (es MockEndpointStore) InsertEndpoint(ctx context.Context, arg db.InsertEndpointParams) (db.Endpoint, error) {
 	return db.Endpoint{Endpoint: arg.Endpoint}, nil
 }
 
-func (us MockUrlStore) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
+func (es MockEndpointStore) CheckEndpointExists(ctx context.Context, endpoint string) (bool, error) {
 	return endpoint == ExistingEndpoint, nil
 }
 
 // TODO: Move below mocks to request tests
-func (us MockUrlStore) CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error) {
+func (es MockEndpointStore) CreateNewRequest(ctx context.Context, params db.CreateNewRequestParams) (db.Request, error) {
 	return db.Request{
 		Method:       params.Method,
 		QueryParams:  params.QueryParams,
@@ -158,98 +158,98 @@ func (us MockUrlStore) CreateNewRequest(ctx context.Context, params db.CreateNew
 	}, nil
 }
 
-func (us MockUrlStore) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
+func (es MockEndpointStore) GetRequestById(ctx context.Context, reqId int64) (db.Request, error) {
 	return db.Request{}, nil
 }
-func (us MockUrlStore) GetRequestByUUID(ctx context.Context, uuid string) (db.Request, error) {
+func (es MockEndpointStore) GetRequestByUUID(ctx context.Context, uuid string) (db.Request, error) {
 	return db.Request{}, nil
 }
 
 func TestCheckEndpointExists(t *testing.T) {
-	exists, err := service.CheckSubdomainExists(context.Background(), ExistingEndpoint)
+	exists, err := service.CheckEndpointExists(context.Background(), ExistingEndpoint)
 	assert.Nil(t, err)
 	assert.Equal(t, Taken, exists)
 }
 
-func TestCreateUrlForFreeUserWhenUserNotFound(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), UnknownUser, FreeEndpoint)
+func TestCreateEndpointForFreeUserWhenUserNotFound(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), UnknownUser, FreeEndpoint)
 	assert.NotNil(t, err)
-	assert.Equal(t, err, &UrlError{
+	assert.Equal(t, err, &EndpointError{
 		Code:    http.StatusNotFound,
 		Message: fmt.Sprintf("No user found with username: %s", "unknown_user"),
 	})
 	assert.Empty(t, endpoint)
 }
 
-func TestCreateUrlForFreeUser(t *testing.T) {
-	ctx := context.WithValue(context.TODO(), NumUrls, 0)
-	endpoint, err := service.CreateUrl(ctx, FreeUser, FreeEndpoint)
+func TestCreateEndpointForFreeUser(t *testing.T) {
+	ctx := context.WithValue(context.TODO(), NumEndpoints, 0)
+	endpoint, err := service.CreateEndpoint(ctx, FreeUser, FreeEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://freeurl.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://free-url.checkpost.io", endpoint.Endpoint)
 }
 
-func TestCreateUrlWhenAlreadyExists(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), ProUser, ExistingEndpoint)
+func TestCreateEndpointWhenAlreadyExists(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), ProUser, ExistingEndpoint)
 	assert.NotNil(t, err)
 	assert.Equal(t, http.StatusConflict, err.Code)
 	assert.Empty(t, endpoint)
 }
 
-func TestCreateUrlForProUser(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), ProUser, ProEndpoint)
+func TestCreateEndpointForProUser(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), ProUser, ProEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://prourl.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://pro-url.checkpost.io", endpoint.Endpoint)
 }
 
-func TestCreateUrlForBasicUser(t *testing.T) {
-	endpoint, err := service.CreateUrl(context.TODO(), BasicUser, BasicEndpoint)
+func TestCreateEndpointForBasicUser(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), BasicUser, BasicEndpoint)
 	assert.Nil(t, err)
 	assert.NotEmpty(t, endpoint)
-	assert.Equal(t, "https://basicurl.checkpost.io", endpoint.Endpoint)
+	assert.Equal(t, "https://basic-url.checkpost.io", endpoint.Endpoint)
 }
 
-func TestCreateUrlWhenFreeUserHasExistingEndpoint(t *testing.T) {
-	ctx := context.WithValue(context.TODO(), NumUrls, 1)
-	url, err := service.CreateUrl(ctx, FreeUser, FreeEndpoint)
+func TestCreateEndpointWhenFreeUserHasExistingEndpoint(t *testing.T) {
+	ctx := context.WithValue(context.TODO(), NumEndpoints, 1)
+	endpoint, err := service.CreateEndpoint(ctx, FreeUser, FreeEndpoint)
 	assert.Equal(t, http.StatusBadRequest, err.Code)
-	assert.Empty(t, url)
+	assert.Empty(t, endpoint)
 }
 
-func TestCreateUrlWhenBasicUserHasExistingEndpoint(t *testing.T) {
-	ctx := context.WithValue(context.TODO(), NumUrls, 1)
-	url, err := service.CreateUrl(ctx, BasicUser, FreeEndpoint)
+func TestCreateEndpointWhenBasicUserHasExistingEndpoint(t *testing.T) {
+	ctx := context.WithValue(context.TODO(), NumEndpoints, 1)
+	endpoint, err := service.CreateEndpoint(ctx, BasicUser, FreeEndpoint)
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, err.Code)
-	assert.Empty(t, url)
+	assert.Empty(t, endpoint)
 }
 
-func TestCreateUrlForReservedDomains(t *testing.T) {
-	url, err := service.CreateUrl(context.TODO(), ProUser, "dash")
+func TestCreateEndpointForReservedDomains(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), ProUser, "dash")
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, err.Code)
-	assert.Empty(t, url)
+	assert.Empty(t, endpoint)
 }
 
-func TestCreateUrlForReservedCompany(t *testing.T) {
-	url, err := service.CreateUrl(context.TODO(), BasicUser, "google")
+func TestCreateEndpointForReservedCompany(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), BasicUser, "google")
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, err.Code)
-	assert.Empty(t, url)
+	assert.Empty(t, endpoint)
 }
 
-func TestCreateUrlForReservedCompanyWhenUserFromSameOrg(t *testing.T) {
-	url, err := service.CreateUrl(context.TODO(), BasicUser, "checkpost")
+func TestCreateEndpointForReservedCompanyWhenUserFromSameOrg(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), BasicUser, "checkpost")
 	assert.Nil(t, err)
-	assert.Equal(t, url.Endpoint, "https://checkpost.checkpost.io")
+	assert.Equal(t, endpoint.Endpoint, "https://checkpost.checkpost.io")
 }
 
-func TestCreateUrlWhenEndpointLessThanFourChars(t *testing.T) {
-	url, err := service.CreateUrl(context.TODO(), ProUser, "a")
+func TestCreateEndpointWhenEndpointLessThanFourChars(t *testing.T) {
+	endpoint, err := service.CreateEndpoint(context.TODO(), ProUser, "a")
 	assert.Error(t, err)
 	assert.Equal(t, http.StatusBadRequest, err.Code)
-	assert.Empty(t, url)
+	assert.Empty(t, endpoint)
 }
 
 func TestGetBasicEndpointStats(t *testing.T) {
@@ -258,7 +258,7 @@ func TestGetBasicEndpointStats(t *testing.T) {
 	assert.NotEmpty(t, stats)
 }
 
-func TestGetEndpointStatsUnknownUrl(t *testing.T) {
+func TestGetEndpointStatsUnknownEndpoint(t *testing.T) {
 	stats, err := service.GetEndpointStats(context.TODO(), UnknownEndpoint)
 	assert.NotNil(t, err)
 	assert.Equal(t, http.StatusNotFound, err.Code)
@@ -273,7 +273,7 @@ func TestStoreRequestDetails(t *testing.T) {
 		Headers: map[string][]string{
 			"Content-Type": {"application/json"},
 		},
-		Query: map[string]string{
+		QueryParams: map[string]string{
 			"hello": "there",
 		},
 		SourceIp:     "17.1.1.1",
@@ -299,7 +299,7 @@ func TestStoreRequestDetailsWhenEndpointNotFound(t *testing.T) {
 		Headers: map[string][]string{
 			"Content-Type": {"application/json"},
 		},
-		Query: map[string]string{
+		QueryParams: map[string]string{
 			"hello": "there",
 		},
 		SourceIp:     "17.1.1.1",

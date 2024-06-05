@@ -16,7 +16,7 @@ type Querier interface {
 	CreateUser(ctx context.Context, arg CreateUserParams) (User, error)
 	DeleteExpiredRequests(ctx context.Context) error
 	DeleteUser(ctx context.Context, id int64) error
-	GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error)
+	GetEndpointDetails(ctx context.Context, endpoint string) (Endpoint, error)
 	GetEndpointHistory(ctx context.Context, arg GetEndpointHistoryParams) ([]GetEndpointHistoryRow, error)
 	GetEndpointRequestCount(ctx context.Context, endpoint string) (GetEndpointRequestCountRow, error)
 	GetNonExpiredEndpointsOfUser(ctx context.Context, userID pgtype.Int8) ([]Endpoint, error)

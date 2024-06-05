@@ -1,4 +1,4 @@
--- name: GetEndpoint :one
+-- name: GetEndpointDetails :one
 SELECT
     *
 FROM

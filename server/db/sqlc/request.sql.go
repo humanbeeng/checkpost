@@ -45,7 +45,7 @@ VALUES
         $13
     )
 RETURNING
-    id, uuid, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
@@ -89,6 +89,7 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		&i.Plan,
 		&i.Path,
 		&i.ResponseID,
+		&i.ResponseTime,
 		&i.Content,
 		&i.Method,
 		&i.SourceIp,
@@ -137,18 +138,22 @@ FROM
     LEFT JOIN endpoint ON request.endpoint_id = endpoint.id
 WHERE
     endpoint.endpoint = $1
+    AND request.user_id = $2
     AND request.is_deleted = FALSE
     AND request.expires_at > NOW()
+ORDER BY
+    request.id DESC
 LIMIT
-    $2
-OFFSET
     $3
+OFFSET
+    $4
 `
 
 type GetEndpointHistoryParams struct {
-	Endpoint string `json:"endpoint"`
-	Limit    int32  `json:"limit"`
-	Offset   int32  `json:"offset"`
+	Endpoint string      `json:"endpoint"`
+	UserID   pgtype.Int8 `json:"user_id"`
+	Limit    int32       `json:"limit"`
+	Offset   int32       `json:"offset"`
 }
 
 type GetEndpointHistoryRow struct {
@@ -171,7 +176,12 @@ type GetEndpointHistoryRow struct {
 }
 
 func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistoryParams) ([]GetEndpointHistoryRow, error) {
-	rows, err := q.db.Query(ctx, getEndpointHistory, arg.Endpoint, arg.Limit, arg.Offset)
+	rows, err := q.db.Query(ctx, getEndpointHistory,
+		arg.Endpoint,
+		arg.UserID,
+		arg.Limit,
+		arg.Offset,
+	)
 	if err != nil {
 		return nil, err
 	}
@@ -244,7 +254,7 @@ func (q *Queries) GetEndpointRequestCount(ctx context.Context, endpoint string) 
 
 const getRequestById = `-- name: GetRequestById :one
 SELECT
-    id, uuid, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
 FROM
     request
 WHERE
@@ -266,6 +276,7 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 		&i.Plan,
 		&i.Path,
 		&i.ResponseID,
+		&i.ResponseTime,
 		&i.Content,
 		&i.Method,
 		&i.SourceIp,
@@ -282,7 +293,7 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 
 const getRequestByUUID = `-- name: GetRequestByUUID :one
 SELECT
-    id, uuid, user_id, endpoint_id, plan, path, response_id, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
 FROM
     request
 WHERE
@@ -304,6 +315,7 @@ func (q *Queries) GetRequestByUUID(ctx context.Context, uuid string) (Request, e
 		&i.Plan,
 		&i.Path,
 		&i.ResponseID,
+		&i.ResponseTime,
 		&i.Content,
 		&i.Method,
 		&i.SourceIp,

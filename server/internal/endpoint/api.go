@@ -1,4 +1,4 @@
-package url
+package endpoint
 
 import (
 	"context"
@@ -15,46 +15,47 @@ import (
 )
 
 // TODO: Add better error messages
-type UrlController struct {
+type EndpointController struct {
 	conns   *sync.Map
-	service *UrlService
+	service *EndpointService
 }
 
-func (uc *UrlController) AddRequestListener(endpoint string, conn *websocket.Conn) {
+func (uc *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
 	// TODO: Resolve concurrency issue.
 	// TODO: Add limit to number of active connections.
-	conns, loaded := uc.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
+	_, loaded := uc.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
 	if loaded {
-		c := conns.([]*websocket.Conn)
-		c = append(c, conn)
+		// Replace existing connection.
+		// TODO: Add support for multiple connections
+		c := append([]*websocket.Conn{}, conn)
 		uc.conns.Store(endpoint, c)
 	}
 
 	slog.Info("Listener connection added", "endpoint", endpoint)
 }
 
-func NewUrlController(service *UrlService) *UrlController {
-	return &UrlController{conns: &sync.Map{}, service: service}
+func NewEndpointController(service *EndpointService) *EndpointController {
+	return &EndpointController{conns: &sync.Map{}, service: service}
 }
 
-func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
-	urlGroup := app.Group("/url")
+func (uc *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
+	endpointGroup := app.Group("/endpoint")
 
-	urlGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
+	endpointGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
 
-	urlGroup.Get("/exists/:endpoint", cache, uc.CheckSubdomainExistsHandler)
+	endpointGroup.Get("/exists/:endpoint", cache, uc.CheckSubdomainExistsHandler)
 
-	urlGroup.Post("/generate", authmw, uc.GenerateUrlHandler)
+	endpointGroup.Post("/generate", authmw, uc.GenerateEndpointHandler)
 
-	urlGroup.All("/hook/:endpoint/*", uc.HookHandler)
+	endpointGroup.All("/hook/:endpoint/*", uc.HookHandler)
 
-	urlGroup.Get("/history/:endpoint", authmw, uc.GetEndpointHistoryHandler)
-	urlGroup.Get("/request/:uuid", authmw, uc.RequestDetailsUUIDHandler)
+	endpointGroup.Get("/history/:endpoint", authmw, uc.GetEndpointHistoryHandler)
+	endpointGroup.Get("/request/:uuid", authmw, uc.RequestDetailsUUIDHandler)
 
-	urlGroup.Get("/stats/:endpoint", authmw, uc.StatsHandler)
+	endpointGroup.Get("/stats/:endpoint", authmw, uc.StatsHandler)
 
 	// TODO: Add rate/conn limiter
-	urlGroup.Use("/inspect", func(c *fiber.Ctx) error {
+	endpointGroup.Use("/inspect", func(c *fiber.Ctx) error {
 		// IsWebSocketUpgrade returns true if the client
 		// requested upgrade to the WebSocket protocol.
 		if websocket.IsWebSocketUpgrade(c) {
@@ -64,30 +65,32 @@ func (uc *UrlController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Hand
 		return fiber.ErrUpgradeRequired
 	})
 
-	urlGroup.Get("/inspect/:endpoint", authmw, websocket.New(uc.InspectRequestsHandler))
+	endpointGroup.Get("/inspect/:endpoint", authmw, websocket.New(uc.InspectRequestsHandler))
 }
 
-func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
+func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
+	slog.Info("Received websocket connection", "username", c.Locals("username").(string))
+
 	endpoint := c.Params("endpoint", "")
 	endpoint = strings.ToLower(endpoint)
 	if endpoint == "" {
 		slog.Info("No endpoint found", "endpoint", endpoint)
 		c.WriteJSON(fiber.Error{
 			Code:    fiber.StatusNotFound,
-			Message: "URL has either expired or not yet created.",
+			Message: "Endpoint has either expired or not yet created.",
 		})
 		c.Close()
 	}
 
 	// Check if endpoint exists
 	// TODO: Revisit this context
-	exists, err := uc.service.urlq.CheckEndpointExists(context.TODO(), endpoint)
+	exists, err := uc.service.endpointq.CheckEndpointExists(context.TODO(), endpoint)
 	if !exists {
 		slog.Info("No endpoint found", "endpoint", endpoint)
 
 		c.WriteJSON(fiber.Error{
 			Code:    fiber.StatusNotFound,
-			Message: "URL has either expired or not yet created.",
+			Message: "Endpoint has either expired or not yet created.",
 		})
 		c.Close()
 		return
@@ -99,7 +102,6 @@ func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 		c.Close()
 	}
 
-	// TODO: Add authorization
 	uc.AddRequestListener(endpoint, c)
 
 	for {
@@ -110,7 +112,7 @@ func (uc *UrlController) InspectRequestsHandler(c *websocket.Conn) {
 }
 
 // Returns status of a given endpoint
-func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) StatsHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 	endpoint = strings.ToLower(endpoint)
 	if endpoint == "" {
@@ -127,7 +129,7 @@ func (uc *UrlController) StatsHandler(c *fiber.Ctx) error {
 	return c.JSON(stats)
 }
 
-func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) RequestDetailsHandler(c *fiber.Ctx) error {
 	reqIdStr := c.Params("requestid", "")
 	if reqIdStr == "" {
 		return fiber.NewError(
@@ -150,7 +152,7 @@ func (uc *UrlController) RequestDetailsHandler(c *fiber.Ctx) error {
 	return c.JSON(req)
 }
 
-func (uc *UrlController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
 	uuid := c.Params("uuid", "")
 	if uuid == "" {
 		return fiber.NewError(
@@ -167,18 +169,18 @@ func (uc *UrlController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
 	return c.JSON(req)
 }
 
-type GenerateUrlRequest struct {
+type GenerateEndpointRequest struct {
 	Endpoint string `json:"endpoint"`
 }
 
-type GenerateUrlResponse struct {
-	Url       string    `json:"url"`
+type GenerateEndpointResponse struct {
+	Endpoint  string    `json:"endpoint"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Plan      string    `json:"plan"`
 }
 
-func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
-	var req GenerateUrlRequest
+func (uc *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
+	var req GenerateEndpointRequest
 
 	if err := c.BodyParser(&req); err != nil {
 		slog.Error("Malformed request payload", "err", err)
@@ -190,7 +192,7 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	endpoint, err := uc.service.CreateUrl(c.Context(), username, req.Endpoint)
+	endpoint, err := uc.service.CreateEndpoint(c.Context(), username, req.Endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -198,14 +200,14 @@ func (uc *UrlController) GenerateUrlHandler(c *fiber.Ctx) error {
 		}
 	}
 
-	res := GenerateUrlResponse{
-		Url:       endpoint.Endpoint,
+	res := GenerateEndpointResponse{
+		Endpoint:  endpoint.Endpoint,
 		ExpiresAt: endpoint.ExpiresAt.Time,
 	}
 	return c.JSON(res)
 }
 
-func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) HookHandler(c *fiber.Ctx) error {
 	// TODO: return request details
 	// Get the Content-Type header from the request
 	contentType := c.Get(fiber.HeaderContentType)
@@ -218,7 +220,7 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 	if endpoint == "" {
 		return &fiber.Error{
 			Code:    http.StatusNotFound,
-			Message: "URL has either expired or not created",
+			Message: "Endpoint has either expired or not created",
 		}
 	}
 
@@ -245,19 +247,19 @@ func (uc *UrlController) HookHandler(c *fiber.Ctx) error {
 		UUID:         c.Locals("requestid").(string),
 		Path:         path,
 		Headers:      headers,
-		Query:        query,
+		QueryParams:  query,
 		SourceIp:     ip,
 		Method:       method,
 		Content:      string(body),
-		ContentSize:  len(body),
+		ContentSize:  int32(len(body)),
 		ResponseCode: http.StatusOK,
 	}
 
-	requestRecord, urlErr := uc.service.StoreRequestDetails(c.Context(), hookReq)
-	if urlErr != nil {
+	requestRecord, endpointErr := uc.service.StoreRequestDetails(c.Context(), hookReq)
+	if endpointErr != nil {
 		return &fiber.Error{
-			Code:    urlErr.Code,
-			Message: urlErr.Message,
+			Code:    endpointErr.Code,
+			Message: endpointErr.Message,
 		}
 	}
 
@@ -273,7 +275,7 @@ type GetUserEndpointsResponse struct {
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
-func (uc *UrlController) GetUserEndpointsHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) GetUserEndpointsHandler(c *fiber.Ctx) error {
 	userId, ok := c.Locals("userId").(int64)
 	if !ok {
 		return fiber.ErrBadRequest
@@ -296,10 +298,10 @@ func (uc *UrlController) GetUserEndpointsHandler(c *fiber.Ctx) error {
 }
 
 type GetEndpointsHistoryResponse struct {
-	Requests []Request `json:"requests"`
+	Requests []HookRequest `json:"requests"`
 }
 
-func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
 		slog.Info("No endpoint found in path params")
@@ -312,13 +314,14 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	offsetStr := c.Query("limit", "1")
+	offsetStr := c.Query("limit", "0")
 	offset, err := strconv.ParseInt(offsetStr, 10, 32)
 	if err != nil {
 		return fiber.ErrBadRequest
 	}
+	userId := c.Locals("userId").(int64)
 
-	reqs, serviceErr := uc.service.GetEndpointRequestHistory(c.Context(), endpoint, int32(limit), int32(offset))
+	reqs, serviceErr := uc.service.GetEndpointRequestHistory(c.Context(), endpoint, userId, int32(limit), int32(offset))
 	if serviceErr != nil {
 		return &fiber.Error{
 			Code:    serviceErr.Code,
@@ -329,6 +332,7 @@ func (uc *UrlController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	res := GetEndpointsHistoryResponse{
 		Requests: reqs,
 	}
+	fmt.Println("Returning", len(res.Requests), "num of requests")
 	return c.JSON(res)
 }
 
@@ -338,14 +342,14 @@ type CheckSubdomainExistsResponse struct {
 	Message  string `json:"message"`
 }
 
-func (uc *UrlController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
+func (uc *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 
 	if endpoint == "" {
 		return fiber.ErrBadRequest
 	}
 
-	subdomainExists, err := uc.service.CheckSubdomainExists(c.Context(), endpoint)
+	subdomainExists, err := uc.service.CheckEndpointExists(c.Context(), endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -389,8 +393,8 @@ func (uc *UrlController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 	}
 }
 
-func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
-	slog.Info("Broadcasting JSON", "endpoint", endpoint)
+func (uc *EndpointController) BroadcastJSON(endpoint string, data any) {
+	slog.Info("Broadcasting incoming request", "endpoint", endpoint)
 	connAny, ok := uc.conns.Load(endpoint)
 	if !ok {
 		slog.Info("No active listeners found", "endpoint", endpoint)
@@ -398,7 +402,6 @@ func (uc *UrlController) BroadcastJSON(endpoint string, data any) {
 	}
 
 	conns := connAny.([]*websocket.Conn)
-
 	for _, c := range conns {
 		err := c.WriteJSON(data)
 		if err != nil {
