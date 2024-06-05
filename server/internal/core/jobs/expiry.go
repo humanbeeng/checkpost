@@ -5,19 +5,19 @@ import (
 	"log/slog"
 	"time"
 
-	"github.com/humanbeeng/checkpost/server/internal/url"
+	"github.com/humanbeeng/checkpost/server/internal/endpoint"
 	"github.com/robfig/cron/v3"
 )
 
 type ExpiredRequestsRemover struct {
-	cron     *cron.Cron
-	urlStore url.UrlStore
+	cron          *cron.Cron
+	endpointStore endpoint.EndpointStore
 }
 
-func NewExpiredRequestsRemover(cron *cron.Cron, urlStore url.UrlStore) *ExpiredRequestsRemover {
+func NewExpiredRequestsRemover(cron *cron.Cron, endpointStore endpoint.EndpointStore) *ExpiredRequestsRemover {
 	return &ExpiredRequestsRemover{
-		cron:     cron,
-		urlStore: urlStore,
+		cron:          cron,
+		endpointStore: endpointStore,
 	}
 }
 
@@ -41,5 +41,5 @@ func (re *ExpiredRequestsRemover) Stop() context.Context {
 
 func (re *ExpiredRequestsRemover) deleteExpiredRequests() {
 	slog.Info("Deleting expired requests", "date", time.Now().Local().String())
-	re.urlStore.ExpireRequests(context.Background())
+	re.endpointStore.ExpireRequests(context.Background())
 }

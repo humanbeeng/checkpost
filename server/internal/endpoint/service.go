@@ -1,4 +1,4 @@
-package url
+package endpoint
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	"log/slog"
 	"net/http"
 	stdurl "net/url"
+	"slices"
 	"strings"
 	"time"
 
@@ -18,77 +19,77 @@ import (
 	"github.com/jackc/pgx/v5/pgtype"
 )
 
-type UrlService struct {
-	urlq  UrlQuerier
-	userq user.UserQuerier
+type EndpointService struct {
+	endpointq EndpointQuerier
+	userq     user.UserQuerier
 }
 
-func NewUrlService(urlq UrlQuerier, userq user.UserQuerier) *UrlService {
-	return &UrlService{
-		urlq:  urlq,
-		userq: userq,
+func NewEndpointService(endpointq EndpointQuerier, userq user.UserQuerier) *EndpointService {
+	return &EndpointService{
+		endpointq: endpointq,
+		userq:     userq,
 	}
 }
 
 // TODO: Convert this into checkpost custom error
-func NewInternalServerError() *UrlError {
-	return &UrlError{
+func NewInternalServerError() *EndpointError {
+	return &EndpointError{
 		Code:    http.StatusInternalServerError,
 		Message: "Oops! Something went wrong :(",
 	}
 }
 
 const (
-	RandomUrlLength    int = 10
-	DefaultLimitNumUrl int = 1
-	DefaultExpiryHours int = 4
+	RandomEndpointLength int = 10
+	DefaultLimitNumUrl   int = 1
+	DefaultExpiryHours   int = 4
 )
 
-func (s *UrlService) CreateUrl(c context.Context, username string, endpoint string) (db.Endpoint, *UrlError) {
-	// Check subdomain length
-	if len(endpoint) < 4 || len(endpoint) > 10 {
-		return db.Endpoint{}, &UrlError{
+func (s *EndpointService) CreateEndpoint(ctx context.Context, username string, subdomain string) (db.Endpoint, *EndpointError) {
+	// Check endpoint length
+	if len(subdomain) < 4 || len(subdomain) > 10 {
+		return db.Endpoint{}, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: "Subdomain should be 4 to 10 characters.",
+			Message: "Endpoint should be 4 to 10 characters.",
 		}
 	}
-	endpoint = strings.ToLower(endpoint)
+	subdomain = strings.ToLower(subdomain)
 
-	url := fmt.Sprintf("https://%v.checkpost.io", endpoint)
+	endpoint := fmt.Sprintf("https://%v.checkpost.io", subdomain)
 
-	_, err := stdurl.ParseRequestURI(url)
+	_, err := stdurl.ParseRequestURI(endpoint)
 	if err != nil {
-		return db.Endpoint{}, &UrlError{
+		return db.Endpoint{}, &EndpointError{
 			Code:    http.StatusBadRequest,
 			Message: "Invalid URL",
 		}
 	}
 
-	// Check reserved subdomains
-	if _, ok := core.ReservedSubdomains[endpoint]; ok {
-		return db.Endpoint{}, &UrlError{
+	// Check reserved endpoints
+	if _, ok := core.ReservedSubdomains[subdomain]; ok {
+		return db.Endpoint{}, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("URL %s is reserved.", url),
+			Message: fmt.Sprintf("URL %s is reserved.", endpoint),
 		}
 	}
 
 	// Check if the requested endpoint already exists
-	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
+	exists, err := s.endpointq.CheckEndpointExists(ctx, subdomain)
 	if err != nil {
-		slog.Error("unable to check if endpoint already exists", "endpoint", endpoint, "username", username, "err", err)
+		slog.Error("unable to check if endpoint already exists", "endpoint", subdomain, "username", username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 	if exists {
-		return db.Endpoint{}, &UrlError{
+		return db.Endpoint{}, &EndpointError{
 			Code:    http.StatusConflict,
-			Message: fmt.Sprintf("URL %s already exists", url),
+			Message: fmt.Sprintf("Endpoint %s already exists", endpoint),
 		}
 	}
 
-	user, err := s.userq.GetUserFromUsername(c, username)
+	user, err := s.userq.GetUserFromUsername(ctx, username)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.Endpoint{}, &UrlError{
+			return db.Endpoint{}, &EndpointError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("No user found with username: %s", username),
 			}
@@ -98,33 +99,33 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 	}
 
 	// Check if user has exceeded number of urls that can be generated
-	urls, err := s.urlq.GetNonExpiredEndpointsOfUser(c, pgtype.Int8{Int64: user.ID, Valid: true})
+	urls, err := s.endpointq.GetNonExpiredEndpointsOfUser(ctx, pgtype.Int8{Int64: user.ID, Valid: true})
 	if err != nil {
 		slog.Error("unable to get non expired endpoints", "username", user.Username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 
 	if (user.Plan == db.PlanBasic || user.Plan == db.PlanFree) && len(urls) >= DefaultLimitNumUrl {
-		return db.Endpoint{}, &UrlError{
+		return db.Endpoint{}, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: "Cannot generate more than one url for your current plan. Consider upgrading to Pro.",
+			Message: "Cannot generate more than one endpoint for your current plan. Consider upgrading to Pro.",
 		}
 	}
 
 	// Check reserved companies. If found, check if the mail is from that organisation
-	if _, ok := core.ReservedCompanies[endpoint]; ok {
-		if !strings.Contains(strings.ToLower(user.Email), endpoint) || strings.Contains(strings.ToLower(user.Email), "@gmail.com") {
-			return db.Endpoint{}, &UrlError{
+	if _, ok := core.ReservedCompanies[subdomain]; ok {
+		if !strings.Contains(strings.ToLower(user.Email), subdomain) || strings.Contains(strings.ToLower(user.Email), "@gmail.com") {
+			return db.Endpoint{}, &EndpointError{
 				Code:    http.StatusBadRequest,
-				Message: fmt.Sprintf("You cannot use this subdomain. Please try with mail issued by %s", endpoint),
+				Message: fmt.Sprintf("You cannot use this endpoint. Please try with mail issued by %s", subdomain),
 			}
 		}
 	}
 
-	slog.Info("Create url request received", "endpoint", endpoint, "username", username, "plan", user.Plan)
+	slog.Info("Create endpoint request received", "endpoint", subdomain, "username", username, "plan", user.Plan)
 
-	endpointRecord, err := s.urlq.InsertEndpoint(c, db.InsertEndpointParams{
-		Endpoint: endpoint,
+	endpointRecord, err := s.endpointq.InsertEndpoint(ctx, db.InsertEndpointParams{
+		Endpoint: subdomain,
 		UserID:   pgtype.Int8{Int64: user.ID, Valid: true},
 		Plan:     user.Plan,
 
@@ -136,20 +137,20 @@ func (s *UrlService) CreateUrl(c context.Context, username string, endpoint stri
 		},
 	})
 	if err != nil {
-		slog.Error("unable to insert new url into db", "endpoint", endpoint, "username", user.Username, "err", err)
+		slog.Error("unable to insert new endpoint into db", "endpoint", subdomain, "username", user.Username, "err", err)
 		return db.Endpoint{}, NewInternalServerError()
 	}
 
-	// Send complete url as response
-	endpointRecord.Endpoint = url
+	// Send complete endpoint as response
+	endpointRecord.Endpoint = endpoint
 
-	slog.Info("URL created", "url", url, "username", user.Username, "plan", user.Plan)
+	slog.Info("Endpoint created", "endpoint", endpoint, "username", user.Username, "plan", user.Plan)
 
 	return endpointRecord, nil
 }
 
-func (s *UrlService) GetUserEndpoints(ctx context.Context, userId int64) ([]Endpoint, *UrlError) {
-	endpointsRec, err := s.urlq.GetUserEndpoints(ctx, userId)
+func (s *EndpointService) GetUserEndpoints(ctx context.Context, userId int64) ([]Endpoint, *EndpointError) {
+	endpointsRec, err := s.endpointq.GetUserEndpoints(ctx, userId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return []Endpoint{}, nil
@@ -169,13 +170,13 @@ func (s *UrlService) GetUserEndpoints(ctx context.Context, userId int64) ([]Endp
 	return endpoints, nil
 }
 
-func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookRequest) (db.Request, *UrlError) {
+func (s *EndpointService) StoreRequestDetails(ctx context.Context, hookReq HookRequest) (db.Request, *EndpointError) {
 	endpoint := hookReq.Endpoint
 
-	endpointRecord, err := s.urlq.GetEndpoint(ctx, endpoint)
+	endpointRecord, err := s.endpointq.GetEndpoint(ctx, endpoint)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return db.Request{}, &UrlError{
+			return db.Request{}, &EndpointError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired.", endpoint),
 			}
@@ -183,7 +184,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		return db.Request{}, NewInternalServerError()
 	}
 
-	slog.Info("Storing request details", "endpoint", endpoint)
+	slog.InfoContext(ctx, "Storing request details", "endpoint", endpoint, "path", hookReq.Path)
 
 	var expiresAt pgtype.Timestamptz
 	switch endpointRecord.Plan {
@@ -192,7 +193,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 
 			// Checking if request body exceeds 10KB
 			if hookReq.ContentSize > 10_000 {
-				return db.Request{}, &UrlError{
+				return db.Request{}, &EndpointError{
 					Code:    http.StatusRequestEntityTooLarge,
 					Message: "Content size limit exceeded",
 				}
@@ -209,7 +210,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		{
 			// Checking if request body exceeds 512KB
 			if hookReq.ContentSize > 512_000 {
-				return db.Request{}, &UrlError{
+				return db.Request{}, &EndpointError{
 					Code:    http.StatusRequestEntityTooLarge,
 					Message: "Content size limit exceeded",
 				}
@@ -222,7 +223,7 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		}
 	default:
 		{
-			return db.Request{}, &UrlError{
+			return db.Request{}, &EndpointError{
 				Code:    http.StatusBadRequest,
 				Message: "Invalid user plan",
 			}
@@ -231,10 +232,10 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 
 	userId := endpointRecord.UserID
 
-	queryBytes, err := json.Marshal(hookReq.Query)
+	queryBytes, err := json.Marshal(hookReq.QueryParams)
 	if err != nil {
 		slog.Error("unable to marshal query params", "err", err)
-		return db.Request{}, &UrlError{
+		return db.Request{}, &EndpointError{
 			Code:    http.StatusBadRequest,
 			Message: "unable to parse query params.",
 		}
@@ -243,13 +244,13 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 	headerBytes, err := json.Marshal(hookReq.Headers)
 	if err != nil {
 		slog.Error("unable to marshal headers", "err", err)
-		return db.Request{}, &UrlError{
+		return db.Request{}, &EndpointError{
 			Code:    http.StatusBadRequest,
 			Message: "unable to parse headers",
 		}
 	}
 
-	requestRecord, err := s.urlq.CreateNewRequest(ctx, db.CreateNewRequestParams{
+	requestRecord, err := s.endpointq.CreateNewRequest(ctx, db.CreateNewRequestParams{
 		UserID:     userId,
 		EndpointID: endpointRecord.ID,
 		Method:     db.HttpMethod(strings.ToLower(hookReq.Method)),
@@ -272,35 +273,63 @@ func (s *UrlService) StoreRequestDetails(ctx context.Context, hookReq HookReques
 		return db.Request{}, NewInternalServerError()
 	}
 
-	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId.Int64)
+	slog.Info("Endpoint record created", "endpoint", endpoint, "userId", userId.Int64, "createdAt", requestRecord.CreatedAt)
 
 	return requestRecord, nil
 }
 
-func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint string, limit int32, offset int32) ([]Request, *UrlError) {
-	slog.Info("Fetch endpoint request history", "endpoint", endpoint)
+func (s *EndpointService) GetEndpointRequestHistory(ctx context.Context, endpoint string, userId int64, limit int32, offset int32) ([]HookRequest, *EndpointError) {
+	slog.Info("Fetch endpoint request history", "endpoint", endpoint, "userId", userId)
 
-	var reqHistory []Request
+	var reqHistory []HookRequest
 
-	reqs, err := s.urlq.GetEndpointHistory(c, db.GetEndpointHistoryParams{Endpoint: endpoint, Limit: limit, Offset: offset})
+	endpointsRec, err := s.endpointq.GetNonExpiredEndpointsOfUser(ctx, pgtype.Int8{Int64: userId, Valid: true})
+	if err != nil {
+		return nil, NewInternalServerError()
+	}
+
+	var endpoints []string
+
+	for _, e := range endpointsRec {
+		endpoints = append(endpoints, e.Endpoint)
+	}
+
+	if !slices.Contains(endpoints, endpoint) {
+		return reqHistory, &EndpointError{
+			Code:    http.StatusUnauthorized,
+			Message: "Unauthorized",
+		}
+	}
+
+	reqs, err := s.endpointq.GetEndpointHistory(ctx,
+		db.GetEndpointHistoryParams{Endpoint: endpoint,
+			UserID: pgtype.Int8{
+				Int64: userId,
+				Valid: true,
+			},
+			Limit:  limit,
+			Offset: offset,
+		})
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
 			return reqHistory, nil
 		}
-		slog.Error("unable to fetch endpoint request history", "endpoint", endpoint, "err", err)
+		slog.Error("unable to fetch endpoint request history", "endpoint", endpoint, "userId", userId, "err", err)
 		return nil, NewInternalServerError()
 	}
 
 	for _, req := range reqs {
-		rh := Request{
-			ID:           req.ID,
+		rh := HookRequest{
+			Endpoint:     endpoint,
+			UUID:         req.Uuid,
 			Path:         req.Path,
 			Content:      req.Content.String,
-			Method:       req.Method,
+			Method:       string(req.Method),
 			SourceIp:     req.SourceIp,
 			ContentSize:  req.ContentSize,
-			ResponseCode: req.ResponseCode,
-			ExpiresAt:    req.ExpiresAt,
+			ResponseCode: req.ResponseCode.Int32,
+			CreatedAt:    req.CreatedAt.Time,
+			ExpiresAt:    req.ExpiresAt.Time,
 		}
 
 		json.Unmarshal(req.Headers, &rh.Headers)
@@ -312,33 +341,32 @@ func (s *UrlService) GetEndpointRequestHistory(c context.Context, endpoint strin
 	return reqHistory, nil
 }
 
-func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request, *UrlError) {
+func (s *EndpointService) GetRequestDetails(ctx context.Context, reqId int64) (HookRequest, *EndpointError) {
 	slog.Info("Fetch request details", "reqId", reqId)
 
-	reqRecord, err := s.urlq.GetRequestById(c, reqId)
+	reqRecord, err := s.endpointq.GetRequestById(ctx, reqId)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Request{}, &UrlError{
+			return HookRequest{}, &EndpointError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("No request found for request id: %v", reqId),
 			}
 		} else {
 			slog.Error("unable to fetch request details", "reqId", reqId, "err", err)
-			return Request{}, NewInternalServerError()
+			return HookRequest{}, NewInternalServerError()
 		}
 	}
 
-	req := Request{
-		ID:           reqRecord.ID,
+	req := HookRequest{
 		UUID:         reqRecord.Uuid,
 		Path:         reqRecord.Path,
-		Method:       reqRecord.Method,
+		Method:       string(reqRecord.Method),
 		SourceIp:     reqRecord.SourceIp,
 		Content:      reqRecord.Content.String,
 		ContentSize:  reqRecord.ContentSize,
-		ResponseCode: reqRecord.ResponseCode,
-		CreatedAt:    reqRecord.CreatedAt,
-		ExpiresAt:    reqRecord.ExpiresAt,
+		ResponseCode: reqRecord.ResponseCode.Int32,
+		CreatedAt:    reqRecord.CreatedAt.Time,
+		ExpiresAt:    reqRecord.ExpiresAt.Time,
 	}
 
 	json.Unmarshal(reqRecord.Headers, &req.Headers)
@@ -347,14 +375,14 @@ func (s *UrlService) GetRequestDetails(c context.Context, reqId int64) (Request,
 	return req, nil
 }
 
-func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (EndpointStats, *UrlError) {
+func (s *EndpointService) GetEndpointStats(ctx context.Context, endpoint string) (EndpointStats, *EndpointError) {
 	endpoint = strings.ToLower(endpoint)
 	slog.Info("Request endpoint stats", "endpoint", endpoint)
 
-	endpointDetails, err := s.urlq.GetEndpoint(c, endpoint)
+	endpointDetails, err := s.endpointq.GetEndpoint(ctx, endpoint)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return EndpointStats{}, &UrlError{
+			return EndpointStats{}, &EndpointError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("Endpoint %v not found", endpoint),
 			}
@@ -363,7 +391,7 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 		return EndpointStats{}, NewInternalServerError()
 	}
 
-	stats, err := s.urlq.GetEndpointRequestCount(c, endpoint)
+	stats, err := s.endpointq.GetEndpointRequestCount(ctx, endpoint)
 	if err != nil {
 		slog.Error("unable to fetch endpoint request count", "endpoint", endpoint, "err", err)
 		return EndpointStats{}, NewInternalServerError()
@@ -378,44 +406,44 @@ func (s *UrlService) GetEndpointStats(c context.Context, endpoint string) (Endpo
 	}, nil
 }
 
-type SubdomainExists string
+type EndpointExists string
 
 const (
-	Available         SubdomainExists = "Its available. Sign up and make it yours"
-	Taken             SubdomainExists = "That subdomain is already taken. Try something else?"
-	ReservedCompany   SubdomainExists = "Subdomain is reserved. But, you can go ahead if you're using mail issued from that organisation."
-	ReservedSubdomain SubdomainExists = "Subdomain is reserved."
-	BadSubdomain      SubdomainExists = "Bad subdomain."
-	Error             SubdomainExists = "Something went wrong."
+	Available        EndpointExists = "Its available. Sign up and make it yours"
+	Taken            EndpointExists = "That endpoint is already taken. Try something else?"
+	ReservedCompany  EndpointExists = "Endpoint is reserved. But, you can go ahead if you're using mail issued from that organisation."
+	ReservedEndpoint EndpointExists = "Endpoint is reserved."
+	BadEndpoint      EndpointExists = "Bad endpoint."
+	Error            EndpointExists = "Something went wrong."
 )
 
-func (s *UrlService) CheckSubdomainExists(c context.Context, endpoint string) (SubdomainExists, *UrlError) {
-	endpoint = strings.ToLower(endpoint)
+func (s *EndpointService) CheckEndpointExists(ctx context.Context, subdomain string) (EndpointExists, *EndpointError) {
+	subdomain = strings.ToLower(subdomain)
 
-	slog.Info("Checking if endpoint exists", "endpoint", endpoint)
+	slog.InfoContext(ctx, "Checking if endpoint exists", "endpoint", subdomain)
 
-	if len(endpoint) < 4 || len(endpoint) > 10 {
-		return BadSubdomain, &UrlError{
+	if len(subdomain) < 4 || len(subdomain) > 10 {
+		return BadEndpoint, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: "Subdomain should be 4 to 10 characters.",
+			Message: "Endpoint should be 4 to 10 characters.",
 		}
 	}
 
-	if _, ok := core.ReservedSubdomains[endpoint]; ok {
-		return ReservedSubdomain, &UrlError{
+	if _, ok := core.ReservedSubdomains[subdomain]; ok {
+		return ReservedEndpoint, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("Subdomain %s is reserved.", endpoint),
+			Message: fmt.Sprintf("Endpoint %s is reserved.", subdomain),
 		}
 	}
 
 	// Check reserved companies. If found, check if the mail is from that organisation
-	if _, ok := core.ReservedCompanies[endpoint]; ok {
+	if _, ok := core.ReservedCompanies[subdomain]; ok {
 		return ReservedCompany, nil
 	}
 
-	exists, err := s.urlq.CheckEndpointExists(c, endpoint)
+	exists, err := s.endpointq.CheckEndpointExists(ctx, subdomain)
 	if err != nil {
-		slog.Error("unable to check if endpoint exists", "endpoint", endpoint, "err", err)
+		slog.Error("unable to check if endpoint exists", "endpoint", subdomain, "err", err)
 		return Error, NewInternalServerError()
 	}
 
@@ -427,32 +455,31 @@ func (s *UrlService) CheckSubdomainExists(c context.Context, endpoint string) (S
 	return Available, nil
 }
 
-func (s *UrlService) GetRequestByUUID(c context.Context, uuid string) (Request, *UrlError) {
+func (s *EndpointService) GetRequestByUUID(ctx context.Context, uuid string) (HookRequest, *EndpointError) {
 
-	reqRecord, err := s.urlq.GetRequestByUUID(c, uuid)
+	reqRecord, err := s.endpointq.GetRequestByUUID(ctx, uuid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return Request{}, &UrlError{
+			return HookRequest{}, &EndpointError{
 				Code:    http.StatusNotFound,
 				Message: fmt.Sprintf("No request found for uuid: %v", uuid),
 			}
 		} else {
 			slog.Error("unable to fetch request details", "uuid", uuid, "err", err)
-			return Request{}, NewInternalServerError()
+			return HookRequest{}, NewInternalServerError()
 		}
 	}
 
-	req := Request{
-		ID:           reqRecord.ID,
+	req := HookRequest{
 		UUID:         reqRecord.Uuid,
 		Path:         reqRecord.Path,
-		Method:       reqRecord.Method,
+		Method:       string(reqRecord.Method),
 		SourceIp:     reqRecord.SourceIp,
 		Content:      reqRecord.Content.String,
 		ContentSize:  reqRecord.ContentSize,
-		ResponseCode: reqRecord.ResponseCode,
-		CreatedAt:    reqRecord.CreatedAt,
-		ExpiresAt:    reqRecord.ExpiresAt,
+		ResponseCode: reqRecord.ResponseCode.Int32,
+		CreatedAt:    reqRecord.CreatedAt.Time,
+		ExpiresAt:    reqRecord.ExpiresAt.Time,
 	}
 
 	json.Unmarshal(reqRecord.Headers, &req.Headers)
@@ -461,9 +488,9 @@ func (s *UrlService) GetRequestByUUID(c context.Context, uuid string) (Request, 
 	return req, nil
 }
 
-func (s *UrlService) ExpireRequests(c context.Context) error {
+func (s *EndpointService) ExpireRequests(ctx context.Context) error {
 	slog.Info("Deleting expired requests", "date", time.Now().Local().String())
-	err := s.urlq.ExpireRequests(c)
+	err := s.endpointq.ExpireRequests(ctx)
 	if err != nil {
 		slog.Error("unable to delete expired requests", "date", time.Now().Local().String(), "err", err)
 		return err

@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
+	"os"
+	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -19,7 +21,7 @@ import (
 	"github.com/humanbeeng/checkpost/server/internal/core"
 	"github.com/humanbeeng/checkpost/server/internal/core/jobs"
 	"github.com/humanbeeng/checkpost/server/internal/core/middleware"
-	"github.com/humanbeeng/checkpost/server/internal/url"
+	"github.com/humanbeeng/checkpost/server/internal/endpoint"
 	"github.com/humanbeeng/checkpost/server/internal/user"
 )
 
@@ -29,6 +31,20 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
+
+	replace := func(groups []string, a slog.Attr) slog.Attr {
+
+		// Remove the directory from the source's filename.
+		if a.Key == slog.SourceKey {
+			source := a.Value.Any().(*slog.Source)
+			source.File = filepath.Base(source.File)
+		}
+		return a
+	}
+
+	slogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace}))
+
+	slog.SetDefault(slogger)
 
 	app := fiber.New()
 	app.Use(cors.New())
@@ -71,10 +87,10 @@ func main() {
 		log.Fatalf("unable to init auth controller. %v", err)
 	}
 
-	urlStore := url.NewUrlStore(queries)
+	endpointStore := endpoint.NewEndpointStore(queries)
 	userStore := user.NewUserStore(queries)
-	endpointService := url.NewUrlService(urlStore, userStore)
-	urlHandler := url.NewUrlController(endpointService)
+	endpointService := endpoint.NewEndpointService(endpointStore, userStore)
+	endpointHandler := endpoint.NewEndpointController(endpointService)
 
 	cachemw := middleware.NewCacheMiddleware()
 
@@ -82,9 +98,9 @@ func main() {
 	userc.RegisterRoutes(app, authmw)
 
 	ac.RegisterRoutes(app)
-	urlHandler.RegisterRoutes(app, authmw, cachemw)
+	endpointHandler.RegisterRoutes(app, authmw, cachemw)
 
-	re := jobs.NewExpiredRequestsRemover(cron.New(), *urlStore)
+	re := jobs.NewExpiredRequestsRemover(cron.New(), *endpointStore)
 	re.Start()
 
 	app.Listen(":3000")
