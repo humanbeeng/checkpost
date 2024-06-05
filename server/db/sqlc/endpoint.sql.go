@@ -34,7 +34,7 @@ func (q *Queries) CheckEndpointExists(ctx context.Context, endpoint string) (boo
 	return exists, err
 }
 
-const getEndpoint = `-- name: GetEndpoint :one
+const getEndpointDetails = `-- name: GetEndpointDetails :one
 SELECT
     id, endpoint, user_id, plan, created_at, expires_at, is_deleted
 FROM
@@ -46,8 +46,8 @@ LIMIT
     1
 `
 
-func (q *Queries) GetEndpoint(ctx context.Context, endpoint string) (Endpoint, error) {
-	row := q.db.QueryRow(ctx, getEndpoint, endpoint)
+func (q *Queries) GetEndpointDetails(ctx context.Context, endpoint string) (Endpoint, error) {
+	row := q.db.QueryRow(ctx, getEndpointDetails, endpoint)
 	var i Endpoint
 	err := row.Scan(
 		&i.ID,
