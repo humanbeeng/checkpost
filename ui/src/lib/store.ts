@@ -1,7 +1,7 @@
 import { writable } from 'svelte/store';
-import type { UrlHistory } from './types';
+import type { EndpointHistory } from './types';
 
-export const urlHistory = writable<UrlHistory>();
+export const endpointHistory = writable<EndpointHistory>();
 
 export const isFormatEnabled = writable<boolean>(false);
 

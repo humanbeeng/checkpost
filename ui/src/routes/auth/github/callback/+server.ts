@@ -7,10 +7,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 	console.log('Code', code);
 	// TODO: Handle edge cases
 
-	// TODO: Replace this url with actual endpoint
 	const endpoint = `${PUBLIC_BASE_URL}/auth/github/callback?code=${code}`;
-
-	// TODO: Handle error case
 
 	const res = await fetch(endpoint).catch((err) => {
 		console.log('Unable to hit auth callback', err);

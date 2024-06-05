@@ -128,7 +128,6 @@
 								{/if}
 							</span>
 						</div>
-						<!-- <label for="subdomain">Your URL</label> -->
 						<Button class="w-full" disabled={state !== 'success'} variant="default" type="submit">
 							{#if state === 'loading'}
 								<Reload class="mr-2 h-4 w-4 animate-spin" />

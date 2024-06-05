@@ -4,12 +4,11 @@
 
 	export let data;
 	let user = data.user;
-	let urls = data.url;
+	let endpoints = data.endpoints;
 	let endpoint = '';
 	let url = '';
-	if (urls.endpoints && urls.endpoints.length) {
-		endpoint = urls.endpoints[0].endpoint;
-		url = `https://${endpoint}.checkpost.io/`;
+	if (endpoints.endpoints && endpoints.endpoints.length) {
+		endpoint = endpoints.endpoints[0].endpoint = `https://${endpoint}.checkpost.io/`;
 	}
 	let copied = false;
 
@@ -37,7 +36,7 @@
 				{/if}
 			</button>
 			<p class="justify-center self-center">
-				https://{urls?.endpoints[0]?.endpoint}.checkpost.io/
+				https://{endpoints?.endpoints[0]?.endpoint}.checkpost.io/
 			</p>
 		</div>
 		<div class="flex flex-col items-center gap-4 px-2">

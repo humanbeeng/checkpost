@@ -26,8 +26,8 @@ export const load = async ({ fetch, cookies }) => {
 		return user;
 	};
 
-	const fetchUrls = async () => {
-		const res = await fetch(`${PUBLIC_BASE_URL}/url`).catch((err) => {
+	const fetchEndpoints = async () => {
+		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
 			console.log('Unable to fetch user details', err);
 			return error(500);
 		});
@@ -37,16 +37,16 @@ export const load = async ({ fetch, cookies }) => {
 			return error(res.status, await res.text());
 		}
 
-		const urls = (await res.json().catch((err) => {
+		const endpoints = (await res.json().catch((err) => {
 			console.error('Unable to parse user response', err);
 		})) as UserEndpointsResponse;
 
-		if (!urls.endpoints || !urls.endpoints.length) {
+		if (!endpoints.endpoints || !endpoints.endpoints.length) {
 			return redirect(301, '/onboarding');
 		}
 
-		return urls;
+		return endpoints;
 	};
 
-	return { user: await fetchUser(), url: await fetchUrls(), err: null };
+	return { user: await fetchUser(), endpoints: await fetchEndpoints(), err: null };
 };

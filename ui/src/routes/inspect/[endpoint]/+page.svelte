@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { page } from '$app/stores';
+	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
@@ -7,7 +8,7 @@
 	import RequestDetails from '@/components/RequestDetails.svelte';
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
-	import { urlHistory } from '@/store.js';
+	import { endpointHistory } from '@/store.js';
 	import type { Request } from '@/types.js';
 	import clsx from 'clsx';
 	import { onMount } from 'svelte';
@@ -18,22 +19,21 @@
 
 	let selectedRequest: Request | undefined;
 
-	$urlHistory = data.urlHistory;
-	if ($urlHistory == null) {
-		console.log('URL History is null');
+	$endpointHistory = data.endpointHistory;
+	if ($endpointHistory == null) {
+		console.log('Endpoint History is null');
 	} else {
-		if ($urlHistory.requests?.length) {
-			selectedRequest = $urlHistory.requests.at(0);
+		if ($endpointHistory.requests?.length) {
+			selectedRequest = $endpointHistory.requests.at(0);
 		}
 	}
 
 	const selectRequest = (requestuuid: string) => {
-		selectedRequest = $urlHistory?.requests?.find((r) => r.uuid == requestuuid);
+		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
 	onMount(() => {
-		// TODO : Replace Websocket URL
-		const socket = new WebSocket(`ws://localhost:3000/url/inspect/${endpoint}`);
+		const socket = new WebSocket(`${PUBLIC_WEBSOCKET_URL}/url/inspect/${endpoint}`);
 
 		socket.addEventListener('open', function () {
 			console.log('Websocket connection established');
@@ -42,7 +42,7 @@
 		// Listen for messages
 		socket.addEventListener('message', function (event) {
 			const req: Request = JSON.parse(event.data) as Request;
-			$urlHistory.requests = [req, ...($urlHistory.requests ?? [])];
+			$endpointHistory.requests = [req, ...($endpointHistory.requests ?? [])];
 		});
 
 		socket.addEventListener('error', (event) => {
@@ -70,8 +70,8 @@
 			class="px-5 flex flex-col justify-self-start grow overflow-y-auto border-b border-b-gray-300"
 		>
 			<p class="font-medium text-md my-4 text-gray-600">Request history</p>
-			{#if $urlHistory && $urlHistory.requests}
-				{#each $urlHistory.requests as request}
+			{#if $endpointHistory && $endpointHistory.requests}
+				{#each $endpointHistory.requests as request}
 					<button
 						on:click={() => selectRequest(request.uuid)}
 						class={clsx(

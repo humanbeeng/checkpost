@@ -1,5 +1,5 @@
 import { PUBLIC_BASE_URL } from '$env/static/public';
-import type { UrlHistory, User } from '@/types';
+import type { EndpointHistory, User } from '@/types';
 import { error } from '@sveltejs/kit';
 
 export const load = async ({ fetch, params }) => {
@@ -24,10 +24,10 @@ export const load = async ({ fetch, params }) => {
 		return user;
 	};
 
-	const fetchUrlHistory = async () => {
+	const fetchEndpointHistory = async () => {
 		console.log('Fetching URL history');
-		const res = await fetch(`${PUBLIC_BASE_URL}/url/history/${endpoint}`).catch((err) => {
-			console.error('Unable to fetch url request history', err);
+		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/history/${endpoint}`).catch((err) => {
+			console.error('Unable to fetch endpoint request history', err);
 			throw error(500);
 		});
 
@@ -35,18 +35,18 @@ export const load = async ({ fetch, params }) => {
 			throw error(res.status, { message: await res.text() });
 		}
 
-		const urlHistory = (await res.json().catch((err) => {
-			console.error('Unable to parse url history', err);
-		})) as UrlHistory;
+		const endpointHistory = (await res.json().catch((err) => {
+			console.error('Unable to parse endpoint history', err);
+		})) as EndpointHistory;
 
-		return urlHistory;
+		return endpointHistory;
 	};
 
 	const user = await fetchUser();
-	const urlHistory = await fetchUrlHistory();
+	const endpointHistory = await fetchEndpointHistory();
 
 	return {
 		user,
-		urlHistory
+		endpointHistory
 	};
 };

@@ -31,8 +31,8 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 			return user;
 		};
 
-		const fetchUserUrls = async () => {
-			const res = await fetch(`${PUBLIC_BASE_URL}/url`).catch((err) => {
+		const fetchUserEndpoints = async () => {
+			const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
 				throw error(500);
 			});
 
@@ -40,18 +40,18 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 				throw error(res.status, { message: await res.text() });
 			}
 
-			const urls = (await res.json().catch((err) => {
-				console.log('Unable to parse user urls response', err);
+			const endpoints = (await res.json().catch((err) => {
+				console.log('Unable to parse user endpoints response', err);
 				throw error(500, { message: 'Something went wrong' });
 			})) as UserEndpointsResponse;
 
-			return urls;
+			return endpoints;
 		};
 
 		const user = await fetchUser();
-		const urls = await fetchUserUrls();
+		const endpoints = await fetchUserEndpoints();
 
-		if (user && urls && urls.endpoints) {
+		if (user && endpoints && endpoints.endpoints) {
 			return redirect(301, '/waitlist');
 		}
 	}
@@ -74,7 +74,7 @@ export const actions = {
 				error: 'Subdomain length should be between 4 and 10.'
 			});
 		}
-		const res = await fetch(`${PUBLIC_BASE_URL}/url/exists/${subdomain}`, {
+		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/exists/${subdomain}`, {
 			method: 'GET'
 		});
 

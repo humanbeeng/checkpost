@@ -39,6 +39,6 @@ export type Request = {
 	expires_at: string;
 };
 
-export type UrlHistory = {
+export type EndpointHistory = {
 	requests: Request[];
 };
