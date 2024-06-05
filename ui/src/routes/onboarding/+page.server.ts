@@ -2,15 +2,15 @@ import { PUBLIC_BASE_URL } from '$env/static/public';
 import type { User } from '@/types';
 import { error, fail, redirect, type Actions } from '@sveltejs/kit';
 import type { PageServerLoad } from '../$types';
-import type { GenerateUrlResponse, UserEndpointsResponse } from './types';
+import type { GenerateEndpointResponse, UserEndpointsResponse } from './types';
 
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token');
 	if (!token) {
 		return redirect(301, '/');
 	}
-	// TODO: Better error handling
 
+	// TODO: Better error handling
 	const fetchUser = async () => {
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 			throw error(500);
@@ -28,8 +28,8 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		return user;
 	};
 
-	const fetchUserUrls = async () => {
-		const res = await fetch(`${PUBLIC_BASE_URL}/url`).catch((err) => {
+	const fetchUserEndpoints = async () => {
+		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
 			throw error(500);
 		});
 
@@ -37,18 +37,18 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 			throw error(res.status, { message: await res.text() });
 		}
 
-		const urls = (await res.json().catch((err) => {
-			console.log('Unable to parse user urls response', err);
+		const endpoints = (await res.json().catch((err) => {
+			console.log('Unable to parse user endpoints response', err);
 			throw error(500, { message: 'Something went wrong' });
 		})) as UserEndpointsResponse;
 
-		return urls;
+		return endpoints;
 	};
 
 	const user = await fetchUser();
-	const urls = await fetchUserUrls();
+	const endpoints = await fetchUserEndpoints();
 
-	if (user && urls && urls.endpoints) {
+	if (user && endpoints && endpoints.endpoints) {
 		return redirect(301, '/waitlist');
 	}
 	return {
@@ -67,7 +67,7 @@ export const actions = {
 			endpoint: endpoint
 		};
 		try {
-			const res = await fetch(`${PUBLIC_BASE_URL}/url/generate`, {
+			const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/generate`, {
 				method: 'POST',
 				headers: {
 					'Content-Type': 'application/json'
@@ -76,13 +76,13 @@ export const actions = {
 			});
 
 			if (res.ok) {
-				return { url: (await res.json()) as GenerateUrlResponse, err: null };
+				return { endpoint: (await res.json()) as GenerateEndpointResponse, err: null };
 			} else {
 				const text = await res.text();
 				return fail(res.status, { err: { field: '', message: text } });
 			}
 		} catch (err) {
-			console.log('Error', err);
+			console.error('Error', err);
 			return fail(500, { err: { field: '', message: 'Something went wrong' } });
 		}
 	}

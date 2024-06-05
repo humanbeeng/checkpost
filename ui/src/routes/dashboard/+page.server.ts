@@ -4,7 +4,6 @@ import { error, redirect } from '@sveltejs/kit';
 import type { PageServerLoad } from '../$types';
 
 export const load: PageServerLoad = async ({ cookies, fetch }) => {
-	console.log(cookies.get('token'));
 	if (!cookies.get('token')) {
 		return redirect(301, '/');
 	}

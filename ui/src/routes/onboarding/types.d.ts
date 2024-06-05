@@ -1,10 +1,10 @@
 import type { Endpoint } from '@/types';
 
-export type GenerateUrlRequest = {
+export type GenerateEndpointRequest = {
 	endpoint: string;
 };
 
-export type GenerateUrlResponse = {
+export type GenerateEndpointResponse = {
 	url: string;
 	expires_at: string;
 	plan: Plan;
