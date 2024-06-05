@@ -33,7 +33,7 @@
 	};
 
 	onMount(() => {
-		const socket = new WebSocket(`${PUBLIC_WEBSOCKET_URL}/url/inspect/${endpoint}`);
+		const socket = new WebSocket(`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}`);
 
 		socket.addEventListener('open', function () {
 			console.log('Websocket connection established');
