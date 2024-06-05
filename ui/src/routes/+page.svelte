@@ -30,7 +30,7 @@
 			return;
 		}
 
-		const res = await fetch(`${PUBLIC_BASE_URL}/url/exists/${subdomain}`);
+		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/exists/${subdomain}`);
 
 		switch (res.status) {
 			case 200: {
