@@ -12,7 +12,7 @@ type EndpointExistsResponse = {
 
 export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	// TODO: Add error returns
-	let cookie = cookies.get('token');
+	const cookie = cookies.get('token');
 	if (cookie) {
 		const fetchUser = async () => {
 			const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
@@ -49,10 +49,15 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		};
 
 		const user = await fetchUser();
-		const endpoints = await fetchUserEndpoints();
+		const userEndpoints = await fetchUserEndpoints();
 
-		if (user && endpoints && endpoints.endpoints) {
-			return redirect(301, '/waitlist');
+		if (user && userEndpoints && userEndpoints.endpoints) {
+			const endpoint = userEndpoints.endpoints.at(0);
+			if (endpoint) {
+				return redirect(301, `/inspect/${endpoint.endpoint}`);
+			} else {
+				return redirect(301, `/onboarding`);
+			}
 		}
 	}
 };
