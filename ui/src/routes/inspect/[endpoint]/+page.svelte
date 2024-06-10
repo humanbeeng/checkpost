@@ -9,9 +9,10 @@
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
 	import { endpointHistory } from '@/store.js';
-	import type { Request } from '@/types.js';
+	import type { Request, WebsocketPayload } from '@/types.js';
 	import clsx from 'clsx';
 	import { onMount } from 'svelte';
+
 	import { Exit } from 'svelte-radix';
 
 	const endpoint = $page.params.endpoint;
@@ -33,7 +34,10 @@
 	};
 
 	onMount(() => {
-		const socket = new WebSocket(`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}`);
+		console.log('Token', data.token);
+		const socket = new WebSocket(
+			`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`
+		);
 
 		socket.addEventListener('open', function () {
 			console.log('Websocket connection established');
@@ -41,8 +45,10 @@
 
 		// Listen for messages
 		socket.addEventListener('message', function (event) {
-			const req: Request = JSON.parse(event.data) as Request;
-			$endpointHistory.requests = [req, ...($endpointHistory.requests ?? [])];
+			const req: WebsocketPayload = JSON.parse(event.data);
+			if (req.code == 200) {
+				$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
+			}
 		});
 
 		socket.addEventListener('error', (event) => {
