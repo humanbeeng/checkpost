@@ -1,6 +1,8 @@
 import { PUBLIC_BASE_URL } from '$env/static/public';
-import type { EndpointHistory, User } from '@/types';
+import type { EndpointHistory, User, WebsocketTokenResponse } from '@/types';
 import { error } from '@sveltejs/kit';
+
+export const csr = true;
 
 export const load = async ({ fetch, params }) => {
 	const endpoint = params.endpoint;
@@ -42,11 +44,35 @@ export const load = async ({ fetch, params }) => {
 		return endpointHistory;
 	};
 
+	const fetchWSToken = async () => {
+		console.log('Fetching websocket token');
+
+		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/${endpoint}/generate-token`).catch(
+			(err) => {
+				console.error('Unable to fetch websocket token', err);
+				throw error(500);
+			}
+		);
+
+		if (!res.ok) {
+			console.log('Not ok');
+			throw error(res.status, { message: await res.text() });
+		}
+
+		const token = (await res.json().catch((err) => {
+			console.error('Unable to parse websocket token', err);
+		})) as WebsocketTokenResponse;
+
+		return token.token;
+	};
+
 	const user = await fetchUser();
 	const endpointHistory = await fetchEndpointHistory();
+	const token = await fetchWSToken();
 
 	return {
 		user,
-		endpointHistory
+		endpointHistory,
+		token
 	};
 };

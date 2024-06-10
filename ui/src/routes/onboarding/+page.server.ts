@@ -46,10 +46,15 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	};
 
 	const user = await fetchUser();
-	const endpoints = await fetchUserEndpoints();
+	const userEndpoints = await fetchUserEndpoints();
 
-	if (user && endpoints && endpoints.endpoints) {
-		return redirect(301, '/waitlist');
+	if (user && userEndpoints && userEndpoints.endpoints) {
+		const endpoint = userEndpoints.endpoints.at(0);
+		if (endpoint) {
+			return redirect(301, `/inspect/${endpoint.endpoint}`);
+		} else {
+			return redirect(301, `/onboarding`);
+		}
 	}
 	return {
 		user

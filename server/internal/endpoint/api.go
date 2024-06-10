@@ -12,21 +12,24 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	gonanoid "github.com/matoous/go-nanoid/v2"
 )
 
 // TODO: Add better error messages
 type EndpointController struct {
 	conns   *sync.Map
+	tokens  *sync.Map
 	service *EndpointService
 }
 
 func (uc *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
-	// TODO: Resolve concurrency issue.
+
 	// TODO: Add limit to number of active connections.
 	_, loaded := uc.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
 	if loaded {
 		// Replace existing connection.
 		// TODO: Add support for multiple connections
+
 		c := append([]*websocket.Conn{}, conn)
 		uc.conns.Store(endpoint, c)
 	}
@@ -35,7 +38,7 @@ func (uc *EndpointController) AddRequestListener(endpoint string, conn *websocke
 }
 
 func NewEndpointController(service *EndpointService) *EndpointController {
-	return &EndpointController{conns: &sync.Map{}, service: service}
+	return &EndpointController{conns: &sync.Map{}, service: service, tokens: &sync.Map{}}
 }
 
 func (uc *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
@@ -53,6 +56,7 @@ func (uc *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 	endpointGroup.Get("/request/:uuid", authmw, uc.RequestDetailsUUIDHandler)
 
 	endpointGroup.Get("/stats/:endpoint", authmw, uc.StatsHandler)
+	endpointGroup.Get("/:endpoint/generate-token", authmw, uc.GenerateWSTokenHandler)
 
 	// TODO: Add rate/conn limiter
 	endpointGroup.Use("/inspect", func(c *fiber.Ctx) error {
@@ -65,26 +69,84 @@ func (uc *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 		return fiber.ErrUpgradeRequired
 	})
 
-	endpointGroup.Get("/inspect/:endpoint", authmw, websocket.New(uc.InspectRequestsHandler))
+	endpointGroup.Get("/inspect/:endpoint", websocket.New(uc.InspectRequestsHandler))
+}
+
+type WebsocketTokenResponse struct {
+	Token string `json:"token"`
+}
+
+func (uc *EndpointController) GenerateWSTokenHandler(c *fiber.Ctx) error {
+	endpoint := c.Params("endpoint")
+	slog.Info("Received generate token request", "endpoint", endpoint)
+
+	//TODO: Add check if endpoint exists
+
+	//Generate a token
+	token, err := gonanoid.New()
+	if err != nil {
+		slog.Error("Unable to generate token", "err", err)
+		return fiber.ErrInternalServerError
+	}
+
+	slog.Info("Token generated", "token", token, "endpoint", endpoint)
+
+	uc.tokens.Store(endpoint, token)
+
+	return c.JSON(WebsocketTokenResponse{
+		Token: token,
+	})
 }
 
 func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
-	slog.Info("Received websocket connection", "username", c.Locals("username").(string))
-
 	endpoint := c.Params("endpoint", "")
-	endpoint = strings.ToLower(endpoint)
 	if endpoint == "" {
-		slog.Info("No endpoint found", "endpoint", endpoint)
 		c.WriteJSON(fiber.Error{
 			Code:    fiber.StatusNotFound,
 			Message: "Endpoint has either expired or not yet created.",
 		})
 		c.Close()
+		return
+	}
+
+	endpoint = strings.ToLower(endpoint)
+
+	// Authorize websocket connection by checking token
+	token := c.Query("token", "")
+	if token == "" {
+		slog.Warn("No token passed. Unauthorized access", "endpoint", endpoint)
+		c.WriteJSON(fiber.Error{
+			Code:    fiber.StatusUnauthorized,
+			Message: fiber.ErrUnauthorized.Message,
+		})
+		c.Close()
+		return
+	}
+
+	storedToken, ok := uc.tokens.Load(endpoint)
+
+	if !ok {
+		slog.Warn("No token stored", "endpoint", endpoint)
+		c.WriteJSON(fiber.Error{
+			Code:    fiber.StatusUnauthorized,
+			Message: fiber.ErrUnauthorized.Message,
+		})
+		c.Close()
+		return
+	}
+
+	if storedToken != token {
+		slog.Warn("Incorrect token", "token", token, "endpoint", endpoint)
+		c.WriteJSON(fiber.Error{
+			Code:    fiber.StatusUnauthorized,
+			Message: fiber.ErrUnauthorized.Message,
+		})
+		c.Close()
+		return
 	}
 
 	// Check if endpoint exists
-	// TODO: Revisit this context
-	exists, err := uc.service.endpointq.CheckEndpointExists(context.TODO(), endpoint)
+	exists, err := uc.service.endpointq.CheckEndpointExists(context.Background(), endpoint)
 	if !exists {
 		slog.Info("No endpoint found", "endpoint", endpoint)
 
@@ -207,6 +269,12 @@ func (uc *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
+type WebsocketPayload struct {
+	Code        int         `json:"code"`
+	HookRequest HookRequest `json:"hook_request"`
+	Message     string      `json:"message"`
+}
+
 func (uc *EndpointController) HookHandler(c *fiber.Ctx) error {
 	// TODO: return request details
 	// Get the Content-Type header from the request
@@ -266,7 +334,12 @@ func (uc *EndpointController) HookHandler(c *fiber.Ctx) error {
 	hookReq.ExpiresAt = requestRecord.ExpiresAt.Time
 	hookReq.CreatedAt = requestRecord.CreatedAt.Time
 
-	uc.BroadcastJSON(endpoint, hookReq)
+	payload := WebsocketPayload{
+		HookRequest: hookReq,
+		Code:        200,
+	}
+
+	uc.BroadcastJSON(endpoint, payload)
 
 	return c.SendStatus(fiber.StatusOK)
 }
