@@ -42,3 +42,13 @@ export type Request = {
 export type EndpointHistory = {
 	requests: Request[];
 };
+
+export type WebsocketTokenResponse = {
+	token: string;
+};
+
+export type WebsocketPayload = {
+	hook_request: Request;
+	code: number;
+	message: string;
+};
