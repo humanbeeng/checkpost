@@ -40,7 +40,8 @@
 	const connectSocket = () => {
 		const options = {
 			connectionTimeout: 1000,
-			maxRetries: 10
+			maxRetries: 10,
+			startClosed: true
 		};
 		socket = new ReconnectingWebSocket(
 			`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`,
@@ -108,12 +109,6 @@
 				<p class="font-light text-gray-400">No requests</p>
 			{/if}
 		</div>
-
-		<button
-			on:click={() => {
-				socket.reconnect();
-			}}>Reconnect</button
-		>
 
 		<!-- User button -->
 		<DropdownMenu.Root>
