@@ -25,10 +25,15 @@ type EndpointController struct {
 func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
 
 	// TODO: Add limit to number of active connections.
-	_, loaded := ec.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
+	conns, loaded := ec.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
 	if loaded {
 		// Replace existing connection.
 		// TODO: Add support for multiple connections
+
+		slog.Info("Closing existing ws connections", "num_connections", len(conns.([]*websocket.Conn)))
+		for _, conn := range conns.([]*websocket.Conn) {
+			conn.Close()
+		}
 
 		c := append([]*websocket.Conn{}, conn)
 		ec.conns.Store(endpoint, c)
