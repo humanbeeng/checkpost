@@ -12,51 +12,50 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	gonanoid "github.com/matoous/go-nanoid/v2"
+	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
-// TODO: Add better error messages
 type EndpointController struct {
 	conns   *sync.Map
 	tokens  *sync.Map
+	pv      *core.PasetoVerifier
 	service *EndpointService
 }
 
-func (uc *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
+func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
 
 	// TODO: Add limit to number of active connections.
-	_, loaded := uc.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
+	_, loaded := ec.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
 	if loaded {
 		// Replace existing connection.
 		// TODO: Add support for multiple connections
 
 		c := append([]*websocket.Conn{}, conn)
-		uc.conns.Store(endpoint, c)
+		ec.conns.Store(endpoint, c)
 	}
 
 	slog.Info("Listener connection added", "endpoint", endpoint)
 }
 
-func NewEndpointController(service *EndpointService) *EndpointController {
-	return &EndpointController{conns: &sync.Map{}, service: service, tokens: &sync.Map{}}
+func NewEndpointController(service *EndpointService, pv *core.PasetoVerifier) *EndpointController {
+	return &EndpointController{conns: &sync.Map{}, service: service, tokens: &sync.Map{}, pv: pv}
 }
 
-func (uc *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
+func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
 	endpointGroup := app.Group("/endpoint")
 
-	endpointGroup.Get("/", authmw, uc.GetUserEndpointsHandler)
+	endpointGroup.Get("/", authmw, ec.GetUserEndpointsHandler)
 
-	endpointGroup.Get("/exists/:endpoint", cache, uc.CheckSubdomainExistsHandler)
+	endpointGroup.Get("/exists/:endpoint", cache, ec.CheckSubdomainExistsHandler)
 
-	endpointGroup.Post("/generate", authmw, uc.GenerateEndpointHandler)
+	endpointGroup.Post("/generate", authmw, ec.GenerateEndpointHandler)
 
-	endpointGroup.All("/hook/:endpoint/*", uc.HookHandler)
+	endpointGroup.All("/hook/:endpoint/*", ec.HookHandler)
 
-	endpointGroup.Get("/history/:endpoint", authmw, uc.GetEndpointHistoryHandler)
-	endpointGroup.Get("/request/:uuid", authmw, uc.RequestDetailsUUIDHandler)
+	endpointGroup.Get("/history/:endpoint", authmw, ec.GetEndpointHistoryHandler)
+	endpointGroup.Get("/request/:uuid", authmw, ec.RequestDetailsUUIDHandler)
 
-	endpointGroup.Get("/stats/:endpoint", authmw, uc.StatsHandler)
-	endpointGroup.Get("/:endpoint/generate-token", authmw, uc.GenerateWSTokenHandler)
+	endpointGroup.Get("/stats/:endpoint", authmw, ec.StatsHandler)
 
 	// TODO: Add rate/conn limiter
 	endpointGroup.Use("/inspect", func(c *fiber.Ctx) error {
@@ -69,36 +68,14 @@ func (uc *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 		return fiber.ErrUpgradeRequired
 	})
 
-	endpointGroup.Get("/inspect/:endpoint", websocket.New(uc.InspectRequestsHandler))
+	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
 }
 
 type WebsocketTokenResponse struct {
 	Token string `json:"token"`
 }
 
-func (uc *EndpointController) GenerateWSTokenHandler(c *fiber.Ctx) error {
-	endpoint := c.Params("endpoint")
-	slog.Info("Received generate token request", "endpoint", endpoint)
-
-	//TODO: Add check if endpoint exists
-
-	//Generate a token
-	token, err := gonanoid.New()
-	if err != nil {
-		slog.Error("Unable to generate token", "err", err)
-		return fiber.ErrInternalServerError
-	}
-
-	slog.Info("Token generated", "token", token, "endpoint", endpoint)
-
-	uc.tokens.Store(endpoint, token)
-
-	return c.JSON(WebsocketTokenResponse{
-		Token: token,
-	})
-}
-
-func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
+func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
 		c.WriteJSON(fiber.Error{
@@ -123,20 +100,9 @@ func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 		return
 	}
 
-	storedToken, ok := uc.tokens.Load(endpoint)
+	_, err := ec.pv.VerifyToken(token)
 
-	if !ok {
-		slog.Warn("No token stored", "endpoint", endpoint)
-		c.WriteJSON(fiber.Error{
-			Code:    fiber.StatusUnauthorized,
-			Message: fiber.ErrUnauthorized.Message,
-		})
-		c.Close()
-		return
-	}
-
-	if storedToken != token {
-		slog.Warn("Incorrect token", "token", token, "endpoint", endpoint)
+	if err != nil {
 		c.WriteJSON(fiber.Error{
 			Code:    fiber.StatusUnauthorized,
 			Message: fiber.ErrUnauthorized.Message,
@@ -146,7 +112,7 @@ func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	}
 
 	// Check if endpoint exists
-	exists, err := uc.service.endpointq.CheckEndpointExists(context.Background(), endpoint)
+	exists, err := ec.service.endpointq.CheckEndpointExists(context.Background(), endpoint)
 	if !exists {
 		slog.Info("No endpoint found", "endpoint", endpoint)
 
@@ -160,11 +126,14 @@ func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 
 	if err != nil {
 		slog.Error("unable to check if endpoint exists", "err", err)
-		c.WriteMessage(websocket.TextMessage, []byte("Oops! Something went wrong."))
+		c.WriteJSON(WebsocketPayload{
+			Code:    fiber.StatusInternalServerError,
+			Message: fiber.ErrInternalServerError.Message,
+		})
 		c.Close()
 	}
 
-	uc.AddRequestListener(endpoint, c)
+	ec.AddRequestListener(endpoint, c)
 
 	for {
 		if _, _, err := c.ReadMessage(); err != nil {
@@ -174,14 +143,14 @@ func (uc *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 }
 
 // Returns status of a given endpoint
-func (uc *EndpointController) StatsHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) StatsHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 	endpoint = strings.ToLower(endpoint)
 	if endpoint == "" {
 		return fiber.ErrBadRequest
 	}
 
-	stats, err := uc.service.GetEndpointStats(c.Context(), endpoint)
+	stats, err := ec.service.GetEndpointStats(c.Context(), endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -191,7 +160,7 @@ func (uc *EndpointController) StatsHandler(c *fiber.Ctx) error {
 	return c.JSON(stats)
 }
 
-func (uc *EndpointController) RequestDetailsHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) RequestDetailsHandler(c *fiber.Ctx) error {
 	reqIdStr := c.Params("requestid", "")
 	if reqIdStr == "" {
 		return fiber.NewError(
@@ -206,7 +175,7 @@ func (uc *EndpointController) RequestDetailsHandler(c *fiber.Ctx) error {
 		return fiber.ErrBadRequest
 	}
 
-	req, err := uc.service.GetRequestDetails(c.Context(), reqId)
+	req, err := ec.service.GetRequestDetails(c.Context(), reqId)
 	if err != nil {
 		return &fiber.Error{Code: err.Code, Message: err.Message}
 	}
@@ -214,7 +183,7 @@ func (uc *EndpointController) RequestDetailsHandler(c *fiber.Ctx) error {
 	return c.JSON(req)
 }
 
-func (uc *EndpointController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
 	uuid := c.Params("uuid", "")
 	if uuid == "" {
 		return fiber.NewError(
@@ -223,7 +192,7 @@ func (uc *EndpointController) RequestDetailsUUIDHandler(c *fiber.Ctx) error {
 		)
 	}
 
-	req, err := uc.service.GetRequestByUUID(c.Context(), uuid)
+	req, err := ec.service.GetRequestByUUID(c.Context(), uuid)
 	if err != nil {
 		return &fiber.Error{Code: err.Code, Message: err.Message}
 	}
@@ -241,7 +210,7 @@ type GenerateEndpointResponse struct {
 	Plan      string    `json:"plan"`
 }
 
-func (uc *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
 	var req GenerateEndpointRequest
 
 	if err := c.BodyParser(&req); err != nil {
@@ -254,7 +223,7 @@ func (uc *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
 		return fiber.ErrInternalServerError
 	}
 
-	endpoint, err := uc.service.CreateEndpoint(c.Context(), username, req.Endpoint)
+	endpoint, err := ec.service.CreateEndpoint(c.Context(), username, req.Endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -275,7 +244,7 @@ type WebsocketPayload struct {
 	Message     string      `json:"message"`
 }
 
-func (uc *EndpointController) HookHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 	// TODO: return request details
 	// Get the Content-Type header from the request
 	contentType := c.Get(fiber.HeaderContentType)
@@ -323,7 +292,7 @@ func (uc *EndpointController) HookHandler(c *fiber.Ctx) error {
 		ResponseCode: http.StatusOK,
 	}
 
-	requestRecord, endpointErr := uc.service.StoreRequestDetails(c.Context(), hookReq)
+	requestRecord, endpointErr := ec.service.StoreRequestDetails(c.Context(), hookReq)
 	if endpointErr != nil {
 		return &fiber.Error{
 			Code:    endpointErr.Code,
@@ -339,7 +308,7 @@ func (uc *EndpointController) HookHandler(c *fiber.Ctx) error {
 		Code:        200,
 	}
 
-	uc.BroadcastJSON(endpoint, payload)
+	ec.BroadcastJSON(endpoint, payload)
 
 	return c.SendStatus(fiber.StatusOK)
 }
@@ -348,14 +317,14 @@ type GetUserEndpointsResponse struct {
 	Endpoints []Endpoint `json:"endpoints"`
 }
 
-func (uc *EndpointController) GetUserEndpointsHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) GetUserEndpointsHandler(c *fiber.Ctx) error {
 	userId, ok := c.Locals("userId").(int64)
 	if !ok {
 		return fiber.ErrBadRequest
 	}
 	slog.Info("Requesting user endpoints", "userId", userId)
 
-	endpoints, err := uc.service.GetUserEndpoints(c.Context(), userId)
+	endpoints, err := ec.service.GetUserEndpoints(c.Context(), userId)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -374,7 +343,7 @@ type GetEndpointsHistoryResponse struct {
 	Requests []HookRequest `json:"requests"`
 }
 
-func (uc *EndpointController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
 		slog.Info("No endpoint found in path params")
@@ -394,7 +363,7 @@ func (uc *EndpointController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	}
 	userId := c.Locals("userId").(int64)
 
-	reqs, serviceErr := uc.service.GetEndpointRequestHistory(c.Context(), endpoint, userId, int32(limit), int32(offset))
+	reqs, serviceErr := ec.service.GetEndpointRequestHistory(c.Context(), endpoint, userId, int32(limit), int32(offset))
 	if serviceErr != nil {
 		return &fiber.Error{
 			Code:    serviceErr.Code,
@@ -415,14 +384,14 @@ type CheckSubdomainExistsResponse struct {
 	Message  string `json:"message"`
 }
 
-func (uc *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
+func (ec *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 	endpoint := c.Params("endpoint", "")
 
 	if endpoint == "" {
 		return fiber.ErrBadRequest
 	}
 
-	subdomainExists, err := uc.service.CheckEndpointExists(c.Context(), endpoint)
+	subdomainExists, err := ec.service.CheckEndpointExists(c.Context(), endpoint)
 	if err != nil {
 		return &fiber.Error{
 			Code:    err.Code,
@@ -466,15 +435,17 @@ func (uc *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 	}
 }
 
-func (uc *EndpointController) BroadcastJSON(endpoint string, data any) {
-	slog.Info("Broadcasting incoming request", "endpoint", endpoint)
-	connAny, ok := uc.conns.Load(endpoint)
+func (ec *EndpointController) BroadcastJSON(endpoint string, data any) {
+	connsAny, ok := ec.conns.Load(endpoint)
 	if !ok {
 		slog.Info("No active listeners found", "endpoint", endpoint)
 		return
 	}
 
-	conns := connAny.([]*websocket.Conn)
+	conns := connsAny.([]*websocket.Conn)
+
+	slog.Info("Broadcasting incoming request", "endpoint", endpoint, "num_listeners", len(conns))
+
 	for _, c := range conns {
 		err := c.WriteJSON(data)
 		if err != nil {

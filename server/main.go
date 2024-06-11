@@ -90,7 +90,7 @@ func main() {
 	endpointStore := endpoint.NewEndpointStore(queries)
 	userStore := user.NewUserStore(queries)
 	endpointService := endpoint.NewEndpointService(endpointStore, userStore)
-	endpointHandler := endpoint.NewEndpointController(endpointService)
+	endpointHandler := endpoint.NewEndpointController(endpointService, pasetoVerifier)
 
 	cachemw := middleware.NewCacheMiddleware()
 
