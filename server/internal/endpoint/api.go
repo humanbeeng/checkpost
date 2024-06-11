@@ -71,10 +71,6 @@ func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
 }
 
-type WebsocketTokenResponse struct {
-	Token string `json:"token"`
-}
-
 func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	endpoint := c.Params("endpoint", "")
 	if endpoint == "" {
