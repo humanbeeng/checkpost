@@ -11,6 +11,7 @@
 	import { endpointHistory } from '@/store.js';
 	import type { Request, WebsocketPayload } from '@/types.js';
 	import clsx from 'clsx';
+	import ReconnectingWebSocket from 'reconnecting-websocket';
 	import { onMount } from 'svelte';
 
 	import { Exit } from 'svelte-radix';
@@ -19,6 +20,7 @@
 	export let data;
 
 	let selectedRequest: Request | undefined;
+	let isSocketConnected = false;
 
 	$endpointHistory = data.endpointHistory;
 	if ($endpointHistory == null) {
@@ -33,14 +35,22 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	onMount(() => {
-		console.log('Token', data.token);
-		const socket = new WebSocket(
-			`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`
+	let socket: ReconnectingWebSocket;
+
+	const connectSocket = () => {
+		const options = {
+			connectionTimeout: 1000,
+			maxRetries: 5
+		};
+		socket = new ReconnectingWebSocket(
+			`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`,
+			[],
+			options
 		);
 
 		socket.addEventListener('open', function () {
 			console.log('Websocket connection established');
+			isSocketConnected = true;
 		});
 
 		// Listen for messages
@@ -52,11 +62,16 @@
 		});
 
 		socket.addEventListener('error', (event) => {
-			console.log('Error', event);
+			isSocketConnected = false;
 		});
+
 		socket.addEventListener('close', (event) => {
-			console.log('Closed');
+			isSocketConnected = false;
 		});
+	};
+
+	onMount(() => {
+		connectSocket();
 	});
 </script>
 
