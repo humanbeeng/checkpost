@@ -40,6 +40,7 @@
 		"bits-ui": "^0.19.5",
 		"clsx": "^2.1.0",
 		"formsnap": "^1.0.0",
+		"reconnecting-websocket": "^4.4.0",
 		"svelte-radix": "^1.0.3",
 		"sveltekit-superforms": "^2.12.6",
 		"tailwind-merge": "^2.2.1",

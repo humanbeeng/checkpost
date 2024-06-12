@@ -17,6 +17,9 @@ dependencies:
   formsnap:
     specifier: ^1.0.0
     version: 1.0.0(svelte@4.2.12)(sveltekit-superforms@2.12.6)
+  reconnecting-websocket:
+    specifier: ^4.4.0
+    version: 4.4.0
   svelte-radix:
     specifier: ^1.0.3
     version: 1.0.3(svelte@4.2.12)
@@ -2364,6 +2367,10 @@ packages:
     engines: {node: '>=8.10.0'}
     dependencies:
       picomatch: 2.3.1
+
+  /reconnecting-websocket@4.4.0:
+    resolution: {integrity: sha512-D2E33ceRPga0NvTDhJmphEgJ7FUYF0v4lr1ki0csq06OdlxKfugGzN0dSkxM/NfqCxYELK4KcaTOUOjTV6Dcng==}
+    dev: false
 
   /regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
