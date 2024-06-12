@@ -35,19 +35,15 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	let socket: ReconnectingWebSocket;
-
 	const connectSocket = () => {
 		const options = {
 			connectionTimeout: 1000,
-			maxRetries: 10,
-			startClosed: true
+			maxRetries: 10
 		};
-		socket = new ReconnectingWebSocket(
-			`${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`,
-			[],
-			options
-		);
+
+		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
+
+		const socket = new ReconnectingWebSocket(wsUrl, [], options);
 
 		socket.addEventListener('open', function () {
 			console.log('Websocket connection established');
