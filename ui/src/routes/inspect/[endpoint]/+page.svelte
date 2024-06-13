@@ -1,6 +1,6 @@
-<script lang="ts">
+<script lang="ts" type="module">
 	import { page } from '$app/stores';
-	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
+	// import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
@@ -9,9 +9,10 @@
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
 	import { endpointHistory } from '@/store.js';
-	import type { Request, WebsocketPayload } from '@/types.js';
+	import type { Request } from '@/types.js';
 	import clsx from 'clsx';
-	import ReconnectingWebSocket from 'reconnecting-websocket';
+	import { Socket, io } from 'socket.io-client';
+
 	import { onMount } from 'svelte';
 
 	import { Exit } from 'svelte-radix';
@@ -35,35 +36,48 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
+	let socket: Socket;
+
 	const connectSocket = () => {
 		const options = {
 			connectionTimeout: 1000,
 			maxRetries: 10
 		};
 
-		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
+		// const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
-		const socket = new ReconnectingWebSocket(wsUrl, [], options);
+		// const socket = new ReconnectingWebSocket(wsUrl, [], options);
 
-		socket.addEventListener('open', function () {
-			console.log('Websocket connection established');
-			isSocketConnected = true;
-		});
+		// socket.addEventListener('open', function () {
+		// 	console.log('Websocket connection established');
+		// 	isSocketConnected = true;
+		// });
 
-		// Listen for messages
-		socket.addEventListener('message', function (event) {
-			const req: WebsocketPayload = JSON.parse(event.data);
-			if (req.code == 200) {
-				$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
-			}
-		});
+		// // Listen for messages
+		// socket.addEventListener('message', function (event) {
+		// 	const req: WebsocketPayload = JSON.parse(event.data);
+		// 	if (req.code == 200) {
+		// 		$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
+		// 	}
+		// });
 
-		socket.addEventListener('error', (event) => {
-			isSocketConnected = false;
-		});
+		// socket.addEventListener('error', (event) => {
+		// 	isSocketConnected = false;
+		// });
 
-		socket.addEventListener('close', (event) => {
-			isSocketConnected = false;
+		// socket.addEventListener('close', (event) => {
+		// 	isSocketConnected = false;
+		// });
+
+		socket = io('localhost:3000', {
+			transports: ['websocket'],
+			path: `/endpoint/inspect/${endpoint}`,
+			upgrade: true,
+			query: {
+				token: data.token
+			},
+			autoConnect: true,
+			forceNew: false
 		});
 	};
 

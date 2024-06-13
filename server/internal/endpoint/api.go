@@ -10,6 +10,7 @@ import (
 	"sync"
 	"time"
 
+	"github.com/gofiber/contrib/socketio"
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
 	"github.com/humanbeeng/checkpost/server/internal/core"
@@ -73,7 +74,32 @@ func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 		return fiber.ErrUpgradeRequired
 	})
 
-	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
+	endpointGroup.Get("/inspect/:endpoint", socketio.New(func(kws *socketio.Websocket) {
+
+		endpoint := kws.Params("endpoint")
+
+		// Add the connection to the list of the connected clients
+		// The UUID is generated randomly and is the key that allow
+		// socketio to manage Emit/EmitTo/Broadcast
+
+		// Every websocket connection has an optional session key => value storage
+		kws.SetAttribute("endpoint", endpoint)
+
+		slog.Info("Inspecting endpoint", "endpoint", endpoint)
+
+		kws.Emit([]byte("Hello"), socketio.TextMessage)
+
+	}))
+
+	socketio.On(socketio.EventConnect, func(ep *socketio.EventPayload) {
+		fmt.Println("Connected")
+	})
+	socketio.On(socketio.EventDisconnect, func(ep *socketio.EventPayload) {
+		fmt.Println("Disconnected")
+	})
+	socketio.On(socketio.EventClose, func(ep *socketio.EventPayload) {
+		fmt.Println("Closed")
+	})
 }
 
 func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
