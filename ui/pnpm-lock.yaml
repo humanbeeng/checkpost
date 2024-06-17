@@ -57,9 +57,6 @@ importers:
       '@types/eslint':
         specifier: ^8.56.0
         version: 8.56.5
-      '@types/node':
-        specifier: ^20.14.2
-        version: 20.14.2
       '@typescript-eslint/eslint-plugin':
         specifier: ^7.0.0
         version: 7.1.1(@typescript-eslint/parser@7.1.1(eslint@8.57.0)(typescript@5.3.3))(eslint@8.57.0)(typescript@5.3.3)
@@ -2314,6 +2311,7 @@ snapshots:
   '@types/node@20.14.2':
     dependencies:
       undici-types: 5.26.5
+    optional: true
 
   '@types/pug@2.0.10': {}
 
@@ -3695,7 +3693,8 @@ snapshots:
 
   ufo@1.4.0: {}
 
-  undici-types@5.26.5: {}
+  undici-types@5.26.5:
+    optional: true
 
   update-browserslist-db@1.0.13(browserslist@4.23.0):
     dependencies:
