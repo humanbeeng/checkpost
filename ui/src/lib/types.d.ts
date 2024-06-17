@@ -24,7 +24,7 @@ export type HttpMethod =
 	| 'head'
 	| 'options';
 
-export type Request = {
+export type HookRequest = {
 	endpoint: string;
 	path: string;
 	content: string;
@@ -40,7 +40,7 @@ export type Request = {
 };
 
 export type EndpointHistory = {
-	requests: Request[];
+	requests: HookRequest[];
 };
 
 export type WebsocketTokenResponse = {
@@ -48,7 +48,7 @@ export type WebsocketTokenResponse = {
 };
 
 export type WebsocketPayload = {
-	hook_request: Request;
+	hook_request: HookRequest | null;
 	code: number;
 	message: string;
 };

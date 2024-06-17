@@ -1,6 +1,7 @@
-<script lang="ts">
+<script lang="ts" type="module">
 	import { page } from '$app/stores';
 	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
+	// import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
@@ -11,7 +12,8 @@
 	import { endpointHistory } from '@/store.js';
 	import type { Request, WebsocketPayload } from '@/types.js';
 	import clsx from 'clsx';
-	import ReconnectingWebSocket from 'reconnecting-websocket';
+	import ResilientWebSocket, { WebSocketEvent } from 'resilient-websocket';
+
 	import { onMount } from 'svelte';
 
 	import { Exit } from 'svelte-radix';
@@ -20,7 +22,6 @@
 	export let data;
 
 	let selectedRequest: Request | undefined;
-	let isSocketConnected = false;
 
 	$endpointHistory = data.endpointHistory;
 	if ($endpointHistory == null) {
@@ -35,35 +36,24 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	const connectSocket = () => {
-		const options = {
-			connectionTimeout: 1000,
-			maxRetries: 10
-		};
+	let socket: ResilientWebSocket;
 
+	const connectSocket = () => {
 		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
-		const socket = new ReconnectingWebSocket(wsUrl, [], options);
-
-		socket.addEventListener('open', function () {
-			console.log('Websocket connection established');
-			isSocketConnected = true;
+		socket = new ResilientWebSocket(wsUrl, {
+			autoConnect: true,
+			pingEnabled: true,
+			pingMessage: '',
+			pongMessage: '',
+			pingInterval: 3000
 		});
 
-		// Listen for messages
-		socket.addEventListener('message', function (event) {
-			const req: WebsocketPayload = JSON.parse(event.data);
+		socket.on(WebSocketEvent.MESSAGE, (msg) => {
+			const req: WebsocketPayload = JSON.parse(msg);
 			if (req.code == 200) {
 				$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
 			}
-		});
-
-		socket.addEventListener('error', (event) => {
-			isSocketConnected = false;
-		});
-
-		socket.addEventListener('close', (event) => {
-			isSocketConnected = false;
 		});
 	};
 

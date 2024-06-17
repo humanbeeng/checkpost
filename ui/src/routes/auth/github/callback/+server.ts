@@ -3,14 +3,12 @@ import { error, redirect } from '@sveltejs/kit';
 import type { RequestEvent } from '../$types';
 
 export async function GET({ url, fetch, cookies }: RequestEvent) {
-	const code = url.searchParams.get('code');
-	console.log('Code', code);
 	// TODO: Handle edge cases
-
+	const code = url.searchParams.get('code');
 	const endpoint = `${PUBLIC_BASE_URL}/auth/github/callback?code=${code}`;
 
 	const res = await fetch(endpoint).catch((err) => {
-		console.log('Unable to hit auth callback', err);
+		console.error('Unable to hit auth callback', err);
 		error(500, { message: 'Something went wrong while callback' });
 	});
 

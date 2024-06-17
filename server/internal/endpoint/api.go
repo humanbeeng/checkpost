@@ -12,6 +12,7 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
+	"github.com/google/uuid"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
@@ -23,9 +24,8 @@ type EndpointController struct {
 }
 
 func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
-
 	// TODO: Add limit to number of active connections.
-	_, loaded := ec.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
+	conns, loaded := ec.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
 	if loaded {
 		// Replace existing connection.
 		// TODO: Add support for multiple connections
@@ -34,12 +34,17 @@ func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocke
 		// for _, conn := range conns.([]*websocket.Conn) {
 		// 	conn.Close()
 		// }
-
-		c := append([]*websocket.Conn{}, conn)
+		c := append(conns.([]*websocket.Conn), conn)
 		ec.conns.Store(endpoint, c)
 	}
-
-	slog.Info("Listener connection added", "endpoint", endpoint)
+	closeHandler := func(code int, text string) error {
+		slog.Info("Closing connection", "endpoint", endpoint, "session_id", conn.Locals("session_id"))
+		_ = conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
+		ec.conns.Delete("endpoint")
+		return nil
+	}
+	conn.SetCloseHandler(closeHandler)
+	slog.Info("Listener added", "endpoint", endpoint, "session_id", conn.Locals("session_id"))
 }
 
 func NewEndpointController(service *EndpointService, pv *core.PasetoVerifier) *EndpointController {
@@ -61,17 +66,6 @@ func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 	endpointGroup.Get("/request/:uuid", authmw, ec.RequestDetailsUUIDHandler)
 
 	endpointGroup.Get("/stats/:endpoint", authmw, ec.StatsHandler)
-
-	// TODO: Add rate/conn limiter
-	endpointGroup.Use("/inspect", func(c *fiber.Ctx) error {
-		// IsWebSocketUpgrade returns true if the client
-		// requested upgrade to the WebSocket protocol.
-		if websocket.IsWebSocketUpgrade(c) {
-			c.Locals("allowed", true)
-			return c.Next()
-		}
-		return fiber.ErrUpgradeRequired
-	})
 
 	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
 }
@@ -101,8 +95,7 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 		return
 	}
 
-	_, err := ec.pv.VerifyToken(token)
-
+	payload, err := ec.pv.VerifyToken(token)
 	if err != nil {
 		c.WriteJSON(fiber.Error{
 			Code:    fiber.StatusUnauthorized,
@@ -128,17 +121,41 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	if err != nil {
 		slog.Error("unable to check if endpoint exists", "err", err)
 		c.WriteJSON(WebsocketPayload{
-			Code:    fiber.StatusInternalServerError,
-			Message: fiber.ErrInternalServerError.Message,
+			Code: fiber.StatusInternalServerError,
 		})
 		c.Close()
 	}
 
+	sessionId, err := uuid.NewV7()
+	if err != nil {
+		slog.Error("unable to generate uuid for ws connection", err)
+		return
+	}
+
+	c.Locals("session_id", sessionId)
+	c.Locals("username", payload.Get("username"))
+	c.Locals("plan", payload.Get("plan"))
+	c.Locals("role", payload.Get("role"))
+
 	ec.AddRequestListener(endpoint, c)
 
 	for {
-		if _, _, err := c.ReadMessage(); err != nil {
+		// Listen for ping message = ""
+		_, msg, err := c.ReadMessage()
+		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
 			break
+		}
+
+		if err != nil {
+			slog.Error("unable to read message from ws conn", "endpoint", endpoint, "err", err)
+			c.Close()
+			break
+		}
+		if string(msg) == "" {
+			err = c.WriteMessage(websocket.TextMessage, []byte(""))
+			if err != nil {
+				slog.Error("unable to send pong", "endpoint", endpoint, "err", err)
+			}
 		}
 	}
 }
@@ -242,7 +259,6 @@ func (ec *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
 type WebsocketPayload struct {
 	Code        int         `json:"code"`
 	HookRequest HookRequest `json:"hook_request"`
-	Message     string      `json:"message"`
 }
 
 func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {

@@ -103,5 +103,10 @@ func main() {
 	re := jobs.NewExpiredRequestsRemover(cron.New(), *endpointStore)
 	re.Start()
 
-	app.Listen(":3000")
+	err = app.Listen(":3000")
+	if err != nil {
+		slog.Error("unable to start fiber server", err)
+		return
+	}
+
 }
