@@ -48,7 +48,7 @@ export type WebsocketTokenResponse = {
 };
 
 export type WebsocketPayload = {
-	hook_request: Request;
+	hook_request: Request | null;
 	code: number;
 	message: string;
 };

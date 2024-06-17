@@ -1,5 +1,6 @@
 <script lang="ts" type="module">
 	import { page } from '$app/stores';
+	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	// import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
@@ -9,9 +10,9 @@
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
 	import { endpointHistory } from '@/store.js';
-	import type { Request } from '@/types.js';
+	import type { Request, WebsocketPayload } from '@/types.js';
 	import clsx from 'clsx';
-	import { Socket, io } from 'socket.io-client';
+	import ResilientWebSocket, { WebSocketEvent } from 'resilient-websocket';
 
 	import { onMount } from 'svelte';
 
@@ -21,7 +22,6 @@
 	export let data;
 
 	let selectedRequest: Request | undefined;
-	let isSocketConnected = false;
 
 	$endpointHistory = data.endpointHistory;
 	if ($endpointHistory == null) {
@@ -36,15 +36,10 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	let socket: Socket;
+	let socket: ResilientWebSocket;
 
 	const connectSocket = () => {
-		const options = {
-			connectionTimeout: 1000,
-			maxRetries: 10
-		};
-
-		// const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
+		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
 		// const socket = new ReconnectingWebSocket(wsUrl, [], options);
 
@@ -69,15 +64,19 @@
 		// 	isSocketConnected = false;
 		// });
 
-		socket = io('localhost:3000', {
-			transports: ['websocket'],
-			path: `/endpoint/inspect/${endpoint}`,
-			upgrade: true,
-			query: {
-				token: data.token
-			},
+		socket = new ResilientWebSocket(wsUrl, {
 			autoConnect: true,
-			forceNew: false
+			pingEnabled: true,
+			pingMessage: '',
+			pongMessage: '',
+			pingInterval: 3000
+		});
+
+		socket.on(WebSocketEvent.MESSAGE, (msg) => {
+			const req: WebsocketPayload = JSON.parse(msg);
+			if (req.code == 200) {
+				$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
+			}
 		});
 	};
 

@@ -20,8 +20,11 @@ dependencies:
   reconnecting-websocket:
     specifier: ^4.4.0
     version: 4.4.0
+  resilient-websocket:
+    specifier: ^1.0.11
+    version: 1.0.11
   socket.io-client:
-    specifier: ^4.7.5
+    specifier: 4.7.5
     version: 4.7.5
   svelte-radix:
     specifier: ^1.0.3
@@ -2400,6 +2403,10 @@ packages:
 
   /regenerator-runtime@0.14.1:
     resolution: {integrity: sha512-dYnhHh0nJoMfnkZs6GmmhFknAGRrLznOu5nc9ML+EJxGvrx6H7teuevqVqCuPcPK//3eDrrjQhehXVx9cnkGdw==}
+    dev: false
+
+  /resilient-websocket@1.0.11:
+    resolution: {integrity: sha512-wdyXc47KbT2wx5pfFKCDYvPG7aK77ylsEFsr8EQjjA/yEBs/lzlQHcZcAwzNMVJm3h5kduubProenEUVmW9b8A==}
     dev: false
 
   /resolve-from@4.0.0:
