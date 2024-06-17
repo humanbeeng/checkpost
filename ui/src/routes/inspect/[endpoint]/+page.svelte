@@ -41,29 +41,6 @@
 	const connectSocket = () => {
 		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
-		// const socket = new ReconnectingWebSocket(wsUrl, [], options);
-
-		// socket.addEventListener('open', function () {
-		// 	console.log('Websocket connection established');
-		// 	isSocketConnected = true;
-		// });
-
-		// // Listen for messages
-		// socket.addEventListener('message', function (event) {
-		// 	const req: WebsocketPayload = JSON.parse(event.data);
-		// 	if (req.code == 200) {
-		// 		$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
-		// 	}
-		// });
-
-		// socket.addEventListener('error', (event) => {
-		// 	isSocketConnected = false;
-		// });
-
-		// socket.addEventListener('close', (event) => {
-		// 	isSocketConnected = false;
-		// });
-
 		socket = new ResilientWebSocket(wsUrl, {
 			autoConnect: true,
 			pingEnabled: true,
