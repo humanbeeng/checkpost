@@ -7,12 +7,14 @@
 	import HistoryItem from '@/components/HistoryItem.svelte';
 	import MethodBadge from '@/components/MethodBadge.svelte';
 	import ProfileHeader from '@/components/ProfileHeader.svelte';
+	import RequestContainer from '@/components/RequestContainer.svelte';
 	import RequestDetails from '@/components/RequestDetails.svelte';
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
 	import { endpointHistory } from '@/store.js';
 	import type { Request, WebsocketPayload } from '@/types.js';
 	import clsx from 'clsx';
+	import ReconnectingWebSocket from 'reconnecting-websocket';
 	import ResilientWebSocket, { WebSocketEvent } from 'resilient-websocket';
 
 	import { onMount } from 'svelte';
@@ -37,11 +39,11 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	let socket: WebSocket;
+	let socket: ReconnectingWebSocket;
 	const connectSocket = () => {
 		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
-		socket = new WebSocket(wsUrl);
+		socket = new ReconnectingWebSocket(wsUrl);
 
 		// Connection opened
 		socket.addEventListener('open', (event) => {
@@ -72,12 +74,8 @@
 		// Send ping
 
 		setInterval(() => {
-			if (socket) {
-				if (socket.readyState === socket.OPEN) {
-					socket.send('');
-				} else if (socket.readyState === socket.CLOSED) {
-					setTimeout(connectSocket, 1000);
-				}
+			if (socket && socket.readyState === socket.OPEN) {
+				socket.send('');
 			}
 		}, 5000);
 	});
