@@ -181,6 +181,7 @@ func (s *EndpointService) StoreRequestDetails(ctx context.Context, hookReq HookR
 				Message: fmt.Sprintf("https://%s.checkpost.io is either not created or has expired.", endpoint),
 			}
 		}
+		slog.Error("unable to get endpoint details", "endpoint", endpoint, "err", err)
 		return db.Request{}, NewInternalServerError()
 	}
 

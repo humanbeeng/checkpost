@@ -6,6 +6,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
 	import MethodBadge from '@/components/MethodBadge.svelte';
+	import ProfileHeader from '@/components/ProfileHeader.svelte';
 	import RequestDetails from '@/components/RequestDetails.svelte';
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
@@ -36,29 +37,59 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	let socket: ResilientWebSocket;
-
+	let socket: WebSocket;
 	const connectSocket = () => {
 		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
-		socket = new ResilientWebSocket(wsUrl, {
-			autoConnect: true,
-			pingEnabled: true,
-			pingMessage: '',
-			pongMessage: '',
-			pingInterval: 3000
+		socket = new WebSocket(wsUrl);
+
+		// Connection opened
+		socket.addEventListener('open', (event) => {
+			console.log('Websocket connection established');
 		});
 
-		socket.on(WebSocketEvent.MESSAGE, (msg) => {
-			const req: WebsocketPayload = JSON.parse(msg);
+		// Listen for messages
+		socket.addEventListener('message', (event) => {
+			console.log('Message:', event.data);
+			if (event.data === '') {
+				console.log('pong');
+				return;
+			}
+
+			const req: WebsocketPayload = JSON.parse(event.data);
 			if (req.code == 200) {
 				$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
 			}
 		});
+
+		socket.addEventListener('close', (event) => {
+			console.log('Closing');
+			socket.close();
+			console.log('');
+		});
+
+		// Send ping
+		setInterval(() => {
+			if (socket.readyState === socket.OPEN) {
+				socket.send('');
+			} else if (socket.readyState === socket.CLOSED) {
+			}
+		}, 5000);
 	};
 
 	onMount(() => {
 		connectSocket();
+		// Send ping
+
+		setInterval(() => {
+			if (socket) {
+				if (socket.readyState === socket.OPEN) {
+					socket.send('');
+				} else if (socket.readyState === socket.CLOSED) {
+					setTimeout(connectSocket, 1000);
+				}
+			}
+		}, 5000);
 	});
 </script>
 

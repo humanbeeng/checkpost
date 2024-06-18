@@ -25,26 +25,26 @@ type EndpointController struct {
 
 func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
 	// TODO: Add limit to number of active connections.
-	conns, loaded := ec.conns.LoadOrStore(endpoint, []*websocket.Conn{conn})
-	if loaded {
-		// Replace existing connection.
-		// TODO: Add support for multiple connections
+	sessionId := conn.Locals("session_id").(string)
 
-		// slog.Info("Closing existing ws connections", "num_connections", len(conns.([]*websocket.Conn)))
-		// for _, conn := range conns.([]*websocket.Conn) {
-		// 	conn.Close()
-		// }
-		c := append(conns.([]*websocket.Conn), conn)
-		ec.conns.Store(endpoint, c)
+	listenersAny, loaded := ec.conns.LoadOrStore(endpoint, map[string]*websocket.Conn{sessionId: conn})
+	if loaded {
+		slog.Info("Loaded existing listeners map")
+		listeners := listenersAny.(map[string]*websocket.Conn)
+		listeners[sessionId] = conn
 	}
+
 	closeHandler := func(code int, text string) error {
-		slog.Info("Closing connection", "endpoint", endpoint, "session_id", conn.Locals("session_id"))
+		slog.Info("Closing connection", "endpoint", endpoint, "session_id", sessionId)
 		_ = conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
-		ec.conns.Delete("endpoint")
+		ec.removeListener(endpoint, sessionId)
+		conn.Close()
 		return nil
 	}
+
+	ec.conns.Store(endpoint, listenersAny)
 	conn.SetCloseHandler(closeHandler)
-	slog.Info("Listener added", "endpoint", endpoint, "session_id", conn.Locals("session_id"))
+	slog.Info("Listener added", "endpoint", endpoint, "session_id", conn.Locals("session_id"), "num_listeners", len(listenersAny.(map[string]*websocket.Conn)))
 }
 
 func NewEndpointController(service *EndpointService, pv *core.PasetoVerifier) *EndpointController {
@@ -132,7 +132,7 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 		return
 	}
 
-	c.Locals("session_id", sessionId)
+	c.Locals("session_id", sessionId.String())
 	c.Locals("username", payload.Get("username"))
 	c.Locals("plan", payload.Get("plan"))
 	c.Locals("role", payload.Get("role"))
@@ -142,15 +142,12 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	for {
 		// Listen for ping message = ""
 		_, msg, err := c.ReadMessage()
-		if websocket.IsCloseError(err, websocket.CloseGoingAway) {
+		if err != nil {
+			slog.Info("Unable to read message from ws conn", "endpoint", endpoint, "session_id", sessionId.String(), "err", err)
 			break
+
 		}
 
-		if err != nil {
-			slog.Error("unable to read message from ws conn", "endpoint", endpoint, "err", err)
-			c.Close()
-			break
-		}
 		if string(msg) == "" {
 			err = c.WriteMessage(websocket.TextMessage, []byte(""))
 			if err != nil {
@@ -453,20 +450,31 @@ func (ec *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 }
 
 func (ec *EndpointController) BroadcastJSON(endpoint string, data any) {
-	connsAny, ok := ec.conns.Load(endpoint)
+	listenersAny, ok := ec.conns.Load(endpoint)
 	if !ok {
 		slog.Info("No active listeners found", "endpoint", endpoint)
 		return
 	}
 
-	conns := connsAny.([]*websocket.Conn)
-
-	slog.Info("Broadcasting incoming request", "endpoint", endpoint, "num_listeners", len(conns))
-
-	for _, c := range conns {
+	listeners := listenersAny.(map[string]*websocket.Conn)
+	for _, c := range listeners {
+		slog.Info("Broadcasting json", "endpoint", endpoint, "session_id", c.Locals("session_id"))
 		err := c.WriteJSON(data)
 		if err != nil {
 			slog.Error("unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
+			sessionId := c.Locals("session_id").(string)
+			ec.removeListener(endpoint, sessionId)
 		}
 	}
+}
+
+func (ec *EndpointController) removeListener(endpoint string, sessionId string) error {
+	listenersAny, loaded := ec.conns.Load(endpoint)
+	if loaded {
+		listeners := listenersAny.(map[string]*websocket.Conn)
+		delete(listeners, sessionId)
+		ec.conns.Store(endpoint, listeners)
+		slog.Info("Removed listener", "endpoint", endpoint, "session_id", sessionId, "num_listeners", len(listeners))
+	}
+	return nil
 }
