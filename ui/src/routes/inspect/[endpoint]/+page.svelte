@@ -43,7 +43,10 @@
 	const connectSocket = () => {
 		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
 
-		socket = new ReconnectingWebSocket(wsUrl);
+		const opts = {
+			startClosed: false
+		};
+		socket = new ReconnectingWebSocket(wsUrl, [], opts);
 
 		// Connection opened
 		socket.addEventListener('open', (event) => {
@@ -65,7 +68,9 @@
 
 		socket.addEventListener('close', () => {
 			console.log('Closing');
-			socket.close();
+			setTimeout(() => {
+				socket.reconnect();
+			}, 5000);
 		});
 	};
 
