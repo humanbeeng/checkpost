@@ -50,9 +50,8 @@
 
 		// Listen for messages
 		socket.addEventListener('message', (event) => {
-			console.log('Message:', event.data);
+			//ping
 			if (event.data === '') {
-				console.log('pong');
 				return;
 			}
 
@@ -62,19 +61,10 @@
 			}
 		});
 
-		socket.addEventListener('close', (event) => {
+		socket.addEventListener('close', () => {
 			console.log('Closing');
 			socket.close();
-			console.log('');
 		});
-
-		// Send ping
-		setInterval(() => {
-			if (socket.readyState === socket.OPEN) {
-				socket.send('');
-			} else if (socket.readyState === socket.CLOSED) {
-			}
-		}, 5000);
 	};
 
 	onMount(() => {
