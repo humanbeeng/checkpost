@@ -5,8 +5,6 @@ import (
 	"fmt"
 	"log"
 	"log/slog"
-	"os"
-	"path/filepath"
 
 	"github.com/gofiber/fiber/v2"
 	"github.com/gofiber/fiber/v2/middleware/cors"
@@ -32,19 +30,19 @@ func main() {
 		log.Fatal(err)
 	}
 
-	replace := func(groups []string, a slog.Attr) slog.Attr {
-
-		// Remove the directory from the source's filename.
-		if a.Key == slog.SourceKey {
-			source := a.Value.Any().(*slog.Source)
-			source.File = filepath.Base(source.File)
-		}
-		return a
-	}
-
-	slogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace}))
-
-	slog.SetDefault(slogger)
+	// replace := func(groups []string, a slog.Attr) slog.Attr {
+	//
+	// 	// Remove the directory from the source's filename.
+	// 	if a.Key == slog.SourceKey {
+	// 		source := a.Value.Any().(*slog.Source)
+	// 		source.File = filepath.Base(source.File)
+	// 	}
+	// 	return a
+	// }
+	//
+	// slogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace}))
+	//
+	// slog.SetDefault(slogger)
 
 	app := fiber.New()
 	app.Use(cors.New())
@@ -90,7 +88,8 @@ func main() {
 	endpointStore := endpoint.NewEndpointStore(queries)
 	userStore := user.NewUserStore(queries)
 	endpointService := endpoint.NewEndpointService(endpointStore, userStore)
-	endpointHandler := endpoint.NewEndpointController(endpointService, pasetoVerifier)
+	wsManager := endpoint.NewWSManager()
+	endpointHandler := endpoint.NewEndpointController(endpointService, wsManager, pasetoVerifier)
 
 	cachemw := middleware.NewCacheMiddleware()
 

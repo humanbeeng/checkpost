@@ -17,19 +17,19 @@ import (
 )
 
 type EndpointController struct {
-	conns   *sync.Map
-	tokens  *sync.Map
-	pv      *core.PasetoVerifier
-	service *EndpointService
+	clients   *sync.Map
+	wsManager *WSManager
+	tokens    *sync.Map
+	pv        *core.PasetoVerifier
+	service   *EndpointService
 }
 
-func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocket.Conn) {
+func (ec *EndpointController) AddListener(endpoint string, conn *websocket.Conn) {
 	// TODO: Add limit to number of active connections.
 	sessionId := conn.Locals("session_id").(string)
 
-	listenersAny, loaded := ec.conns.LoadOrStore(endpoint, map[string]*websocket.Conn{sessionId: conn})
+	listenersAny, loaded := ec.clients.LoadOrStore(endpoint, map[string]*websocket.Conn{sessionId: conn})
 	if loaded {
-		slog.Info("Loaded existing listeners map")
 		listeners := listenersAny.(map[string]*websocket.Conn)
 		listeners[sessionId] = conn
 	}
@@ -38,17 +38,17 @@ func (ec *EndpointController) AddRequestListener(endpoint string, conn *websocke
 		slog.Info("Closing connection", "endpoint", endpoint, "session_id", sessionId)
 		_ = conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
 		ec.removeListener(endpoint, sessionId)
-		conn.Close()
 		return nil
 	}
 
-	ec.conns.Store(endpoint, listenersAny)
+	ec.clients.Store(endpoint, listenersAny)
 	conn.SetCloseHandler(closeHandler)
+
 	slog.Info("Listener added", "endpoint", endpoint, "session_id", conn.Locals("session_id"), "num_listeners", len(listenersAny.(map[string]*websocket.Conn)))
 }
 
-func NewEndpointController(service *EndpointService, pv *core.PasetoVerifier) *EndpointController {
-	return &EndpointController{conns: &sync.Map{}, service: service, tokens: &sync.Map{}, pv: pv}
+func NewEndpointController(service *EndpointService, wsManager *WSManager, pv *core.PasetoVerifier) *EndpointController {
+	return &EndpointController{clients: &sync.Map{}, service: service, tokens: &sync.Map{}, pv: pv, wsManager: wsManager}
 }
 
 func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
@@ -67,7 +67,76 @@ func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 
 	endpointGroup.Get("/stats/:endpoint", authmw, ec.StatsHandler)
 
-	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
+	// endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
+	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.Inspect))
+}
+
+func (ec *EndpointController) Inspect(c *websocket.Conn) {
+	endpoint := c.Params("endpoint")
+	// ec.wsManager.AddConn(endpoint, c)
+
+	// client := WSClient{
+	// 	conn:      c,
+	// 	endpoint:  endpoint,
+	// 	sessionId: c.Locals("requestid").(string),
+	// 	manager:   ec.wsManager,
+	// 	egress:    make(chan WSMessage),
+	// }
+	// cl := NewWSClient(c.Locals("requestid").(string), endpoint, c, ec.wsManager)
+
+	// cl.conn.Conn.SetPongHandler(cl.pongHandler)
+
+	go func(c *websocket.Conn) error {
+
+		_, _, err := c.ReadMessage()
+		if err != nil {
+			slog.Info("Unable to read message from ws conn", "endpoint", endpoint, "session_id", c.Locals("requestid"), "err", err)
+			return err
+		}
+		return nil
+	}(c)
+
+	go func(c *websocket.Conn) error {
+
+		t := time.NewTicker(pingInterval)
+		defer func(t *time.Ticker) {
+			t.Stop()
+			// c.manager.RemoveConn(endpoint, c.Locals("sessionid").(string))
+		}(t)
+
+		for {
+			select {
+			case <-t.C:
+				{
+					fmt.Println("Sending ping", "session_id", c.Locals("requestid"))
+					if err := c.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+						slog.Error("unable to send ping", "session_id", c.Locals("requestid"), "err", err)
+						// Trigger cleanup func
+						return err
+					}
+				}
+			}
+		}
+	}(c)
+	// go cl.readMessages()
+	// go cl.writeMessage()
+
+	c.SetPongHandler(func(appData string) error {
+		fmt.Println("pong")
+		c.SetReadDeadline(time.Now().Add(time.Second))
+		return nil
+	})
+	go func() {
+		t := time.NewTicker(time.Second)
+		for {
+			select {
+			case <-t.C:
+				{
+					slog.Info("Ticker")
+				}
+			}
+		}
+	}()
 }
 
 func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
@@ -137,7 +206,7 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	c.Locals("plan", payload.Get("plan"))
 	c.Locals("role", payload.Get("role"))
 
-	ec.AddRequestListener(endpoint, c)
+	ec.AddListener(endpoint, c)
 
 	for {
 		// Listen for ping message = ""
@@ -145,7 +214,6 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 		if err != nil {
 			slog.Info("Unable to read message from ws conn", "endpoint", endpoint, "session_id", sessionId.String(), "err", err)
 			break
-
 		}
 
 		if string(msg) == "" {
@@ -450,7 +518,7 @@ func (ec *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 }
 
 func (ec *EndpointController) BroadcastJSON(endpoint string, data any) {
-	listenersAny, ok := ec.conns.Load(endpoint)
+	listenersAny, ok := ec.clients.Load(endpoint)
 	if !ok {
 		slog.Info("No active listeners found", "endpoint", endpoint)
 		return
@@ -469,11 +537,11 @@ func (ec *EndpointController) BroadcastJSON(endpoint string, data any) {
 }
 
 func (ec *EndpointController) removeListener(endpoint string, sessionId string) error {
-	listenersAny, loaded := ec.conns.Load(endpoint)
+	listenersAny, loaded := ec.clients.Load(endpoint)
 	if loaded {
 		listeners := listenersAny.(map[string]*websocket.Conn)
 		delete(listeners, sessionId)
-		ec.conns.Store(endpoint, listeners)
+		ec.clients.Store(endpoint, listeners)
 		slog.Info("Removed listener", "endpoint", endpoint, "session_id", sessionId, "num_listeners", len(listeners))
 	}
 	return nil
