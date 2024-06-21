@@ -6,7 +6,7 @@ toolchain go1.22.4
 
 require (
 	github.com/aead/chacha20poly1305 v0.0.0-20201124145622-1a5aba2a8b29
-	github.com/gofiber/contrib/websocket v1.3.1
+	github.com/gofiber/contrib/websocket v1.3.0
 	github.com/gofiber/fiber/v2 v2.52.4
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.5.5
