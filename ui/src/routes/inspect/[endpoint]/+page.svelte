@@ -1,21 +1,16 @@
 <script lang="ts" type="module">
 	import { page } from '$app/stores';
 	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
-	// import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
 	import MethodBadge from '@/components/MethodBadge.svelte';
-	import ProfileHeader from '@/components/ProfileHeader.svelte';
-	import RequestContainer from '@/components/RequestContainer.svelte';
 	import RequestDetails from '@/components/RequestDetails.svelte';
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
 	import { endpointHistory } from '@/store.js';
-	import type { Request, WebsocketPayload } from '@/types.js';
+	import type { Request, WSMessage } from '@/types.js';
 	import clsx from 'clsx';
-	import ReconnectingWebSocket from 'reconnecting-websocket';
-	import ResilientWebSocket, { WebSocketEvent } from 'resilient-websocket';
 
 	import { onMount } from 'svelte';
 
@@ -39,50 +34,28 @@
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
 	};
 
-	let socket: ReconnectingWebSocket;
 	const connectSocket = () => {
 		const wsUrl = `${PUBLIC_WEBSOCKET_URL}/endpoint/inspect/${endpoint}?token=${data.token}`;
-
-		const opts = {
-			startClosed: false
-		};
-		socket = new ReconnectingWebSocket(wsUrl, [], opts);
+		const socket = new WebSocket(wsUrl);
 
 		// Connection opened
-		socket.addEventListener('open', (event) => {
+		socket.addEventListener('open', () => {
 			console.log('Websocket connection established');
 		});
 
 		// Listen for messages
 		socket.addEventListener('message', (event) => {
-			//ping
-			if (event.data === '') {
-				return;
+			const message = JSON.parse(event.data) as WSMessage;
+			if (message.code == 200) {
+				$endpointHistory.requests = [message.payload, ...($endpointHistory.requests ?? [])];
+			} else {
+				// TODO: Handle error
 			}
-
-			const req: WebsocketPayload = JSON.parse(event.data);
-			if (req.code == 200) {
-				$endpointHistory.requests = [req.hook_request, ...($endpointHistory.requests ?? [])];
-			}
-		});
-
-		socket.addEventListener('close', () => {
-			console.log('Closing');
-			setTimeout(() => {
-				socket.reconnect();
-			}, 5000);
 		});
 	};
 
 	onMount(() => {
 		connectSocket();
-		// Send ping
-
-		setInterval(() => {
-			if (socket && socket.readyState === socket.OPEN) {
-				socket.send('');
-			}
-		}, 5000);
 	});
 </script>
 

@@ -54,8 +54,6 @@ func NewGithubAuthHandler(config *config.AppConfig, querier db.Querier) (*AuthHa
 func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
 	app.Get("/auth/github", ac.LoginHandler)
 	app.Get("/auth/github/callback", ac.CallbackHandler)
-	// TODO: Remove this
-	app.Get("/auth/token", ac.GenerateToken)
 }
 
 type GithubUser struct {
@@ -164,21 +162,4 @@ func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUse
 	}
 
 	return &githubUser, nil
-}
-
-// TODO: Delete this
-func (ac *AuthHandler) GenerateToken(c *fiber.Ctx) error {
-	args := core.CreateTokenArgs{
-		Username: "humanbeeng",
-		UserId:   1,
-		Plan:     db.PlanFree,
-		Role:     "user",
-	}
-	token, err := ac.pasetoVerifier.CreateToken(args, time.Hour*12)
-	if err != nil {
-		slog.Error("err", "err", err)
-		return fiber.ErrInternalServerError
-	}
-
-	return c.SendString(token)
 }
