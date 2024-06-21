@@ -2,12 +2,12 @@ package endpoint
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
@@ -16,38 +16,13 @@ import (
 )
 
 type EndpointController struct {
-	clients   *sync.Map
 	wsManager *WSManager
-	tokens    *sync.Map
 	pv        *core.PasetoVerifier
 	service   *EndpointService
 }
 
-func (ec *EndpointController) AddListener(endpoint string, conn *websocket.Conn) {
-	// TODO: Add limit to number of active connections.
-	sessionId := conn.Locals("session_id").(string)
-
-	listenersAny, loaded := ec.clients.LoadOrStore(endpoint, map[string]*websocket.Conn{sessionId: conn})
-	if loaded {
-		listeners := listenersAny.(map[string]*websocket.Conn)
-		listeners[sessionId] = conn
-	}
-
-	closeHandler := func(code int, text string) error {
-		slog.Info("Closing connection", "endpoint", endpoint, "session_id", sessionId)
-		_ = conn.WriteControl(websocket.CloseMessage, nil, time.Now().Add(time.Second))
-		ec.removeListener(endpoint, sessionId)
-		return nil
-	}
-
-	ec.clients.Store(endpoint, listenersAny)
-	conn.SetCloseHandler(closeHandler)
-
-	slog.Info("Listener added", "endpoint", endpoint, "session_id", conn.Locals("session_id"), "num_listeners", len(listenersAny.(map[string]*websocket.Conn)))
-}
-
 func NewEndpointController(service *EndpointService, wsManager *WSManager, pv *core.PasetoVerifier) *EndpointController {
-	return &EndpointController{clients: &sync.Map{}, service: service, tokens: &sync.Map{}, pv: pv, wsManager: wsManager}
+	return &EndpointController{service: service, pv: pv, wsManager: wsManager}
 }
 
 func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber.Handler) {
@@ -66,13 +41,7 @@ func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 
 	endpointGroup.Get("/stats/:endpoint", authmw, ec.StatsHandler)
 
-	// endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
-	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.Inspect))
-}
-
-func (ec *EndpointController) Inspect(c *websocket.Conn) {
-	endpoint := c.Params("endpoint")
-	ec.wsManager.AddConn(endpoint, c)
+	endpointGroup.Get("/inspect/:endpoint", websocket.New(ec.InspectRequestsHandler))
 }
 
 func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
@@ -125,7 +94,7 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 
 	if err != nil {
 		slog.Error("unable to check if endpoint exists", "err", err)
-		c.WriteJSON(WebsocketPayload{
+		c.WriteJSON(WSMessage{
 			Code: fiber.StatusInternalServerError,
 		})
 		c.Close()
@@ -233,11 +202,6 @@ func (ec *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
-type WebsocketPayload struct {
-	Code        int         `json:"code"`
-	HookRequest HookRequest `json:"hook_request"`
-}
-
 func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 	// TODO: return request details
 	// Get the Content-Type header from the request
@@ -297,13 +261,7 @@ func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 	hookReq.ExpiresAt = requestRecord.ExpiresAt.Time
 	hookReq.CreatedAt = requestRecord.CreatedAt.Time
 
-	payload := WebsocketPayload{
-		HookRequest: hookReq,
-		Code:        200,
-	}
-
-	ec.BroadcastJSON(endpoint, payload)
-
+	ec.Broadcast(endpoint, &hookReq)
 	return c.SendStatus(fiber.StatusOK)
 }
 
@@ -429,32 +387,31 @@ func (ec *EndpointController) CheckSubdomainExistsHandler(c *fiber.Ctx) error {
 	}
 }
 
-func (ec *EndpointController) BroadcastJSON(endpoint string, data any) {
-	listenersAny, ok := ec.clients.Load(endpoint)
+func (ec *EndpointController) Broadcast(endpoint string, req *HookRequest) {
+	ec.wsManager.Lock()
+	defer ec.wsManager.Unlock()
+	sessions, ok := ec.wsManager.endpointSessions[endpoint]
 	if !ok {
-		slog.Info("No active listeners found", "endpoint", endpoint)
+		slog.Info("No active sessions found", "endpoint", endpoint)
 		return
 	}
 
-	listeners := listenersAny.(map[string]*websocket.Conn)
-	for _, c := range listeners {
-		slog.Info("Broadcasting json", "endpoint", endpoint, "session_id", c.Locals("session_id"))
-		err := c.WriteJSON(data)
-		if err != nil {
-			slog.Error("unable to broadcast json msg", "dest", c.RemoteAddr(), "err", err)
-			sessionId := c.Locals("session_id").(string)
-			ec.removeListener(endpoint, sessionId)
-		}
+	data, err := json.Marshal(req)
+	if err != nil {
+		slog.Error("unable to marshal hook request", "endpoint", endpoint)
+		return
 	}
-}
 
-func (ec *EndpointController) removeListener(endpoint string, sessionId string) error {
-	listenersAny, loaded := ec.clients.Load(endpoint)
-	if loaded {
-		listeners := listenersAny.(map[string]*websocket.Conn)
-		delete(listeners, sessionId)
-		ec.clients.Store(endpoint, listeners)
-		slog.Info("Removed listener", "endpoint", endpoint, "session_id", sessionId, "num_listeners", len(listeners))
+	slog.Info("Found active sessions", "num_sessions", len(sessions.sessionsMap))
+	for sid, s := range sessions.sessionsMap {
+		slog.Info("Broadcasting", "session_id", sid)
+
+		msg := EgressMessage{
+			// TODO: Replace with constant
+			Type:    "hook",
+			Payload: data,
+		}
+
+		s.egress <- msg
 	}
-	return nil
 }
