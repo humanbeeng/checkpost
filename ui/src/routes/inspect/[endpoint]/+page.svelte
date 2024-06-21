@@ -121,7 +121,7 @@
 	<div class=" flex-1 overflow-y-auto w-screen">
 		<!-- Header -->
 		{#if selectedRequest}
-			<div class="flex justify-between mt-1 py-4 px-10 border-b border-gray-300 gap-4">
+			<div class="flex justify-between py-4 px-10 border-b border-gray-300 gap-4">
 				<span class="flex gap-2 w-3/4">
 					<MethodBadge method={selectedRequest.method} />
 					{#if selectedRequest.path === '/'}
