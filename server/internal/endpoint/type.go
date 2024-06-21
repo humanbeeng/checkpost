@@ -1,6 +1,7 @@
 package endpoint
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -40,4 +41,9 @@ type Endpoint struct {
 	Endpoint  string    `json:"endpoint"`
 	ExpiresAt time.Time `json:"expires_at"`
 	Plan      string    `json:"plan"`
+}
+
+type WSMessage struct {
+	Code    int             `json:"code"`
+	Payload json.RawMessage `json:"payload"`
 }
