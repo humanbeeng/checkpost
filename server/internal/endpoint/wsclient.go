@@ -27,7 +27,7 @@ type WSClient struct {
 	endpoint  string
 	conn      *websocket.Conn
 	manager   *WSManager
-	egress    chan WSMessage
+	egress    chan EgressMessage
 }
 
 func NewWSClient(sessionId string, endpoint string, conn *websocket.Conn, manager *WSManager) *WSClient {
@@ -36,7 +36,7 @@ func NewWSClient(sessionId string, endpoint string, conn *websocket.Conn, manage
 		endpoint:  endpoint,
 		conn:      conn,
 		manager:   manager,
-		egress:    make(chan WSMessage),
+		egress:    make(chan EgressMessage),
 	}
 }
 
@@ -47,6 +47,8 @@ func (c *WSClient) readMessages(wg *sync.WaitGroup) {
 		c.manager.RemoveConn(c.endpoint, c.sessionId)
 		wg.Done()
 	}()
+
+	c.conn.SetReadDeadline(time.Now().Add(nextPongWait))
 
 	for {
 		_, _, err := c.conn.ReadMessage()
@@ -69,13 +71,34 @@ func (c *WSClient) writeMessage(wg *sync.WaitGroup) {
 
 	for {
 		select {
+		case em, ok := <-c.egress:
+			{
+				if !ok {
+					// Connection has been closed
+					if err := c.conn.WriteMessage(websocket.CloseMessage, nil); err != nil {
+						slog.Error("unable to write close message", "endpoint", c.endpoint, "session_id", c.sessionId)
+						return
+					}
+				}
+
+				wm := WSMessage{
+					Code:    200,
+					Payload: em.Payload,
+				}
+
+				err := c.conn.WriteJSON(wm)
+				if err != nil {
+					slog.Error("unable to write json to connection", "endpoint", c.endpoint, "session_id", c.sessionId)
+					return
+				}
+
+			}
 		case <-t.C:
 			{
-				// TODO: Remove this log statement
 				if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 					slog.Error("unable to send ping", "session_id", c.sessionId, "err", err)
 					// Trigger cleanup func
-					break
+					return
 				}
 			}
 		}
@@ -109,7 +132,7 @@ func (m *WSManager) AddConn(endpoint string, conn *websocket.Conn) error {
 		conn:      conn,
 		manager:   m,
 		endpoint:  endpoint,
-		egress:    make(chan WSMessage),
+		egress:    make(chan EgressMessage),
 	}
 
 	sessions, ok := m.endpointSessions[endpoint]
@@ -120,7 +143,13 @@ func (m *WSManager) AddConn(endpoint string, conn *websocket.Conn) error {
 		s.sessionsMap[sessionId] = &client
 		m.endpointSessions[endpoint] = &s
 	} else {
-		slog.Info("Found existing sessions map", "num_sessions", len(sessions.sessionsMap))
+		// TODO: Plan based limit
+		if len(sessions.sessionsMap) > 5 {
+			slog.Warn("Number of sessions limit exceeded 5", "endpoint", endpoint)
+			return nil
+		}
+
+		slog.Info("Found existing sessions", "num_sessions", len(sessions.sessionsMap))
 		// Acquire lock on both maps
 		sessions.Lock()
 		m.Lock()
@@ -174,7 +203,14 @@ func (m *WSManager) RemoveConn(endpoint string, sessionId string) error {
 	return nil
 }
 
-type WSMessage struct {
-	Type    string          `json:"type"`
+type EgressEvent string
+
+const (
+	Hook EgressEvent = "hook"
+	Err  EgressEvent = "err"
+)
+
+type EgressMessage struct {
+	Type    EgressEvent     `json:"event"`
 	Payload json.RawMessage `json:"payload"`
 }
