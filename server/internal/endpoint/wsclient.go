@@ -2,18 +2,23 @@ package endpoint
 
 import (
 	"encoding/json"
-	"fmt"
 	"log/slog"
+	"sync"
 	"time"
 
 	"github.com/gofiber/contrib/websocket"
-	"github.com/google/uuid"
 )
 
-const pongTimeout = 5 * time.Second
-const pingInterval = 6 * time.Second
+const (
+	pingInterval = 5 * time.Second
+	// Pong will be received within few seconds. nextPongWait will mark read deadline till = now() + nextPongWait.
+	// so if ping fails to receive a pong, deadline wont be pushed further and deadline will be reached.
+	// So ping-pong timeout would be 35 - 30 = 5 seconds.
+	nextPongWait = 10 * time.Second
+)
 
 type EndpointSession struct {
+	sync.RWMutex
 	sessionsMap map[string]*WSClient
 }
 
@@ -26,7 +31,6 @@ type WSClient struct {
 }
 
 func NewWSClient(sessionId string, endpoint string, conn *websocket.Conn, manager *WSManager) *WSClient {
-	conn.Conn.ReadMessage()
 	return &WSClient{
 		sessionId: sessionId,
 		endpoint:  endpoint,
@@ -36,28 +40,30 @@ func NewWSClient(sessionId string, endpoint string, conn *websocket.Conn, manage
 	}
 }
 
-func (c *WSClient) readMessages() {
+func (c *WSClient) readMessages(wg *sync.WaitGroup) {
 	slog.Info("Reading from conn", "endpoint", c.endpoint, "session_id", c.sessionId)
 	// Cleanup function
 	defer func() {
 		c.manager.RemoveConn(c.endpoint, c.sessionId)
+		wg.Done()
 	}()
 
 	for {
-		_, msg, err := c.conn.Conn.ReadMessage()
+		_, _, err := c.conn.ReadMessage()
 		if err != nil {
 			slog.Error("unable to read message from websocket", "err", err)
 			// break and let the cleanup func execute
 			break
 		}
-		fmt.Println("Received message", string(msg))
 	}
 }
 
-func (c *WSClient) writeMessage() {
+func (c *WSClient) writeMessage(wg *sync.WaitGroup) {
 	t := time.NewTicker(pingInterval)
+
 	defer func(t *time.Ticker) {
 		t.Stop()
+		wg.Done()
 		c.manager.RemoveConn(c.endpoint, c.sessionId)
 	}(t)
 
@@ -65,11 +71,11 @@ func (c *WSClient) writeMessage() {
 		select {
 		case <-t.C:
 			{
-				fmt.Println("Sending ping", "session_id", c.sessionId)
-				if err := c.conn.Conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
+				// TODO: Remove this log statement
+				if err := c.conn.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
 					slog.Error("unable to send ping", "session_id", c.sessionId, "err", err)
 					// Trigger cleanup func
-					return
+					break
 				}
 			}
 		}
@@ -77,13 +83,13 @@ func (c *WSClient) writeMessage() {
 }
 
 func (c *WSClient) pongHandler(data string) error {
-	fmt.Println("Pong")
-	// reset deadline
-	c.conn.SetReadDeadline(time.Now().Add(pongTimeout))
+	// push deadline further
+	c.conn.SetReadDeadline(time.Now().Add(nextPongWait))
 	return nil
 }
 
 type WSManager struct {
+	sync.RWMutex
 	endpointSessions map[string]*EndpointSession
 }
 
@@ -94,16 +100,10 @@ func NewWSManager() *WSManager {
 }
 
 func (m *WSManager) AddConn(endpoint string, conn *websocket.Conn) error {
-	id, err := uuid.NewV7()
-	if err != nil {
-		slog.Error("unable to generate uuid", err)
-		return err
-	}
-	sessionId := id.String()
+	// Reuse requestId as sessionId
+	sessionId := conn.Locals("requestid").(string)
 
-	// Check if endpoint exists
 	// Check if there are any existing listeners. No, then create a new sessions map, else just store in existing map
-
 	client := WSClient{
 		sessionId: sessionId,
 		conn:      conn,
@@ -114,26 +114,63 @@ func (m *WSManager) AddConn(endpoint string, conn *websocket.Conn) error {
 
 	sessions, ok := m.endpointSessions[endpoint]
 	if !ok {
-		slog.Info("No sessions found")
+		slog.Info("No sessions found", "endpoint", endpoint)
 		// No sessions found. Create a new sessions map
 		s := EndpointSession{sessionsMap: make(map[string]*WSClient)}
 		s.sessionsMap[sessionId] = &client
 		m.endpointSessions[endpoint] = &s
 	} else {
-		slog.Info("Found existing sessions map")
+		slog.Info("Found existing sessions map", "num_sessions", len(sessions.sessionsMap))
+		// Acquire lock on both maps
+		sessions.Lock()
+		m.Lock()
 		sessions.sessionsMap[sessionId] = &client
 		m.endpointSessions[endpoint] = sessions
+		sessions.Unlock()
+		m.Unlock()
 	}
 
-	conn.SetPingHandler(client.pongHandler)
+	conn.SetPongHandler(client.pongHandler)
+
 	slog.Info("Connection added to manager", "endpoint", endpoint, "session_id", sessionId)
-	go client.readMessages()
-	go client.writeMessage()
+
+	wg := sync.WaitGroup{}
+	wg.Add(2)
+	go client.readMessages(&wg)
+	go client.writeMessage(&wg)
+	wg.Wait()
 	return nil
 }
 
 func (m *WSManager) RemoveConn(endpoint string, sessionId string) error {
-	slog.Info("Connection removed", "endpoint", endpoint, "session_id", sessionId)
+	sessions, ok := m.endpointSessions[endpoint]
+	if !ok {
+		slog.Warn("No sessions found", "endpoint", endpoint)
+		return nil
+	}
+
+	if s, ok := sessions.sessionsMap[sessionId]; ok {
+		err := s.conn.Close()
+		if err != nil {
+			slog.Error("unable to close connection", "session_id", sessionId, "err", err)
+			return nil
+		}
+
+		sessions.Lock()
+		defer sessions.Unlock()
+		delete(sessions.sessionsMap, sessionId)
+
+		if len(sessions.sessionsMap) == 0 {
+			// Remove sessions object itself from endpointSessions
+			m.Lock()
+			defer m.Unlock()
+			delete(m.endpointSessions, endpoint)
+		}
+
+		slog.Info("Connection removed", "endpoint", endpoint, "session_id", sessionId, "num_sessions", len(sessions.sessionsMap))
+	} else {
+		slog.Warn("No session found", "session_id", sessionId)
+	}
 	return nil
 }
 

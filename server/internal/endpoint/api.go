@@ -12,7 +12,6 @@ import (
 
 	"github.com/gofiber/contrib/websocket"
 	"github.com/gofiber/fiber/v2"
-	"github.com/google/uuid"
 	"github.com/humanbeeng/checkpost/server/internal/core"
 )
 
@@ -73,70 +72,7 @@ func (ec *EndpointController) RegisterRoutes(app *fiber.App, authmw, cache fiber
 
 func (ec *EndpointController) Inspect(c *websocket.Conn) {
 	endpoint := c.Params("endpoint")
-	// ec.wsManager.AddConn(endpoint, c)
-
-	// client := WSClient{
-	// 	conn:      c,
-	// 	endpoint:  endpoint,
-	// 	sessionId: c.Locals("requestid").(string),
-	// 	manager:   ec.wsManager,
-	// 	egress:    make(chan WSMessage),
-	// }
-	// cl := NewWSClient(c.Locals("requestid").(string), endpoint, c, ec.wsManager)
-
-	// cl.conn.Conn.SetPongHandler(cl.pongHandler)
-
-	go func(c *websocket.Conn) error {
-
-		_, _, err := c.ReadMessage()
-		if err != nil {
-			slog.Info("Unable to read message from ws conn", "endpoint", endpoint, "session_id", c.Locals("requestid"), "err", err)
-			return err
-		}
-		return nil
-	}(c)
-
-	go func(c *websocket.Conn) error {
-
-		t := time.NewTicker(pingInterval)
-		defer func(t *time.Ticker) {
-			t.Stop()
-			// c.manager.RemoveConn(endpoint, c.Locals("sessionid").(string))
-		}(t)
-
-		for {
-			select {
-			case <-t.C:
-				{
-					fmt.Println("Sending ping", "session_id", c.Locals("requestid"))
-					if err := c.WriteMessage(websocket.PingMessage, []byte{}); err != nil {
-						slog.Error("unable to send ping", "session_id", c.Locals("requestid"), "err", err)
-						// Trigger cleanup func
-						return err
-					}
-				}
-			}
-		}
-	}(c)
-	// go cl.readMessages()
-	// go cl.writeMessage()
-
-	c.SetPongHandler(func(appData string) error {
-		fmt.Println("pong")
-		c.SetReadDeadline(time.Now().Add(time.Second))
-		return nil
-	})
-	go func() {
-		t := time.NewTicker(time.Second)
-		for {
-			select {
-			case <-t.C:
-				{
-					slog.Info("Ticker")
-				}
-			}
-		}
-	}()
+	ec.wsManager.AddConn(endpoint, c)
 }
 
 func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
@@ -194,35 +130,11 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 		})
 		c.Close()
 	}
-
-	sessionId, err := uuid.NewV7()
-	if err != nil {
-		slog.Error("unable to generate uuid for ws connection", err)
-		return
-	}
-
-	c.Locals("session_id", sessionId.String())
 	c.Locals("username", payload.Get("username"))
 	c.Locals("plan", payload.Get("plan"))
 	c.Locals("role", payload.Get("role"))
 
-	ec.AddListener(endpoint, c)
-
-	for {
-		// Listen for ping message = ""
-		_, msg, err := c.ReadMessage()
-		if err != nil {
-			slog.Info("Unable to read message from ws conn", "endpoint", endpoint, "session_id", sessionId.String(), "err", err)
-			break
-		}
-
-		if string(msg) == "" {
-			err = c.WriteMessage(websocket.TextMessage, []byte(""))
-			if err != nil {
-				slog.Error("unable to send pong", "endpoint", endpoint, "err", err)
-			}
-		}
-	}
+	ec.wsManager.AddConn(endpoint, c)
 }
 
 // Returns status of a given endpoint
