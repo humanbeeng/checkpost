@@ -5,6 +5,7 @@
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
 	import MethodBadge from '@/components/MethodBadge.svelte';
+	import OnlineStatusIndicator from '@/components/OnlineStatusIndicator.svelte';
 	import RequestDetails from '@/components/RequestDetails.svelte';
 	import StatusCodeBadge from '@/components/StatusCodeBadge.svelte';
 	import { Button } from '@/components/ui/button';
@@ -16,10 +17,11 @@
 
 	import { Exit } from 'svelte-radix';
 
-	const endpoint = $page.params.endpoint;
 	export let data;
 
+	const endpoint = $page.params.endpoint;
 	let selectedRequest: Request | undefined;
+	let websocketOnline = false;
 
 	$endpointHistory = data.endpointHistory;
 	if ($endpointHistory == null) {
@@ -41,6 +43,7 @@
 		// Connection opened
 		socket.addEventListener('open', () => {
 			console.log('Websocket connection established');
+			websocketOnline = true;
 		});
 
 		// Listen for messages
@@ -51,6 +54,16 @@
 			} else {
 				// TODO: Handle error
 			}
+		});
+
+		socket.addEventListener('close', () => {
+			console.log('Websocket connection closed');
+			websocketOnline = false;
+		});
+
+		socket.addEventListener('error', () => {
+			console.log('Websocket connection error');
+			websocketOnline = false;
 		});
 	};
 
@@ -64,9 +77,12 @@
 	<div class="min-w-64 max-w-64 border-r border-gray-300 bg-gray-200 flex flex-col justify-between">
 		<!-- Branding -->
 		<div class="border-b border-gray-300 px-5 py-4">
-			<span class="flex">
-				<img src={logo} alt="Checkpost logo" />
-				<p class=" tracking-normal font-medium text-md">Checkpost</p>
+			<span class="flex justify-between">
+				<span class="flex gap-1 place-items-center">
+					<img src={logo} alt="Checkpost logo" />
+					<p class=" tracking-normal font-medium text-md">Checkpost</p>
+				</span>
+				<OnlineStatusIndicator online={websocketOnline} />
 			</span>
 		</div>
 
@@ -118,14 +134,14 @@
 	</div>
 
 	<!-- Main section -->
-	<div class=" flex-1 overflow-y-auto w-screen">
+	<div class="flex-1 overflow-y-auto w-screen">
 		<!-- Header -->
 		{#if selectedRequest}
-			<div class="flex justify-between mt-1 py-4 px-10 border-b border-gray-300 gap-4">
+			<div class="flex justify-between py-4 px-10 border-b border-gray-300 gap-4">
 				<span class="flex gap-2 w-3/4">
 					<MethodBadge method={selectedRequest.method} />
 					{#if selectedRequest.path === '/'}
-						<p class="">
+						<p>
 							{selectedRequest.path}
 						</p>
 					{:else}
