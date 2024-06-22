@@ -127,7 +127,7 @@
 							{/if}
 						</Button>
 					</div>
-					<div class="">
+					<div>
 						{#if state === 'empty' || state === 'loading'}
 							<h3
 								class="font-light text-md opacity-60 select-none leading-10 md:leading-10 text-left"
