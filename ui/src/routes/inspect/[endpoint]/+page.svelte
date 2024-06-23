@@ -156,7 +156,6 @@
 		<!-- Request details -->
 		<div class="my-4 mx-10 flex flex-col gap-2 overflow-y-auto">
 			{#if selectedRequest}
-				<!-- <RequestStats successCount={100} /> -->
 				<RequestDetails request={selectedRequest} />
 			{:else}
 				<div class="flex flex-col justify-start w-full my-32">

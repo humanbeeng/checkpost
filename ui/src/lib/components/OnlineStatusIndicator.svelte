@@ -10,7 +10,7 @@
 		class="bg-green-100 text-green-600 dark:bg-green-900/20 dark:text-green-400 py-1 max-h-6 px-0"
 		><span class="flex place-items-center">
 			<DotFilled />
-			<p class="pr-2">Online</p>
+			<p class="pr-2">Listening</p>
 		</span></Badge
 	>
 {:else}

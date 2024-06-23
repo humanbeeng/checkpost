@@ -23,6 +23,7 @@ export const load = async ({ fetch, params, cookies }) => {
 
 		return endpointHistory;
 	};
+
 	const fetchUser = async () => {
 		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {

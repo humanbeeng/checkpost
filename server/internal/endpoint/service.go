@@ -251,13 +251,14 @@ func (s *EndpointService) StoreRequestDetails(ctx context.Context, hookReq HookR
 		}
 	}
 
-	requestRecord, err := s.endpointq.CreateNewRequest(ctx, db.CreateNewRequestParams{
-		UserID:     userId,
-		EndpointID: endpointRecord.ID,
-		Method:     db.HttpMethod(strings.ToLower(hookReq.Method)),
-		Content:    pgtype.Text{String: hookReq.Content, Valid: true},
-		Path:       hookReq.Path,
-		Uuid:       hookReq.UUID,
+	requestParams := db.CreateNewRequestParams{
+		UserID:      userId,
+		EndpointID:  endpointRecord.ID,
+		Method:      db.HttpMethod(strings.ToLower(hookReq.Method)),
+		Content:     pgtype.Text{String: hookReq.Content, Valid: true},
+		ContentType: hookReq.ContentType,
+		Path:        hookReq.Path,
+		Uuid:        hookReq.UUID,
 
 		// TODO: Fetch response from configured response
 		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
@@ -268,7 +269,21 @@ func (s *EndpointService) StoreRequestDetails(ctx context.Context, hookReq HookR
 		// TODO: Add request body limiting
 		ContentSize: int32(hookReq.ContentSize),
 		ExpiresAt:   expiresAt,
-	})
+	}
+
+	if strings.Contains(hookReq.ContentType, string(MultipartForm)) || strings.Contains(hookReq.ContentType, string(FormUrlEncoded)) {
+		formBytes, err := json.Marshal(hookReq.FormData)
+		if err != nil {
+			slog.Error("unable to marshal form data", "err", err)
+			return db.Request{}, &EndpointError{
+				Code:    http.StatusBadRequest,
+				Message: "unable to parse form data",
+			}
+		}
+		requestParams.FormData = formBytes
+	}
+
+	requestRecord, err := s.endpointq.CreateNewRequest(ctx, requestParams)
 	if err != nil {
 		slog.Error("unable to create new request record", "endpoint", endpoint, "userId", userId, "err", err)
 		return db.Request{}, NewInternalServerError()
@@ -303,7 +318,8 @@ func (s *EndpointService) GetEndpointRequestHistory(ctx context.Context, endpoin
 	}
 
 	reqs, err := s.endpointq.GetEndpointHistory(ctx,
-		db.GetEndpointHistoryParams{Endpoint: endpoint,
+		db.GetEndpointHistoryParams{
+			Endpoint: endpoint,
 			UserID: pgtype.Int8{
 				Int64: userId,
 				Valid: true,
@@ -325,6 +341,7 @@ func (s *EndpointService) GetEndpointRequestHistory(ctx context.Context, endpoin
 			UUID:         req.Uuid,
 			Path:         req.Path,
 			Content:      req.Content.String,
+			ContentType:  req.ContentType,
 			Method:       string(req.Method),
 			SourceIp:     req.SourceIp,
 			ContentSize:  req.ContentSize,
@@ -334,9 +351,11 @@ func (s *EndpointService) GetEndpointRequestHistory(ctx context.Context, endpoin
 		}
 
 		json.Unmarshal(req.Headers, &rh.Headers)
+		json.Unmarshal(req.FormData, &rh.FormData)
 		json.Unmarshal(req.QueryParams, &rh.QueryParams)
 
 		reqHistory = append(reqHistory, rh)
+		fmt.Println("Content type", rh.ContentType)
 	}
 
 	return reqHistory, nil
@@ -364,6 +383,7 @@ func (s *EndpointService) GetRequestDetails(ctx context.Context, reqId int64) (H
 		Method:       string(reqRecord.Method),
 		SourceIp:     reqRecord.SourceIp,
 		Content:      reqRecord.Content.String,
+		ContentType:  reqRecord.ContentType,
 		ContentSize:  reqRecord.ContentSize,
 		ResponseCode: reqRecord.ResponseCode.Int32,
 		CreatedAt:    reqRecord.CreatedAt.Time,
@@ -371,6 +391,7 @@ func (s *EndpointService) GetRequestDetails(ctx context.Context, reqId int64) (H
 	}
 
 	json.Unmarshal(reqRecord.Headers, &req.Headers)
+	json.Unmarshal(reqRecord.FormData, &req.FormData)
 	json.Unmarshal(reqRecord.QueryParams, &req.QueryParams)
 
 	return req, nil
@@ -457,7 +478,6 @@ func (s *EndpointService) CheckEndpointExists(ctx context.Context, subdomain str
 }
 
 func (s *EndpointService) GetRequestByUUID(ctx context.Context, uuid string) (HookRequest, *EndpointError) {
-
 	reqRecord, err := s.endpointq.GetRequestByUUID(ctx, uuid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {

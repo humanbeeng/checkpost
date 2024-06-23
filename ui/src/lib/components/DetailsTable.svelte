@@ -5,7 +5,7 @@
 
 <div class="border py-2 px-4 rounded bg-gray-100 shadow-sm my-2">
 	<h4 class="font-medium text-md">{title}</h4>
-	{#if data}
+	{#if data && Object.keys(data).length}
 		{#each Object.entries(data) as d}
 			<hr />
 			<div class="grid grid-cols-5 text-sm w-full my-1 gap-2">
@@ -19,6 +19,8 @@
 		{/each}
 	{:else}
 		<hr />
-		<p>(empty)</p>
+		<div class="w-full flex flex-col place-items-center align-middle justify-center min-h-6">
+			<p class="font-light text-xs py-2">(empty)</p>
+		</div>
 	{/if}
 </div>
