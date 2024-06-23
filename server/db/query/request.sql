@@ -4,6 +4,8 @@ INSERT INTO
         user_id,
         endpoint_id,
         PATH,
+    form_data,
+    content_type,
         response_id,
         CONTENT,
         METHOD,
@@ -29,7 +31,8 @@ VALUES
         $10,
         $11,
         $12,
-        $13
+        $13,
+    $14, $15
     )
 RETURNING
     *;
@@ -43,6 +46,8 @@ SELECT
     request.path,
     request.response_id,
     request.response_code,
+    request.form_data,
+    request.content_type,
     request.content,
     request.method,
     request.source_ip,
