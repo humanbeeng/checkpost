@@ -97,3 +97,23 @@ export const copy = (content: string) => {
 			console.error('Failed to copy text: ', err);
 		});
 };
+
+export const extraHeaders = [
+	'Cdn-Loop',
+	'Cf-Connecting-Ip',
+	'Cf-Ipcountry',
+	'Cf-Ray',
+	'Cf-Visitor',
+	'X-Forwarded-For',
+	'X-Forwarded-Proto',
+	'X-Request-Id',
+	'X-Envoy-External-Address'
+];
+
+export function removeKeys(obj: Object, keysToRemove: string[]) {
+	if (obj) {
+		return Object.fromEntries(Object.entries(obj).filter(([key]) => !keysToRemove.includes(key)));
+	} else {
+		return obj;
+	}
+}

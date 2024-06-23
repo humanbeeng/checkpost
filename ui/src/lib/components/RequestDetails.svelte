@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { isFormatEnabled } from '@/store';
 	import type { Request } from '@/types';
-	import { formatJson, timeAgo } from '@/utils.js';
+	import { extraHeaders, formatJson, timeAgo } from '@/utils.js';
 	import DetailsTable from './DetailsTable.svelte';
 	import { Checkbox } from './ui/checkbox';
 
@@ -63,7 +63,12 @@
 	</div>
 
 	<!-- Headers-->
-	<DetailsTable title="Headers" data={request.headers} />
+	<DetailsTable
+		title="Headers"
+		data={request.headers}
+		showHideButton={true}
+		hiddenEntries={extraHeaders}
+	/>
 </div>
 
 {#if request.query_params}
