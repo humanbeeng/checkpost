@@ -17,6 +17,8 @@ INSERT INTO
         user_id,
         endpoint_id,
         PATH,
+    form_data,
+    content_type,
         response_id,
         CONTENT,
         METHOD,
@@ -42,16 +44,19 @@ VALUES
         $10,
         $11,
         $12,
-        $13
+        $13,
+    $14, $15
     )
 RETURNING
-    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, content_type, method, source_ip, content_size, response_code, headers, form_data, query_params, created_at, expires_at, is_deleted
 `
 
 type CreateNewRequestParams struct {
 	UserID       pgtype.Int8        `json:"user_id"`
 	EndpointID   int64              `json:"endpoint_id"`
 	Path         string             `json:"path"`
+	FormData     []byte             `json:"form_data"`
+	ContentType  string             `json:"content_type"`
 	ResponseID   pgtype.Int8        `json:"response_id"`
 	Content      pgtype.Text        `json:"content"`
 	Method       HttpMethod         `json:"method"`
@@ -69,6 +74,8 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		arg.UserID,
 		arg.EndpointID,
 		arg.Path,
+		arg.FormData,
+		arg.ContentType,
 		arg.ResponseID,
 		arg.Content,
 		arg.Method,
@@ -91,11 +98,13 @@ func (q *Queries) CreateNewRequest(ctx context.Context, arg CreateNewRequestPara
 		&i.ResponseID,
 		&i.ResponseTime,
 		&i.Content,
+		&i.ContentType,
 		&i.Method,
 		&i.SourceIp,
 		&i.ContentSize,
 		&i.ResponseCode,
 		&i.Headers,
+		&i.FormData,
 		&i.QueryParams,
 		&i.CreatedAt,
 		&i.ExpiresAt,
@@ -124,6 +133,8 @@ SELECT
     request.path,
     request.response_id,
     request.response_code,
+    request.form_data,
+    request.content_type,
     request.content,
     request.method,
     request.source_ip,
@@ -164,6 +175,8 @@ type GetEndpointHistoryRow struct {
 	Path         string             `json:"path"`
 	ResponseID   pgtype.Int8        `json:"response_id"`
 	ResponseCode pgtype.Int4        `json:"response_code"`
+	FormData     []byte             `json:"form_data"`
+	ContentType  string             `json:"content_type"`
 	Content      pgtype.Text        `json:"content"`
 	Method       HttpMethod         `json:"method"`
 	SourceIp     string             `json:"source_ip"`
@@ -197,6 +210,8 @@ func (q *Queries) GetEndpointHistory(ctx context.Context, arg GetEndpointHistory
 			&i.Path,
 			&i.ResponseID,
 			&i.ResponseCode,
+			&i.FormData,
+			&i.ContentType,
 			&i.Content,
 			&i.Method,
 			&i.SourceIp,
@@ -254,7 +269,7 @@ func (q *Queries) GetEndpointRequestCount(ctx context.Context, endpoint string) 
 
 const getRequestById = `-- name: GetRequestById :one
 SELECT
-    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, content_type, method, source_ip, content_size, response_code, headers, form_data, query_params, created_at, expires_at, is_deleted
 FROM
     request
 WHERE
@@ -278,11 +293,13 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 		&i.ResponseID,
 		&i.ResponseTime,
 		&i.Content,
+		&i.ContentType,
 		&i.Method,
 		&i.SourceIp,
 		&i.ContentSize,
 		&i.ResponseCode,
 		&i.Headers,
+		&i.FormData,
 		&i.QueryParams,
 		&i.CreatedAt,
 		&i.ExpiresAt,
@@ -293,7 +310,7 @@ func (q *Queries) GetRequestById(ctx context.Context, id int64) (Request, error)
 
 const getRequestByUUID = `-- name: GetRequestByUUID :one
 SELECT
-    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, method, source_ip, content_size, response_code, headers, query_params, created_at, expires_at, is_deleted
+    id, uuid, user_id, endpoint_id, plan, path, response_id, response_time, content, content_type, method, source_ip, content_size, response_code, headers, form_data, query_params, created_at, expires_at, is_deleted
 FROM
     request
 WHERE
@@ -317,11 +334,13 @@ func (q *Queries) GetRequestByUUID(ctx context.Context, uuid string) (Request, e
 		&i.ResponseID,
 		&i.ResponseTime,
 		&i.Content,
+		&i.ContentType,
 		&i.Method,
 		&i.SourceIp,
 		&i.ContentSize,
 		&i.ResponseCode,
 		&i.Headers,
+		&i.FormData,
 		&i.QueryParams,
 		&i.CreatedAt,
 		&i.ExpiresAt,

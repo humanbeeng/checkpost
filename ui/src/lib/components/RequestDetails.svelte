@@ -11,6 +11,7 @@
 	$: content = request.content;
 	$: prettyContent = formatJson(content);
 	$: checked = $isFormatEnabled;
+	console.log('Contento type', request.content_type);
 
 	const copy = (content: string) => {
 		navigator.clipboard
@@ -68,17 +69,16 @@
 {#if request.query_params}
 	<div class="grid grid-col-1 lg:grid-cols-2 w-full gap-3">
 		<!-- Query params-->
-
 		<DetailsTable title="Query" data={request.query_params} />
 
-		<!-- TODO: Add form values -->
 		<!-- Form values-->
-		<DetailsTable title="Form" data={request.query_params} />
+		<DetailsTable title="Form" data={request.form_data} />
 	</div>
 {/if}
 
 <!-- File attachments -->
 <!-- TODO: Add file attachments -->
+
 <!-- <DetailsTable title="Form" data={request.query_params} /> -->
 <hr class="mt-4 mb-2" />
 
@@ -87,7 +87,7 @@
 	<div class="flex justify-between mb-1">
 		<h4 class="font-medium text-md">Payload</h4>
 
-		{#if request.content}
+		{#if request.content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
 			<div class="inline-flex justify-center items-center gap-2">
 				<span class="inline-flex place-items-center gap-1">
 					<Checkbox id="terms" bind:checked class="border-gray-500" />
@@ -110,7 +110,7 @@
 		{/if}
 	</div>
 
-	{#if content}
+	{#if content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
 		{#if checked}
 			<pre class="bg-gray-50 border rounded p-4 shadow-sm"><code>{prettyContent}</code>
 		</pre>
@@ -120,8 +120,9 @@
 		{/if}
 	{:else}
 		<hr class="my-2" />
-		<div class="flex w-full justify-center">
-			<pre class="my-2">(empty)</pre>
+
+		<div class="w-full flex flex-col place-items-center align-middle justify-center min-h-6">
+			<p class="font-light text-xs py-2">(empty)</p>
 		</div>
 	{/if}
 </div>

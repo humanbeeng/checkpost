@@ -132,12 +132,14 @@ type Request struct {
 	ResponseID   pgtype.Int8 `json:"response_id"`
 	ResponseTime pgtype.Int4 `json:"response_time"`
 	Content      pgtype.Text `json:"content"`
+	ContentType  string      `json:"content_type"`
 	Method       HttpMethod  `json:"method"`
 	// IPv4
 	SourceIp     string             `json:"source_ip"`
 	ContentSize  int32              `json:"content_size"`
 	ResponseCode pgtype.Int4        `json:"response_code"`
 	Headers      []byte             `json:"headers"`
+	FormData     []byte             `json:"form_data"`
 	QueryParams  []byte             `json:"query_params"`
 	CreatedAt    pgtype.Timestamptz `json:"created_at"`
 	ExpiresAt    pgtype.Timestamptz `json:"expires_at"`

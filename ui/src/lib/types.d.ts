@@ -32,6 +32,8 @@ export type Request = {
 	uuid: string;
 	source_ip: string;
 	content_size: number;
+	content_type: string;
+	form_data: Object;
 	response_code: number;
 	headers: Object;
 	query_params: Object;
@@ -43,13 +45,7 @@ export type EndpointHistory = {
 	requests: Request[];
 };
 
-export type WebsocketTokenResponse = {
-	token: string;
-};
-
 export type WSMessage = {
 	payload: Request;
 	code: number;
 };
-
-

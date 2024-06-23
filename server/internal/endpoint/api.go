@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"time"
@@ -205,24 +206,18 @@ func (ec *EndpointController) GenerateEndpointHandler(c *fiber.Ctx) error {
 func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 	// TODO: return request details
 	// Get the Content-Type header from the request
-	contentType := c.Get(fiber.HeaderContentType)
-
-	// Print the Content-Type
-	fmt.Println("Content-Type:", contentType)
-
 	endpoint := c.Params("endpoint", "")
-
 	if endpoint == "" {
 		return &fiber.Error{
 			Code:    http.StatusNotFound,
 			Message: "Endpoint has either expired or not created",
 		}
 	}
-
+	endpoint = strings.ToLower(endpoint)
+	contentType := c.Get(fiber.HeaderContentType)
 	body := c.Body()
-
-	// Note: key is string and value is []string
 	headers := c.GetReqHeaders()
+
 	var ip string
 
 	// Specific to railway.app deployment
@@ -237,6 +232,22 @@ func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 	method := c.Method()
 	query := c.Queries()
 
+	var form map[string][]string
+	if strings.Contains(contentType, string(MultipartForm)) {
+		f, err := c.MultipartForm()
+		if err != nil {
+			slog.Error("unable to read multipart form data from request", "endpoint", endpoint, "err", err)
+			return nil
+		}
+		form = f.Value
+	} else if strings.Contains(contentType, string(FormUrlEncoded)) {
+		f, err := url.ParseQuery(string(c.Body()))
+		if err != nil {
+			slog.Error("unable to parse form url encoded values", "err", err)
+		}
+		form = f
+	}
+
 	hookReq := HookRequest{
 		Endpoint:     endpoint,
 		UUID:         c.Locals("requestid").(string),
@@ -245,9 +256,14 @@ func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 		QueryParams:  query,
 		SourceIp:     ip,
 		Method:       method,
+		ContentType:  contentType,
 		Content:      string(body),
 		ContentSize:  int32(len(body)),
 		ResponseCode: http.StatusOK,
+	}
+
+	if form != nil {
+		hookReq.FormData = form
 	}
 
 	requestRecord, endpointErr := ec.service.StoreRequestDetails(c.Context(), hookReq)
