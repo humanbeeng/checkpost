@@ -163,7 +163,7 @@
 					<span class="text-lg font-normal text-gray-800"
 						>Try calling this endpoint
 						<code class="bg-gray-50 py-1 border px-4 rounded-md">
-							<a href="http://{endpoint}.checkpost.local:3000" class="underline" target="_blank">
+							<a href="http://{endpoint}.checkpost.io" class="underline" target="_blank">
 								https://{endpoint}.checkpost.io/
 							</a>
 						</code>
