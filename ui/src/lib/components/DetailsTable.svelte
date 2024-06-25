@@ -3,16 +3,14 @@
 	import Button from './ui/button/button.svelte';
 
 	export let data: Object;
-
 	export let title: string;
-	export let showHiddenEntries = false;
 	export let showHideButton = false;
 	export let hiddenEntries: string[] = [];
-	let displayedData = data;
+	let showHiddenEntries = false;
 
-	const filteredData = removeKeys(data, hiddenEntries);
-
+	$: displayedData = data;
 	$: {
+		const filteredData = removeKeys(data, hiddenEntries);
 		if (showHiddenEntries) {
 			displayedData = data;
 		} else {
@@ -45,9 +43,7 @@
 			<hr />
 			<div class="grid grid-cols-5 text-sm w-full my-1 gap-2">
 				<p class="col-span-1 text-wrap">{d[0]}</p>
-				<code
-					class="col-span-4 overflow-hidden hover:overflow-auto text-ellipsis whitespace-normal"
-				>
+				<code class="col-span-4 overflow-hidden hover:overflow-auto whitespace-normal">
 					{d[1]}
 				</code>
 			</div>

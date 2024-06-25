@@ -71,10 +71,8 @@ export const actions = {
 			return;
 		}
 
-		console.log(subdomain.toString());
 
 		if (subdomain.toString().length < 4 || subdomain.toString().length > 10) {
-			console.log('failing');
 			return fail(400, {
 				error: 'Subdomain length should be between 4 and 10.'
 			});
