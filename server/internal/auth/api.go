@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -91,8 +90,6 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 		slog.Error("unable to exchange code for github user", "err", err)
 		return fiber.ErrInternalServerError
 	}
-
-	fmt.Println("Fetched github user", githubUser)
 
 	user, err := a.q.GetUserFromEmail(context.Background(), githubUser.Email)
 	if err != nil {
