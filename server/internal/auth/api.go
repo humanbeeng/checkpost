@@ -75,6 +75,7 @@ type AuthResponse struct {
 func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	slog.Info("Received login request")
 	// TODO: Add state to oauth request
+	a.oauthConfig.Scopes = append(a.oauthConfig.Scopes, "email")
 	url := a.oauthConfig.AuthCodeURL("none")
 	return c.Redirect(url)
 }
