@@ -71,10 +71,17 @@ type AuthResponse struct {
 	AvatarUrl string `json:"avatar_url"`
 }
 
+type MailResponseItem struct {
+	Email      string `json:"email"`
+	Primary    bool   `json:"primary"`
+	Verified   bool   `json:"verified"`
+	Visibility string `json:"visibility"`
+}
+
 func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	slog.Info("Received login request")
 	// TODO: Add state to oauth request
-	a.oauthConfig.Scopes = append(a.oauthConfig.Scopes, "email")
+	a.oauthConfig.Scopes = append(a.oauthConfig.Scopes, "user:email")
 	url := a.oauthConfig.AuthCodeURL("none")
 	return c.Redirect(url)
 }
@@ -137,29 +144,70 @@ func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUse
 		return nil, err
 	}
 
-	req, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseUrl.String(), nil)
+	// Fetch basic user information
+	userReq, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseUrl.String(), nil)
 	if err != nil {
 		return nil, err
 	}
 
-	req.Header.Add("Authorization", "Bearer "+token.AccessToken)
+	userReq.Header.Add("Authorization", "Bearer "+token.AccessToken)
 
-	githubRes, err := http.DefaultClient.Do(req)
+	userRes, err := http.DefaultClient.Do(userReq)
 	if err != nil {
 		return nil, err
 	}
 
-	defer githubRes.Body.Close()
+	// Fetch user emails
+	emailUrl, err := url.Parse("https://api.github.com/user/emails")
+	if err != nil {
+		return nil, err
+	}
 
-	body, err := io.ReadAll(githubRes.Body)
+	emailReq, err := http.NewRequestWithContext(c.Context(), http.MethodGet, emailUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+	emailReq.Header.Add("Authorization", "Bearer "+token.AccessToken)
+
+	emailRes, err := http.DefaultClient.Do(emailReq)
+	if err != nil {
+		return nil, err
+	}
+
+	defer userRes.Body.Close()
+	defer emailRes.Body.Close()
+
+	userBody, err := io.ReadAll(userRes.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	emailBody, err := io.ReadAll(emailRes.Body)
 	if err != nil {
 		return nil, err
 	}
 
 	var githubUser GithubUser
-	err = json.Unmarshal(body, &githubUser)
+	err = json.Unmarshal(userBody, &githubUser)
 	if err != nil {
 		return nil, err
+	}
+
+	if githubUser.Name == "" {
+		githubUser.Name = githubUser.Username
+	}
+
+	var userEmails []MailResponseItem
+	err = json.Unmarshal(emailBody, &userEmails)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, email := range userEmails {
+		if email.Primary {
+			githubUser.Email = email.Email
+			break
+		}
 	}
 
 	return &githubUser, nil
