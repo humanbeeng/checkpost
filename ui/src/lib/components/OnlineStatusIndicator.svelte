@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Dot, DotFilled } from 'svelte-radix';
-	export let online: boolean;
+	export let online = false;
 </script>
 
 {#if online}
