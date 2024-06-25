@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
-	"fmt"
 	"io"
 	"log/slog"
 	"net/http"
@@ -75,6 +74,7 @@ type AuthResponse struct {
 func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
 	slog.Info("Received login request")
 	// TODO: Add state to oauth request
+	a.oauthConfig.Scopes = append(a.oauthConfig.Scopes, "email")
 	url := a.oauthConfig.AuthCodeURL("none")
 	return c.Redirect(url)
 }
@@ -90,8 +90,6 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 		slog.Error("unable to exchange code for github user", "err", err)
 		return fiber.ErrInternalServerError
 	}
-
-	fmt.Println("Fetched github user", githubUser)
 
 	user, err := a.q.GetUserFromEmail(context.Background(), githubUser.Email)
 	if err != nil {

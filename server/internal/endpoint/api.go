@@ -3,7 +3,6 @@ package endpoint
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"log/slog"
 	"net/http"
 	"net/url"
@@ -342,7 +341,7 @@ func (ec *EndpointController) GetEndpointHistoryHandler(c *fiber.Ctx) error {
 	res := GetEndpointsHistoryResponse{
 		Requests: reqs,
 	}
-	fmt.Println("Returning", len(res.Requests), "num of requests")
+	slog.Info("Returning requests", "num_requests", len(res.Requests))
 	return c.JSON(res)
 }
 

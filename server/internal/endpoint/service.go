@@ -355,7 +355,6 @@ func (s *EndpointService) GetEndpointRequestHistory(ctx context.Context, endpoin
 		json.Unmarshal(req.QueryParams, &rh.QueryParams)
 
 		reqHistory = append(reqHistory, rh)
-		fmt.Println("Content type", rh.ContentType)
 	}
 
 	return reqHistory, nil
@@ -470,7 +469,6 @@ func (s *EndpointService) CheckEndpointExists(ctx context.Context, subdomain str
 	}
 
 	if exists {
-		fmt.Println("Exists", exists)
 		return Taken, nil
 	}
 
