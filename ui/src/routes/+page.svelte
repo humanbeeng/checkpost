@@ -76,6 +76,9 @@
 			target="_blank"
 			class="hover:underline">Pricing</a
 		>
+
+		<a href="/login" class="underline"> Login </a>
+
 		<a href="https://github.com/humanbeeng/checkpost">
 			<GithubLogo />
 		</a>

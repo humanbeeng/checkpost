@@ -2,7 +2,6 @@
 	import logo from '$lib/assets/logo-black.svg';
 	import type { User } from '@/types';
 	import ProfileHeader from './ProfileHeader.svelte';
-	import { Button } from './ui/button';
 	export let user: User | null;
 </script>
 
@@ -21,10 +20,6 @@
 			<slot />
 			{#if user}
 				<ProfileHeader {user} />
-			{:else}
-				<Button class="h-8 hidden shadow-sm md:flex" href="/auth/github" variant="default"
-					>Login</Button
-				>
 			{/if}
 		</nav>
 	</div>
