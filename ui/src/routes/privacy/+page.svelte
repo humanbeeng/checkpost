@@ -1,8 +1,10 @@
 <script>
 	import Footer from '@/components/Footer.svelte';
+	import Header from '@/components/Header.svelte';
 </script>
 
-<body class="bg-gray-50 w-full min-h-full">
+<body class="bg-gray-50 w-full h-screen">
+	<Header />
 	<div class="flex flex-col justify-center mx-10 lg:mx-64">
 		<h1 class="text-4xl font-bold tracking-tight my-16 text-center">Privacy Policy</h1>
 
