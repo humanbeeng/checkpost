@@ -1,20 +1,24 @@
 import { PUBLIC_BASE_URL } from '$env/static/public';
 import type { EndpointHistory, User } from '@/types';
-import { error } from '@sveltejs/kit';
+import { error, redirect } from '@sveltejs/kit';
+import type { PageServerLoad } from './$types';
 
 export const csr = true;
 
-export const load = async ({ fetch, params, cookies }) => {
+export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const endpoint = params.endpoint;
 
 	const fetchEndpointHistory = async () => {
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/history/${endpoint}`).catch((err) => {
 			console.error('Unable to fetch endpoint request history', err);
-			throw error(500);
+			return error(500);
 		});
 
 		if (!res.ok) {
-			throw error(res.status, { message: await res.text() });
+			if (res.status == 401) {
+				return redirect(301, '/auth/logout');
+			}
+			return error(res.status, { message: await res.text() });
 		}
 
 		const endpointHistory = (await res.json().catch((err) => {
@@ -28,16 +32,22 @@ export const load = async ({ fetch, params, cookies }) => {
 		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 			console.error('Unable to fetch user details', err);
-			throw error(500);
+			return error(500);
 		});
 
 		if (!res.ok) {
-			throw error(res.status, { message: await res.text() });
+			if (res.status == 401) {
+				return redirect(301, '/auth/logout');
+			} else if (res.status == 404) {
+				return redirect(301, '/onboarding');
+			} else if (res.status === 403) {
+				return error(res.status, { message: await res.text() });
+			}
 		}
 
 		const user = (await res.json().catch((err) => {
 			console.error('Unable to parse user response', err);
-			throw error(500, { message: 'Something went wrong' });
+			return error(500, { message: 'Something went wrong' });
 		})) as User;
 
 		return user;

@@ -9,7 +9,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 
 	const res = await fetch(endpoint).catch((err) => {
 		console.error('Unable to hit auth callback', err);
-		error(500, { message: 'Something went wrong while callback' });
+		return error(500, { message: 'Something went wrong while callback' });
 	});
 
 	if (res.ok) {
@@ -23,8 +23,8 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 			secure: process.env.NODE_ENV === 'production'
 		});
 
-		redirect(302, '/onboarding');
+		return redirect(302, '/onboarding');
 	} else {
-		error(401);
+		return error(401);
 	}
 }

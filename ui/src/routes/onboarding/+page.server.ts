@@ -7,39 +7,47 @@ import type { GenerateEndpointResponse, UserEndpointsResponse } from './types';
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token');
 	if (!token) {
-		return redirect(301, '/');
+		return redirect(301, '/auth/logout');
 	}
 
 	// TODO: Better error handling
 	const fetchUser = async () => {
+		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
-			throw error(500);
+			return error(500);
 		});
 
 		if (!res.ok) {
-			throw error(res.status, { message: await res.text() });
+			if (res.status == 401) {
+				return redirect(301, '/auth/logout');
+			}
+			return error(res.status, { message: await res.text() });
 		}
 
 		const user = (await res.json().catch((err) => {
 			console.log('Unable to parse user response', err);
-			throw error(500, { message: 'Something went wrong' });
+			return error(500, { message: 'Something went wrong' });
 		})) as User;
 
 		return user;
 	};
 
 	const fetchUserEndpoints = async () => {
+		console.log('Fetching user endpoints');
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
-			throw error(500);
+			return error(500);
 		});
 
 		if (!res.ok) {
-			throw error(res.status, { message: await res.text() });
+			if (res.status == 401) {
+				return redirect(301, '/auth/logout');
+			}
+			return error(res.status, { message: await res.text() });
 		}
 
 		const endpoints = (await res.json().catch((err) => {
 			console.log('Unable to parse user endpoints response', err);
-			throw error(500, { message: 'Something went wrong' });
+			return error(500, { message: 'Something went wrong' });
 		})) as UserEndpointsResponse;
 
 		return endpoints;
