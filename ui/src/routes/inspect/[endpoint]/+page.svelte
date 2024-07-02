@@ -21,7 +21,7 @@
 
 	const endpoint = $page.params.endpoint;
 	let selectedRequest: Request | undefined;
-	let websocketOnline = false;
+	let websocketOnline: 'connecting' | 'offline' | 'online' = 'connecting';
 
 	$endpointHistory = data.endpointHistory;
 	if ($endpointHistory == null) {
@@ -43,7 +43,7 @@
 		// Connection opened
 		socket.addEventListener('open', () => {
 			console.log('Websocket connection established');
-			websocketOnline = true;
+			websocketOnline = 'online';
 		});
 
 		// Listen for messages
@@ -58,12 +58,12 @@
 
 		socket.addEventListener('close', () => {
 			console.log('Websocket connection closed');
-			websocketOnline = false;
+			websocketOnline = 'offline';
 		});
 
 		socket.addEventListener('error', () => {
 			console.log('Websocket connection error');
-			websocketOnline = false;
+			websocketOnline = 'offline';
 		});
 	};
 
@@ -82,7 +82,7 @@
 					<img src={logo} alt="Checkpost logo" />
 					<p class=" tracking-normal font-medium text-md">Checkpost</p>
 				</span>
-				<OnlineStatusIndicator online={websocketOnline} />
+				<OnlineStatusIndicator state={websocketOnline} />
 			</span>
 		</div>
 
