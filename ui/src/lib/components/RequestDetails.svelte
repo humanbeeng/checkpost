@@ -31,31 +31,31 @@
 		<hr />
 		<div class="grid grid-cols-10 gap-3 my-1 text-sm">
 			<p>ID</p>
-			<code class="overflow-hidden col-span-9">{request.uuid}</code>
+			<code class="overflow-hidden col-span-9 font-sans">{request.uuid}</code>
 		</div>
 
 		<hr />
 		<div class="grid grid-cols-10 gap-3 my-1 text-sm">
 			<p>Path</p>
-			<code class="overflow-hidden col-span-9">{request.path}</code>
+			<code class="overflow-hidden col-span-9 font-sans">{request.path}</code>
 		</div>
 
 		<hr />
 		<div class="grid grid-cols-10 gap-3 my-1 text-sm">
 			<p>Method</p>
-			<code class="overflow-hidden col-span-9">{request.method.toUpperCase()}</code>
+			<code class="font-sans overflow-hidden col-span-9">{request.method.toUpperCase()}</code>
 		</div>
 
 		<hr />
 		<div class="grid grid-cols-10 gap-3 my-1 text-sm">
 			<p>Size</p>
-			<code class="overflow-hidden col-span-9">{request.content_size}</code>
+			<code class="overflow-hidden col-span-9 font-sans">{request.content_size}</code>
 		</div>
 
 		<hr />
 		<div class="grid grid-cols-10 gap-3 my-1 text-sm">
 			<p>Time</p>
-			<code class="overflow-hidden col-span-9"
+			<code class="overflow-hidden col-span-9 font-sans"
 				>{request.created_at} ({timeAgo(request.created_at)})</code
 			>
 		</div>
@@ -116,12 +116,14 @@
 
 	{#if content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
 		{#if checked}
-			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
+			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code class="font-mono"
 					>{prettyContent}</code
 				>
 		</pre>
 		{:else}
-			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code>{content}</code>
+			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code class="font-mono"
+					>{content}</code
+				>
 		</pre>
 		{/if}
 	{:else}

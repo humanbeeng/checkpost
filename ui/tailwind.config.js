@@ -55,7 +55,8 @@ const config = {
 				sm: 'calc(var(--radius) - 4px)'
 			},
 			fontFamily: {
-				sans: ["'Figtree'", ...fontFamily.sans]
+				sans: ["'Figtree'", ...fontFamily.sans],
+				mono: ["'PT Mono'", ...fontFamily.mono],
 			}
 		}
 	}
