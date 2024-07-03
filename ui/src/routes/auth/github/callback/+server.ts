@@ -13,8 +13,12 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 	});
 
 	if (res.ok) {
+		console.log("Setting cookie token")
 		const response = await res.json();
 		// TODO: Increase security
+
+		cookies.delete('token', { path: '/' })
+
 		cookies.set('token', response.token, {
 			path: '/',
 			// TODO: Fetch expiry from response
@@ -23,7 +27,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 			secure: process.env.NODE_ENV === 'production'
 		});
 
-		return redirect(302, '/onboarding');
+		return redirect(301, '/onboarding');
 	} else {
 		return error(401);
 	}
