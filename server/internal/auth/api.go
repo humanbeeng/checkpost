@@ -17,18 +17,18 @@ import (
 	"github.com/jackc/pgx/v5"
 	"golang.org/x/oauth2"
 	"golang.org/x/oauth2/github"
+	"golang.org/x/oauth2/google"
 )
 
 type AuthHandler struct {
-	config         *config.AppConfig
-	oauthConfig    *oauth2.Config
-	pasetoVerifier *core.PasetoVerifier
-	q              db.Querier
+	config            *config.AppConfig
+	githubOAuthConfig *oauth2.Config
+	googleOAuthConfig *oauth2.Config
+	pasetoVerifier    *core.PasetoVerifier
+	q                 db.Querier
 }
 
-func NewGithubAuthHandler(config *config.AppConfig, querier db.Querier) (*AuthHandler, error) {
-	key := config.Github.Key
-	secret := config.Github.Secret
+func NewAuthHandler(config *config.AppConfig, querier db.Querier) (*AuthHandler, error) {
 	symmetricKey := config.Paseto.Key
 
 	pasetoVerifier, err := core.NewPasetoVerifier(symmetricKey)
@@ -36,27 +36,38 @@ func NewGithubAuthHandler(config *config.AppConfig, querier db.Querier) (*AuthHa
 		return nil, err
 	}
 
-	oauthConfig := &oauth2.Config{
-		ClientID:     key,
-		ClientSecret: secret,
+	githubOauthConfig := &oauth2.Config{
+		ClientID:     config.Github.ClientId,
+		ClientSecret: config.Github.Secret,
 		Endpoint:     github.Endpoint,
-		Scopes:       []string{},
+		Scopes:       []string{"user:email"},
+	}
+
+	googleOAuthConfig := &oauth2.Config{
+		ClientID:     config.Google.ClientId,
+		ClientSecret: config.Google.Secret,
+		Endpoint:     google.Endpoint,
+		Scopes:       []string{"email"},
+		RedirectURL:  config.Google.RedirectUrl,
 	}
 
 	return &AuthHandler{
-		oauthConfig:    oauthConfig,
-		config:         config,
-		pasetoVerifier: pasetoVerifier,
-		q:              querier,
+		githubOAuthConfig: githubOauthConfig,
+		googleOAuthConfig: googleOAuthConfig,
+		config:            config,
+		pasetoVerifier:    pasetoVerifier,
+		q:                 querier,
 	}, err
 }
 
 func (ac *AuthHandler) RegisterRoutes(app *fiber.App) {
-	app.Get("/auth/github", ac.LoginHandler)
-	app.Get("/auth/github/callback", ac.CallbackHandler)
+	app.Get("/auth/github", ac.GithubLoginHandler)
+	app.Get("/auth/google", ac.GoogleLoginHandler)
+	app.Get("/auth/github/callback", ac.GithubCallbackHandler)
+	app.Get("/auth/google/callback", ac.GoogleCallbackHandler)
 }
 
-type GithubUser struct {
+type OAuthUser struct {
 	Name      string `json:"name"`
 	Username  string `json:"login"`
 	Email     string `json:"email"`
@@ -78,21 +89,79 @@ type MailResponseItem struct {
 	Visibility string `json:"visibility"`
 }
 
-func (a *AuthHandler) LoginHandler(c *fiber.Ctx) error {
-	slog.Info("Received login request")
+func (a *AuthHandler) GithubLoginHandler(c *fiber.Ctx) error {
+	slog.Info("Received Github login request")
 	// TODO: Add state to oauth request
-	a.oauthConfig.Scopes = append(a.oauthConfig.Scopes, "user:email")
-	url := a.oauthConfig.AuthCodeURL("none")
+	url := a.githubOAuthConfig.AuthCodeURL("none")
 	return c.Redirect(url)
 }
 
-func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
+func (a *AuthHandler) GoogleLoginHandler(c *fiber.Ctx) error {
+	slog.Info("Received Google login request")
+	url := a.googleOAuthConfig.AuthCodeURL("none")
+	slog.Info("Redirecting", "url", url)
+	return c.Redirect(url)
+}
+
+func (a *AuthHandler) GoogleCallbackHandler(c *fiber.Ctx) error {
+	code := c.Query("code")
+
+	if code == "" {
+		slog.Warn("Code not found in callback url")
+		return fiber.ErrBadRequest
+	}
+
+	slog.Info("Received Google callback")
+
+	googleUser, err := a.exchangeGoogleCodeForUser(c, code)
+	if err != nil {
+		slog.Error("unable to exchange code for google user", "err", err)
+		return fiber.ErrInternalServerError
+	}
+
+	user, err := a.q.GetUserFromEmail(context.Background(), googleUser.Email)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			user, err = a.q.CreateUser(c.Context(), db.CreateUserParams{
+				Name:      googleUser.Name,
+				AvatarUrl: googleUser.AvatarUrl,
+				Username:  googleUser.Username,
+				Plan:      db.PlanFree,
+				Email:     googleUser.Email,
+			})
+			if err != nil {
+				slog.Error("unable to create new user", "err", err)
+				return fiber.ErrInternalServerError
+			}
+		} else {
+			slog.Error("unable to fetch existing user", "err", err)
+		}
+	}
+
+	// Create token and encrypt it
+	args := core.CreateTokenArgs{
+		Username: user.Username,
+		UserId:   user.ID,
+		Plan:     db.PlanFree,
+	}
+	pasetoToken, err := a.pasetoVerifier.CreateToken(args, time.Hour*24*30)
+	if err != nil {
+		return err
+	}
+
+	res := AuthResponse{Token: pasetoToken}
+	return c.JSON(res)
+
+}
+
+func (a *AuthHandler) GithubCallbackHandler(c *fiber.Ctx) error {
 	code := c.Query("code")
 	if code == "" {
 		slog.Warn("Code not found in callback url")
+		return fiber.ErrBadRequest
 	}
 
-	githubUser, err := a.exchangeCodeForUser(c, code)
+	githubUser, err := a.exchangeGithubCodeForUser(c, code)
 	if err != nil {
 		slog.Error("unable to exchange code for github user", "err", err)
 		return fiber.ErrInternalServerError
@@ -132,9 +201,63 @@ func (a *AuthHandler) CallbackHandler(c *fiber.Ctx) error {
 	return c.JSON(res)
 }
 
+func (a *AuthHandler) exchangeGoogleCodeForUser(c *fiber.Ctx, code string) (*OAuthUser, error) {
+	slog.Info("Exchanging Google code for user")
+	token, err := a.googleOAuthConfig.Exchange(c.Context(), code)
+	if err != nil {
+		slog.Error("unable to exchange google callback code for token", "err", err)
+		return nil, err
+	}
+
+	baseUrl, err := url.Parse("https://www.googleapis.com/oauth2/v1/userinfo")
+	if err != nil {
+		return nil, err
+	}
+
+	// Fetch basic user information
+	userReq, err := http.NewRequestWithContext(c.Context(), http.MethodGet, baseUrl.String(), nil)
+	if err != nil {
+		return nil, err
+	}
+
+	userReq.Header.Add("Authorization", "Bearer "+token.AccessToken)
+
+	userRes, err := http.DefaultClient.Do(userReq)
+	if err != nil {
+		return nil, err
+	}
+
+	defer userRes.Body.Close()
+
+	userBody, _ := io.ReadAll(userRes.Body)
+
+	var googleUser struct {
+		Id            string `json:"id"`
+		Name          string `json:"name"`
+		Picture       string `json:"picture"`
+		Email         string `json:"email"`
+		VerifiedEmail bool   `json:"verified_email"`
+	}
+
+	err = json.Unmarshal(userBody, &googleUser)
+	if err != nil {
+		return nil, err
+	}
+
+	oauthUser := OAuthUser{
+		Name:      googleUser.Name,
+		Email:     googleUser.Email,
+		AvatarUrl: googleUser.Picture,
+		Username:  googleUser.Email,
+	}
+
+	return &oauthUser, nil
+}
+
 // exchange the auth code that retrieved from github via URL query parameter into an access token.
-func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUser, error) {
-	token, err := a.oauthConfig.Exchange(c.Context(), code)
+func (a *AuthHandler) exchangeGithubCodeForUser(c *fiber.Ctx, code string) (*OAuthUser, error) {
+	slog.Info("Exchanging Github code for user")
+	token, err := a.githubOAuthConfig.Exchange(c.Context(), code)
 	if err != nil {
 		return nil, err
 	}
@@ -187,7 +310,7 @@ func (a *AuthHandler) exchangeCodeForUser(c *fiber.Ctx, code string) (*GithubUse
 		return nil, err
 	}
 
-	var githubUser GithubUser
+	var githubUser OAuthUser
 	err = json.Unmarshal(userBody, &githubUser)
 	if err != nil {
 		return nil, err

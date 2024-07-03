@@ -11,14 +11,18 @@
 		<div
 			class="rounded-md w-1/2 mx-20 border flex flex-col p-6 gap-3 justify-between xl:w-1/5 shadow-lg backdrop-blur-lg bg-gray-50"
 		>
-			<h1 class="text-xl font-medium">Login</h1>
-			<!-- <h2 class="font-normal text-xl tracking-tight text-gray-600">Login</h2> -->
+			<div>
+				<h1 class="text-xl font-medium">Login</h1>
+				<h2 class="font-normal text-md tracking-tight text-gray-600">to continue to Checkpost</h2>
+			</div>
 			<hr />
-			<div class="flex flex-row gap-3 pt-2">
+			<div class="flex flex-col gap-3 pt-2">
 				<a href="/auth/github" class="w-full">
 					<Button variant="default" class="w-full">Continue with Github</Button>
 				</a>
-				<!-- <Button variant="default" class="w-full">Google</Button> -->
+				<a href="/auth/google" class="w-full">
+					<Button variant="default" class="w-full">Continue with Google</Button>
+				</a>
 			</div>
 		</div>
 	</div>
