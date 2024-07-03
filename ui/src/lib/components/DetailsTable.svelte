@@ -43,7 +43,7 @@
 			<hr />
 			<div class="grid grid-cols-5 text-sm w-full my-1 gap-2">
 				<p class="col-span-1 text-wrap">{d[0]}</p>
-				<code class="col-span-4 overflow-hidden hover:overflow-auto whitespace-normal">
+				<code class="col-span-4 overflow-hidden hover:overflow-auto whitespace-normal font-sans">
 					{d[1]}
 				</code>
 			</div>
