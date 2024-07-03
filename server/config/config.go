@@ -11,7 +11,7 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-const CheckpostConfigPrefix = "CP_"
+const CheckpostConfigPrefix = "CP__"
 
 type AppConfig struct {
 	Postgres `koanf:"postgres"`
@@ -47,8 +47,7 @@ func GetAppConfig() (*AppConfig, error) {
 	k := koanf.New(".")
 	if err := k.Load(file.Provider("config.toml"), toml.Parser()); os.IsNotExist(err) {
 		if err := k.Load(env.Provider(CheckpostConfigPrefix, ".", func(s string) string {
-			str := strings.Replace(strings.ToLower(
-				strings.TrimPrefix(s, CheckpostConfigPrefix)), "_", ".", -1)
+			str := strings.Replace(strings.ToLower(strings.TrimPrefix(s, CheckpostConfigPrefix)), "__", ".", -1)
 			return str
 		}), nil); err != nil {
 			slog.Error("unable to load config", "err", err)
