@@ -7,13 +7,13 @@ database = "postgres"
 
 [github]
 secret = "407c416d99a3885f3f152b3fdbf938a3b88e6742"
-client_id = "4dc28eef1750ddf0088a"
+clientid = "4dc28eef1750ddf0088a"
 
 
 [google]
 secret = "407c416d99a3885f3f152b3fdbf938a3b88e6742"
-client_id = "4dc28eef1750ddf0088a"
-redirect_url = "http://localhost:5173/auth/google/callback"
+clientid = "4dc28eef1750ddf0088a"
+redirecturl = "http://localhost:5173/auth/google/callback"
 
 [paseto]
 key = "rJM6HEmSnO9UnfNwgajL1ZLAdeYoUnxT"
