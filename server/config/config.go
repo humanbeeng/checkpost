@@ -16,6 +16,7 @@ const CheckpostConfigPrefix = "CP_"
 type AppConfig struct {
 	Postgres `koanf:"postgres"`
 	Github   `koanf:"github"`
+	Google   `koanf:"google"`
 	Paseto   `koanf:"paseto"`
 }
 
@@ -28,8 +29,14 @@ type Postgres struct {
 }
 
 type Github struct {
-	Key    string `koanf:"key"`
-	Secret string `koanf:"secret"`
+	ClientId string `koanf:"client_id"`
+	Secret   string `koanf:"secret"`
+}
+
+type Google struct {
+	ClientId    string `koanf:"client_id"`
+	Secret      string `koanf:"secret"`
+	RedirectUrl string `koanf:"redirect_url"`
 }
 
 type Paseto struct {

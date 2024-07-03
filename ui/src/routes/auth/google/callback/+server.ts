@@ -5,7 +5,7 @@ import type { RequestEvent } from '../$types';
 export async function GET({ url, fetch, cookies }: RequestEvent) {
 	// TODO: Handle edge cases
 	const code = url.searchParams.get('code');
-	const endpoint = `${PUBLIC_BASE_URL}/auth/github/callback?code=${code}`;
+	const endpoint = `${PUBLIC_BASE_URL}/auth/google/callback?code=${code}`;
 
 	const res = await fetch(endpoint).catch((err) => {
 		console.error('Unable to hit auth callback', err);
@@ -16,8 +16,8 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 		console.log("Setting cookie token")
 		const response = await res.json();
 		// TODO: Increase security
-
-		cookies.delete('token', { path: '/' })
+		//
+		cookies.delete('token', { path: "/" })
 
 		cookies.set('token', response.token, {
 			path: '/',

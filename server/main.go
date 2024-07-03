@@ -80,7 +80,7 @@ func main() {
 
 	queries := db.New(conn)
 
-	ac, err := auth.NewGithubAuthHandler(config, queries)
+	ac, err := auth.NewAuthHandler(config, queries)
 	if err != nil {
 		log.Fatalf("unable to init auth controller. %v", err)
 	}
