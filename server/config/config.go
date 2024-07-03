@@ -11,12 +11,12 @@ import (
 	"github.com/knadh/koanf/v2"
 )
 
-const CheckpostConfigPrefix = "CP__"
+const CheckpostConfigPrefix = "CP_"
 
 type AppConfig struct {
-	Postgres `koanf:"postgres"`
 	Github   `koanf:"github"`
 	Google   `koanf:"google"`
+	Postgres `koanf:"postgres"`
 	Paseto   `koanf:"paseto"`
 }
 
@@ -29,14 +29,14 @@ type Postgres struct {
 }
 
 type Github struct {
-	ClientId string `koanf:"client_id"`
+	ClientId string `koanf:"clientid"`
 	Secret   string `koanf:"secret"`
 }
 
 type Google struct {
-	ClientId    string `koanf:"client_id"`
+	ClientId    string `koanf:"clientid"`
 	Secret      string `koanf:"secret"`
-	RedirectUrl string `koanf:"redirect_url"`
+	RedirectUrl string `koanf:"redirecturl"`
 }
 
 type Paseto struct {
@@ -47,7 +47,7 @@ func GetAppConfig() (*AppConfig, error) {
 	k := koanf.New(".")
 	if err := k.Load(file.Provider("config.toml"), toml.Parser()); os.IsNotExist(err) {
 		if err := k.Load(env.Provider(CheckpostConfigPrefix, ".", func(s string) string {
-			str := strings.Replace(strings.ToLower(strings.TrimPrefix(s, CheckpostConfigPrefix)), "__", ".", -1)
+			str := strings.Replace(strings.ToLower(strings.TrimPrefix(s, CheckpostConfigPrefix)), "_", ".", -1)
 			return str
 		}), nil); err != nil {
 			slog.Error("unable to load config", "err", err)
