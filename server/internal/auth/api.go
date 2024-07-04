@@ -47,7 +47,7 @@ func NewAuthHandler(config *config.AppConfig, querier db.Querier) (*AuthHandler,
 		ClientID:     config.Google.ClientId,
 		ClientSecret: config.Google.Secret,
 		Endpoint:     google.Endpoint,
-		Scopes:       []string{"email"},
+		Scopes:       []string{"email", "profile"},
 		RedirectURL:  config.Google.RedirectUrl,
 	}
 
