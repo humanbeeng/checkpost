@@ -4,7 +4,7 @@
 
 [Checkpost](https://checkpost.io) is an open-source, real-time webhook inspection platform that allows you to easily inspect and debug incoming HTTP requests. With Checkpost, you get your own branded subdomain for free, eliminating the need to remember random UUIDs.
 
-🚧 Project is still under construction ([track here](https://github.com/humanbeeng/checkpost/issues/100)). v1 will be released by first half of July.
+🚧 Project is still under construction ([Launch checklist](https://github.com/humanbeeng/checkpost/issues/100)). v1 will be released by first half of July.
 
 ### Planned Features
 - [ ]  Mock server.
