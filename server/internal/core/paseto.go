@@ -2,6 +2,7 @@ package core
 
 import (
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -35,6 +36,7 @@ type CreateTokenArgs struct {
 }
 
 func (p *PasetoVerifier) CreateToken(args CreateTokenArgs, duration time.Duration) (string, error) {
+	slog.Info("Creating new paseto token")
 	id, err := gonanoid.New()
 	if err != nil {
 		return "", err
@@ -56,6 +58,7 @@ func (p *PasetoVerifier) CreateToken(args CreateTokenArgs, duration time.Duratio
 		return "", err
 	}
 
+	slog.Info("Created paseto token", "username", args.Username, "role", args.Role)
 	return token, nil
 }
 

@@ -80,6 +80,7 @@ func (s *EndpointService) CreateEndpoint(ctx context.Context, username string, s
 		return db.Endpoint{}, NewInternalServerError()
 	}
 	if exists {
+		slog.Info("Endpoint exists", "endpoint", endpoint)
 		return db.Endpoint{}, &EndpointError{
 			Code:    http.StatusConflict,
 			Message: fmt.Sprintf("Endpoint %s already exists", endpoint),
@@ -361,7 +362,7 @@ func (s *EndpointService) GetEndpointRequestHistory(ctx context.Context, endpoin
 }
 
 func (s *EndpointService) GetRequestDetails(ctx context.Context, reqId int64) (HookRequest, *EndpointError) {
-	slog.Info("Fetch request details", "reqId", reqId)
+	slog.Info("Request to fetch request details", "reqId", reqId)
 
 	reqRecord, err := s.endpointq.GetRequestById(ctx, reqId)
 	if err != nil {
@@ -472,10 +473,12 @@ func (s *EndpointService) CheckEndpointExists(ctx context.Context, subdomain str
 		return Taken, nil
 	}
 
+	slog.Info("Endpoint available", "endpoint", subdomain)
 	return Available, nil
 }
 
 func (s *EndpointService) GetRequestByUUID(ctx context.Context, uuid string) (HookRequest, *EndpointError) {
+	slog.Info("Request to fetch request details by uuid", "uuid", uuid)
 	reqRecord, err := s.endpointq.GetRequestByUUID(ctx, uuid)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
