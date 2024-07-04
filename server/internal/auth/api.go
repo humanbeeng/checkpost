@@ -98,8 +98,8 @@ func (a *AuthHandler) GithubLoginHandler(c *fiber.Ctx) error {
 
 func (a *AuthHandler) GoogleLoginHandler(c *fiber.Ctx) error {
 	slog.Info("Received Google login request")
+	// TODO: Add state to oauth request
 	url := a.googleOAuthConfig.AuthCodeURL("none")
-	slog.Info("Redirecting", "url", url)
 	return c.Redirect(url)
 }
 
@@ -122,6 +122,7 @@ func (a *AuthHandler) GoogleCallbackHandler(c *fiber.Ctx) error {
 	user, err := a.q.GetUserFromEmail(context.Background(), googleUser.Email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			slog.Info("Creating new user", "username", googleUser.Name, "email", googleUser.Email)
 			user, err = a.q.CreateUser(c.Context(), db.CreateUserParams{
 				Name:      googleUser.Name,
 				AvatarUrl: googleUser.AvatarUrl,
@@ -136,6 +137,8 @@ func (a *AuthHandler) GoogleCallbackHandler(c *fiber.Ctx) error {
 		} else {
 			slog.Error("unable to fetch existing user", "err", err)
 		}
+	} else {
+		slog.Info("Logging in existing user", "username", user.Username, "email", user.Email)
 	}
 
 	// Create token and encrypt it
@@ -170,6 +173,7 @@ func (a *AuthHandler) GithubCallbackHandler(c *fiber.Ctx) error {
 	user, err := a.q.GetUserFromEmail(context.Background(), githubUser.Email)
 	if err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
+			slog.Info("Creating new user", "username", githubUser.Username, "email", githubUser.Email)
 			user, err = a.q.CreateUser(c.Context(), db.CreateUserParams{
 				Name:      githubUser.Name,
 				AvatarUrl: githubUser.AvatarUrl,
@@ -184,6 +188,8 @@ func (a *AuthHandler) GithubCallbackHandler(c *fiber.Ctx) error {
 		} else {
 			slog.Error("unable to fetch existing user", "err", err)
 		}
+	} else {
+		slog.Info("Logging in existing user", "username", user.Username, "email", user.Email)
 	}
 
 	// Create token and encrypt it
@@ -192,6 +198,7 @@ func (a *AuthHandler) GithubCallbackHandler(c *fiber.Ctx) error {
 		UserId:   user.ID,
 		Plan:     db.PlanFree,
 	}
+
 	pasetoToken, err := a.pasetoVerifier.CreateToken(args, time.Hour*24*30)
 	if err != nil {
 		return err
@@ -203,6 +210,7 @@ func (a *AuthHandler) GithubCallbackHandler(c *fiber.Ctx) error {
 
 func (a *AuthHandler) exchangeGoogleCodeForUser(c *fiber.Ctx, code string) (*OAuthUser, error) {
 	slog.Info("Exchanging Google code for user")
+
 	token, err := a.googleOAuthConfig.Exchange(c.Context(), code)
 	if err != nil {
 		slog.Error("unable to exchange google callback code for token", "err", err)

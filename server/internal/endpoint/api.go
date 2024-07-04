@@ -55,6 +55,8 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 		return
 	}
 
+	slog.Info("Received inspect request", "endpoint", endpoint)
+
 	endpoint = strings.ToLower(endpoint)
 
 	// Authorize websocket connection by checking token
@@ -82,8 +84,7 @@ func (ec *EndpointController) InspectRequestsHandler(c *websocket.Conn) {
 	// Check if endpoint exists
 	exists, err := ec.service.endpointq.CheckEndpointExists(context.Background(), endpoint)
 	if !exists {
-		slog.Info("No endpoint found", "endpoint", endpoint)
-
+		slog.Warn("No endpoint found", "endpoint", endpoint)
 		c.WriteJSON(fiber.Error{
 			Code:    fiber.StatusNotFound,
 			Message: "Endpoint has either expired or not yet created.",
@@ -264,6 +265,8 @@ func (ec *EndpointController) HookHandler(c *fiber.Ctx) error {
 	if form != nil {
 		hookReq.FormData = form
 	}
+
+	slog.Info("Received hook request", "endpoint", endpoint)
 
 	requestRecord, endpointErr := ec.service.StoreRequestDetails(c.Context(), hookReq)
 	if endpointErr != nil {
