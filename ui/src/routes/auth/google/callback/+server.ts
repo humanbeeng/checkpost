@@ -16,8 +16,6 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 		console.log("Setting cookie token")
 		const response = await res.json();
 		// TODO: Increase security
-		//
-		cookies.delete('token', { path: "/" })
 
 		cookies.set('token', response.token, {
 			path: '/',
