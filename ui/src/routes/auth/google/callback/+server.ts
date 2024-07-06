@@ -9,11 +9,10 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 
 	const res = await fetch(endpoint).catch((err) => {
 		console.error('Unable to hit auth callback', err);
-		return error(500, { message: 'Something went wrong while callback' });
+		throw error(500, { message: 'Something went wrong while callback' });
 	});
 
 	if (res.ok) {
-		console.log("Setting cookie token")
 		const response = await res.json();
 		// TODO: Increase security
 
@@ -27,6 +26,6 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 
 		return redirect(301, '/onboarding');
 	} else {
-		return error(401);
+		throw error(401);
 	}
 }

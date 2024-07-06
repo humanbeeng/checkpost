@@ -10,7 +10,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 
 	const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 		console.log('Unable to fetch user details', err);
-		return error(500);
+		throw error(500);
 	});
 
 	if (!res.ok) {

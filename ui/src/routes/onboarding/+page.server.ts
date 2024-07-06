@@ -14,19 +14,20 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const fetchUser = async () => {
 		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
-			return error(500);
+			throw error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
 				return redirect(301, '/auth/logout');
 			}
-			return error(res.status, { message: await res.text() });
+			const err = await res.text();
+			throw error(res.status, { message: err });
 		}
 
 		const user = (await res.json().catch((err) => {
 			console.log('Unable to parse user response', err);
-			return error(500, { message: 'Something went wrong' });
+			throw error(500, { message: 'Something went wrong' });
 		})) as User;
 
 		return user;
@@ -35,19 +36,20 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const fetchUserEndpoints = async () => {
 		console.log('Fetching user endpoints');
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
-			return error(500);
+			throw error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
 				return redirect(301, '/auth/logout');
 			}
-			return error(res.status, { message: await res.text() });
+			const msg = await res.text();
+			throw error(res.status, { message: msg });
 		}
 
 		const endpoints = (await res.json().catch((err) => {
-			console.log('Unable to parse user endpoints response', err);
-			return error(500, { message: 'Something went wrong' });
+			console.error('Unable to parse user endpoints response', err);
+			throw error(500, { message: 'Something went wrong' });
 		})) as UserEndpointsResponse;
 
 		return endpoints;
