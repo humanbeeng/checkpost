@@ -71,12 +71,6 @@
 
 <div class="w-full">
 	<Header user={null}>
-		<a
-			href="https://checkpost.notion.site/Pricing-Proposed-c9399d8349f44ff9bf095817ad05bed0?pvs=74"
-			target="_blank"
-			class="hover:underline">Pricing</a
-		>
-
 		<a href="/login" class="underline"> Login </a>
 
 		<a href="https://github.com/humanbeeng/checkpost">
