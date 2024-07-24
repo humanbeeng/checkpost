@@ -15,7 +15,7 @@
 
 	import { onMount } from 'svelte';
 
-	import { Exit } from 'svelte-radix';
+	import { Exit, Reload } from 'svelte-radix';
 
 	export let data;
 
@@ -82,7 +82,18 @@
 					<img src={logo} alt="Checkpost logo" />
 					<p class=" tracking-normal font-medium text-md">Checkpost</p>
 				</span>
-				<OnlineStatusIndicator state={websocketOnline} />
+				{#if websocketOnline === 'offline'}
+					<Button
+						class="h-7 w-auto p-2 bg-red-100 text-red-600 hover:bg-red-200"
+						on:click={connectSocket}
+					>
+						<span class="flex gap-1 place-items-center">
+							<Reload class="size-3" />Reconnect
+						</span>
+					</Button>
+				{:else}
+					<OnlineStatusIndicator state={websocketOnline} />
+				{/if}
 			</span>
 		</div>
 
