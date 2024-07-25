@@ -8,6 +8,8 @@ var ReservedSubdomains = map[string]bool{
 	"dashboard": true,
 	"uat":       true,
 	"qa":        true,
+	"user":      true,
+	"client":    true,
 	"prod":      true,
 	"staging":   true,
 	"jobs":      true,
