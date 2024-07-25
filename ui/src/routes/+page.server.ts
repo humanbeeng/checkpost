@@ -73,24 +73,24 @@ export const actions = {
 
 		if (subdomain.toString().length < 4 || subdomain.toString().length > 10) {
 			return fail(400, {
-				error: 'Subdomain length should be between 4 and 10.'
+				error: 'Subdomain length should be between 4 and 10.',
 			});
 		}
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/exists/${subdomain}`, {
-			method: 'GET'
+			method: 'GET',
 		});
 
 		switch (res.status) {
 			case 200: {
 				return {
-					data: (await res.json()) as EndpointExistsResponse
+					data: (await res.json()) as EndpointExistsResponse,
 				};
 			}
 			case 400: {
 				return {
-					error: await res.text()
+					error: await res.text(),
 				};
 			}
 		}
-	}
+	},
 } satisfies Actions;
