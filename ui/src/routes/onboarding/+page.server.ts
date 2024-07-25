@@ -67,7 +67,7 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 		}
 	}
 	return {
-		user
+		user,
 	};
 };
 
@@ -79,15 +79,15 @@ export const actions = {
 			return fail(400, { err: { field: 'subdomain', message: 'Empty subdomain' } });
 		}
 		const req = {
-			endpoint: endpoint
+			endpoint: endpoint,
 		};
 		try {
 			const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/generate`, {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json'
+					'Content-Type': 'application/json',
 				},
-				body: JSON.stringify(req)
+				body: JSON.stringify(req),
 			});
 
 			if (res.ok) {
@@ -100,5 +100,5 @@ export const actions = {
 			console.error('Error', err);
 			return fail(500, { err: { field: '', message: 'Something went wrong' } });
 		}
-	}
+	},
 } satisfies Actions;

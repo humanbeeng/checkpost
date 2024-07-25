@@ -60,6 +60,6 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	return {
 		user,
 		endpointHistory,
-		token
+		token,
 	};
 };
