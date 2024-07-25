@@ -21,7 +21,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 			return redirect(301, '/auth/logout');
 		}
 		return {
-			err: { message: 'Unable to fetch user details' }
+			err: { message: 'Unable to fetch user details' },
 		};
 	}
 

@@ -48,10 +48,10 @@ export const flyAndScale = (
 
 			return styleToString({
 				transform: `${transform} translate3d(${x}px, ${y}px, 0) scale(${scale})`,
-				opacity: t
+				opacity: t,
 			});
 		},
-		easing: cubicOut
+		easing: cubicOut,
 	};
 };
 
@@ -107,7 +107,7 @@ export const extraHeaders = [
 	'X-Forwarded-For',
 	'X-Forwarded-Proto',
 	'X-Request-Id',
-	'X-Envoy-External-Address'
+	'X-Envoy-External-Address',
 ];
 
 export function removeKeys(obj: Object, keysToRemove: string[]) {

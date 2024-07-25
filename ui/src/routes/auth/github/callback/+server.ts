@@ -24,7 +24,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 			// TODO: Fetch expiry from response
 			httpOnly: true,
 			maxAge: 60 * 60 * 24 * 1000,
-			secure: process.env.NODE_ENV === 'production'
+			secure: process.env.NODE_ENV === 'production',
 		});
 
 		return redirect(301, '/onboarding');
