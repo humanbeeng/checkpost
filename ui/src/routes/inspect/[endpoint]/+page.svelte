@@ -124,7 +124,7 @@
 		{#if user.plan === 'free'}
 			<div class="px-2 mx-4 py-2 bg-orange-200/90 mt-2 rounded-md">
 				<p class="font-extralight text-gray-600 text-xs">
-					⚠️ You're on {user.plan} tier. <br />Incoming requests history will be expired in 4 hours.
+					⚠️ You're on {user.plan} tier. <br />Incoming requests history will be expired in 6 hours.
 				</p>
 			</div>
 		{/if}
