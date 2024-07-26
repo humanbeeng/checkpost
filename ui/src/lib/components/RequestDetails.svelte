@@ -116,13 +116,13 @@
 
 	{#if content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
 		{#if checked}
-			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code class="font-mono"
-					>{prettyContent}</code
+			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
+					class="font-mono text-sm">{prettyContent}</code
 				>
 		</pre>
 		{:else}
-			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code class="font-mono"
-					>{content}</code
+			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
+					class="font-mono text-sm">{content}</code
 				>
 		</pre>
 		{/if}
