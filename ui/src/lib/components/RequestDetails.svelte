@@ -25,7 +25,8 @@
 	};
 </script>
 
-<div class="grid grid-cols-1 w-full h-full gap-3">
+<div class="grid grid-cols-1 w-full h-fit gap-6">
+	<!-- Request details -->
 	<div class="border py-2 px-3 rounded bg-gray-100 shadow-sm my-2">
 		<h4 class="font-medium text-md">Request details</h4>
 		<hr />
@@ -68,18 +69,17 @@
 		showHideButton={true}
 		hiddenEntries={extraHeaders}
 	/>
+
+	{#if request.query_params}
+		<div class="grid grid-cols-1 lg:grid-cols-2 w-full gap-3">
+			<!-- Query params-->
+			<DetailsTable title="Query" data={request.query_params} />
+
+			<!-- Form values-->
+			<DetailsTable title="Form" data={request.form_data} />
+		</div>
+	{/if}
 </div>
-
-{#if request.query_params}
-	<div class="grid grid-col-1 lg:grid-cols-2 w-full gap-3">
-		<!-- Query params-->
-		<DetailsTable title="Query" data={request.query_params} />
-
-		<!-- Form values-->
-		<DetailsTable title="Form" data={request.form_data} />
-	</div>
-{/if}
-
 <!-- File attachments -->
 <!-- TODO: Add file attachments -->
 
