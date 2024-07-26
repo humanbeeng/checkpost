@@ -19,8 +19,8 @@
 	}
 </script>
 
-<div class="border py-2 px-4 rounded bg-gray-100 shadow-sm my-2">
-	<span class="flex align-middle justify-between w-full py-1">
+<div class="border py-2 px-4 rounded bg-gray-100 shadow-sm h-fit">
+	<span class="flex align-middle justify-between w-full py-1 h-auto">
 		<h4 class="font-medium text-md">{title}</h4>
 		{#if showHideButton}
 			<Button
@@ -43,7 +43,9 @@
 			<hr />
 			<div class="grid grid-cols-5 text-sm w-full my-1 gap-2">
 				<p class="col-span-1 text-wrap">{d[0]}</p>
-				<code class="col-span-4 overflow-hidden hover:overflow-auto whitespace-normal font-sans">
+				<code
+					class="col-span-4 overflow-x-hidden hover:overflow-x-auto whitespace-normal font-sans"
+				>
 					{d[1]}
 				</code>
 			</div>
