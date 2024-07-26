@@ -108,6 +108,8 @@ export const extraHeaders = [
 	'X-Forwarded-Proto',
 	'X-Request-Id',
 	'X-Envoy-External-Address',
+	'X-Forwarded-Host',
+	'X-Real-Ip'
 ];
 
 export function removeKeys(obj: Object, keysToRemove: string[]) {
