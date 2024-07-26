@@ -42,7 +42,7 @@ func NewInternalServerError() *EndpointError {
 const (
 	RandomEndpointLength int = 10
 	DefaultLimitNumUrl   int = 1
-	DefaultExpiryHours   int = 4
+	DefaultExpiryHours   int = 6
 )
 
 func (s *EndpointService) CreateEndpoint(ctx context.Context, username string, subdomain string) (db.Endpoint, *EndpointError) {
