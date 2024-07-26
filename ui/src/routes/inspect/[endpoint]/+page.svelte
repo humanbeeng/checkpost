@@ -165,7 +165,7 @@
 			</div>
 		{/if}
 		<!-- Request details -->
-		<div class="my-4 mx-10 flex flex-col gap-2 overflow-y-auto">
+		<div class="my-4 mx-10 flex flex-col gap-2 h-screen">
 			{#if selectedRequest}
 				<RequestDetails request={selectedRequest} />
 			{:else}
