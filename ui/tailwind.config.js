@@ -56,7 +56,7 @@ const config = {
 			},
 			fontFamily: {
 				sans: ["'Figtree'", ...fontFamily.sans],
-				mono: ["'PT Mono'", ...fontFamily.mono],
+				mono: ["'JetBrains Mono'", ...fontFamily.mono],
 			},
 		},
 	},
