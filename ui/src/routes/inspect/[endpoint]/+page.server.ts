@@ -7,6 +7,7 @@ export const csr = true;
 
 export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const endpoint = params.endpoint;
+	const token = cookies.get('token')
 
 	const fetchEndpointHistory = async () => {
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/history/${endpoint}`).catch((err) => {
@@ -55,7 +56,6 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 
 	const user = await fetchUser();
 	const endpointHistory = await fetchEndpointHistory();
-	const token = cookies.get('token');
 
 	return {
 		user,
