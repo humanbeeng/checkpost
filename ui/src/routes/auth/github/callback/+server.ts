@@ -15,16 +15,14 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 	if (res.ok) {
 		console.log('Setting cookie token');
 		const response = await res.json();
-		// TODO: Increase security
-
-		cookies.delete('token', { path: '/' });
 
 		cookies.set('token', response.token, {
 			path: '/',
 			// TODO: Fetch expiry from response
 			httpOnly: true,
-			maxAge: 60 * 60 * 24 * 1000,
 			secure: process.env.NODE_ENV === 'production',
+			domain: process.env.NODE_ENV === 'production' ? `.${process.env.DOMAIN}` : "",
+			maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
 		});
 
 		redirect(301, '/onboarding');
