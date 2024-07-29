@@ -73,9 +73,11 @@
 	});
 </script>
 
-<body class="bg-gray-50 flex overflow-hidden h-screen">
+<body class="bg-gray-50 flex overflow-hidden">
 	<!-- Sidebar -->
-	<div class="min-w-64 max-w-64 border-r border-gray-300 bg-gray-200 flex flex-col justify-between">
+	<div
+		class="min-w-64 max-w-64 border-r border-gray-300 bg-gray-200 flex flex-col justify-between h-screen"
+	>
 		<!-- Branding -->
 		<div class="border-b border-gray-300 px-5 py-4">
 			<span class="flex justify-between">
@@ -176,11 +178,11 @@
 			</div>
 		{/if}
 		<!-- Request details -->
-		<div class="my-4 mx-10 flex flex-col gap-2 h-full">
+		<div class="my-4 mx-10 flex flex-col gap-2">
 			{#if selectedRequest}
 				<RequestDetails request={selectedRequest} />
 			{:else}
-				<div class="flex flex-col justify-start w-full my-32">
+				<div class="flex flex-col justify-start w-full my-32 h-auto">
 					<p class="text-3xl font-bold tracking-tight my-2">It's empty in here</p>
 					<span class="text-lg font-normal text-gray-800"
 						>Try calling this endpoint
