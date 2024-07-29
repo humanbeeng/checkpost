@@ -16,16 +16,16 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	if (cookie) {
 		const fetchUser = async () => {
 			const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
-				throw error(500);
+				error(500);
 			});
 
 			if (!res.ok) {
-				throw error(res.status, { message: await res.text() });
+				error(res.status, { message: await res.text() });
 			}
 
 			const user = (await res.json().catch((err) => {
 				console.log('Unable to parse user response', err);
-				throw error(500, { message: 'Something went wrong' });
+				error(500, { message: 'Something went wrong' });
 			})) as User;
 
 			return user;
@@ -33,16 +33,16 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 
 		const fetchUserEndpoints = async () => {
 			const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
-				throw error(500);
+				error(500);
 			});
 
 			if (!res.ok) {
-				throw error(res.status, { message: await res.text() });
+				error(res.status, { message: await res.text() });
 			}
 
 			const endpoints = (await res.json().catch((err) => {
 				console.log('Unable to parse user endpoints response', err);
-				throw error(500, { message: 'Something went wrong' });
+				error(500, { message: 'Something went wrong' });
 			})) as UserEndpointsResponse;
 
 			return endpoints;
@@ -54,9 +54,9 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		if (user && userEndpoints && userEndpoints.endpoints) {
 			const endpoint = userEndpoints.endpoints.at(0);
 			if (endpoint) {
-				return redirect(301, `/inspect/${endpoint.endpoint}`);
+				redirect(301, `/inspect/${endpoint.endpoint}`);
 			} else {
-				return redirect(301, `/onboarding`);
+				redirect(301, `/onboarding`);
 			}
 		}
 	}

@@ -7,18 +7,19 @@ export const csr = true;
 
 export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const endpoint = params.endpoint;
+	const token = cookies.get('token')
 
 	const fetchEndpointHistory = async () => {
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/history/${endpoint}`).catch((err) => {
 			console.error('Unable to fetch endpoint request history', err);
-			throw error(500);
+			error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				return redirect(301, '/auth/logout');
+				redirect(301, '/auth/logout');
 			}
-			throw error(res.status, { message: await res.text() });
+			error(res.status, { message: await res.text() });
 		}
 
 		const endpointHistory = (await res.json().catch((err) => {
@@ -32,22 +33,22 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
 			console.error('Unable to fetch user details', err);
-			throw error(500);
+			error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				return redirect(301, '/auth/logout');
+				redirect(301, '/auth/logout');
 			} else if (res.status == 404) {
-				return redirect(301, '/onboarding');
+				redirect(301, '/onboarding');
 			} else if (res.status === 403) {
-				throw error(res.status, { message: await res.text() });
+				error(res.status, { message: await res.text() });
 			}
 		}
 
 		const user = (await res.json().catch((err) => {
 			console.error('Unable to parse user response', err);
-			throw error(500, { message: 'Something went wrong' });
+			error(500, { message: 'Something went wrong' });
 		})) as User;
 
 		return user;
@@ -55,7 +56,6 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 
 	const user = await fetchUser();
 	const endpointHistory = await fetchEndpointHistory();
-	const token = cookies.get('token');
 
 	return {
 		user,

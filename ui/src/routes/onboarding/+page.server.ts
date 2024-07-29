@@ -7,27 +7,30 @@ import type { GenerateEndpointResponse, UserEndpointsResponse } from './types';
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token');
 	if (!token) {
-		return redirect(301, '/auth/logout');
+		console.warn("No token found. Logging out")
+		redirect(301, '/auth/logout');
 	}
 
 	// TODO: Better error handling
 	const fetchUser = async () => {
 		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
-			throw error(500);
+			console.error("Unable to fetch user details", err)
+			error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				return redirect(301, '/auth/logout');
+				console.error("Unauthorized request to fetch user details")
+				redirect(301, '/auth/logout');
 			}
 			const err = await res.text();
-			throw error(res.status, { message: err });
+			error(res.status, { message: err });
 		}
 
 		const user = (await res.json().catch((err) => {
 			console.log('Unable to parse user response', err);
-			throw error(500, { message: 'Something went wrong' });
+			error(500, { message: 'Something went wrong' });
 		})) as User;
 
 		return user;
@@ -36,20 +39,22 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const fetchUserEndpoints = async () => {
 		console.log('Fetching user endpoints');
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
-			throw error(500);
+			console.error('Unable to fetch user endpoints', err)
+			error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				return redirect(301, '/auth/logout');
+				console.error("Unauthorized request to fetch user endpoints")
+				redirect(301, '/auth/logout');
 			}
 			const msg = await res.text();
-			throw error(res.status, { message: msg });
+			error(res.status, { message: msg });
 		}
 
 		const endpoints = (await res.json().catch((err) => {
 			console.error('Unable to parse user endpoints response', err);
-			throw error(500, { message: 'Something went wrong' });
+			error(500, { message: 'Something went wrong' });
 		})) as UserEndpointsResponse;
 
 		return endpoints;
@@ -61,9 +66,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	if (user && userEndpoints && userEndpoints.endpoints) {
 		const endpoint = userEndpoints.endpoints.at(0);
 		if (endpoint) {
-			return redirect(301, `/inspect/${endpoint.endpoint}`);
+			redirect(301, `/inspect/${endpoint.endpoint}`);
 		} else {
-			return redirect(301, `/onboarding`);
+			redirect(301, `/onboarding`);
 		}
 	}
 	return {
