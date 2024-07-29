@@ -7,22 +7,22 @@ import type { GenerateEndpointResponse, UserEndpointsResponse } from './types';
 export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const token = cookies.get('token');
 	if (!token) {
-		console.warn("No token found. Logging out")
-		redirect(301, '/auth/logout');
+		console.warn('No token found. Logging out');
+		throw redirect(301, '/auth/logout');
 	}
 
 	// TODO: Better error handling
 	const fetchUser = async () => {
 		console.log('Fetching user details');
 		const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
-			console.error("Unable to fetch user details", err)
+			console.error('Unable to fetch user details', err);
 			error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				console.error("Unauthorized request to fetch user details")
-				redirect(301, '/auth/logout');
+				console.error('Unauthorized request to fetch user details');
+				throw redirect(301, '/auth/logout');
 			}
 			const err = await res.text();
 			error(res.status, { message: err });
@@ -39,14 +39,14 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	const fetchUserEndpoints = async () => {
 		console.log('Fetching user endpoints');
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint`).catch((err) => {
-			console.error('Unable to fetch user endpoints', err)
+			console.error('Unable to fetch user endpoints', err);
 			error(500);
 		});
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				console.error("Unauthorized request to fetch user endpoints")
-				redirect(301, '/auth/logout');
+				console.error('Unauthorized request to fetch user endpoints');
+				throw redirect(301, '/auth/logout');
 			}
 			const msg = await res.text();
 			error(res.status, { message: msg });
@@ -66,9 +66,9 @@ export const load: PageServerLoad = async ({ fetch, cookies }) => {
 	if (user && userEndpoints && userEndpoints.endpoints) {
 		const endpoint = userEndpoints.endpoints.at(0);
 		if (endpoint) {
-			redirect(301, `/inspect/${endpoint.endpoint}`);
+			throw redirect(301, `/inspect/${endpoint.endpoint}`);
 		} else {
-			redirect(301, `/onboarding`);
+			throw redirect(301, `/onboarding`);
 		}
 	}
 	return {

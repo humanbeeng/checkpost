@@ -24,7 +24,7 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 			secure: process.env.NODE_ENV === 'production',
 		});
 
-		redirect(301, '/onboarding');
+		throw redirect(301, '/onboarding');
 	} else {
 		error(401);
 	}
