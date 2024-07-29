@@ -447,33 +447,37 @@ func (s *EndpointService) CheckEndpointExists(ctx context.Context, subdomain str
 	if len(subdomain) < 4 || len(subdomain) > 10 {
 		return BadEndpoint, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: "Endpoint should be 4 to 10 characters.",
+			Message: "Subdomain should be 4 to 10 characters.",
 		}
 	}
 
 	if _, ok := core.ReservedSubdomains[subdomain]; ok {
+		slog.Info("Subdomain is reserved", "subdomain", subdomain)
 		return ReservedEndpoint, &EndpointError{
 			Code:    http.StatusBadRequest,
-			Message: fmt.Sprintf("Endpoint %s is reserved.", subdomain),
+			Message: fmt.Sprintf("Subdomain %s is reserved.", subdomain),
 		}
 	}
 
-	// Check reserved companies. If found, check if the mail is from that organisation
+	// Check reserved companies.
 	if _, ok := core.ReservedCompanies[subdomain]; ok {
+		slog.Info("Subdomain is reserved company", "subdomain", subdomain)
 		return ReservedCompany, nil
 	}
 
 	exists, err := s.endpointq.CheckEndpointExists(ctx, subdomain)
 	if err != nil {
-		slog.Error("unable to check if endpoint exists", "endpoint", subdomain, "err", err)
+		slog.Error("unable to check if subdomain exists", "subdomain", subdomain, "err", err)
 		return Error, NewInternalServerError()
 	}
 
 	if exists {
 		return Taken, nil
+	} else {
+		slog.Info("Subdomain is taken", "subdomain", subdomain)
 	}
 
-	slog.Info("Endpoint available", "endpoint", subdomain)
+	slog.Info("Subdomain available", "subdomain", subdomain)
 	return Available, nil
 }
 
