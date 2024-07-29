@@ -30,24 +30,9 @@ func main() {
 		log.Fatal(err)
 	}
 
-	// replace := func(groups []string, a slog.Attr) slog.Attr {
-	//
-	// 	// Remove the directory from the source's filename.
-	// 	if a.Key == slog.SourceKey {
-	// 		source := a.Value.Any().(*slog.Source)
-	// 		source.File = filepath.Base(source.File)
-	// 	}
-	// 	return a
-	// }
-	//
-	// slogger := slog.New(slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{AddSource: true, ReplaceAttr: replace}))
-	//
-	// slog.SetDefault(slogger)
-
 	app := fiber.New()
-	app.Use(cors.New())
-	app.Use(requestid.New())
 
+	app.Use(requestid.New())
 	// TODO: Revisit this configuration and slog configuration
 	app.Use(logger.New(logger.Config{
 		// For more options, see the Config section
@@ -55,6 +40,7 @@ func main() {
 		Format:     "${time} | ${latency} | ${locals:requestid} | ${status} | ${method} ${path}\n",
 	}))
 
+	app.Use(cors.New())
 	key := config.Paseto.Key
 
 	pasetoVerifier, err := core.NewPasetoVerifier(key)
@@ -104,7 +90,7 @@ func main() {
 
 	err = app.Listen(":3000")
 	if err != nil {
-		slog.Error("unable to start fiber server", err)
+		slog.Error("unable to start fiber server", "err", err)
 		return
 	}
 
