@@ -5,7 +5,7 @@ import type { PageServerLoad } from '../$types';
 
 export const load: PageServerLoad = async ({ cookies, fetch }) => {
 	if (!cookies.get('token')) {
-		redirect(301, '/auth/logout');
+		throw redirect(301, '/auth/logout');
 	}
 
 	const res = await fetch(`${PUBLIC_BASE_URL}/user`).catch((err) => {
@@ -18,7 +18,7 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		console.log('err', await res.text());
 
 		if (res.status == 401) {
-			redirect(301, '/auth/logout');
+			throw redirect(301, '/auth/logout');
 		}
 		return {
 			err: { message: 'Unable to fetch user details' },

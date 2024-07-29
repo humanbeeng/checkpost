@@ -54,9 +54,9 @@ export const load: PageServerLoad = async ({ cookies, fetch }) => {
 		if (user && userEndpoints && userEndpoints.endpoints) {
 			const endpoint = userEndpoints.endpoints.at(0);
 			if (endpoint) {
-				redirect(301, `/inspect/${endpoint.endpoint}`);
+				throw redirect(301, `/inspect/${endpoint.endpoint}`);
 			} else {
-				redirect(301, `/onboarding`);
+				throw redirect(301, `/onboarding`);
 			}
 		}
 	}
