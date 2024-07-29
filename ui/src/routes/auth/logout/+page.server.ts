@@ -3,6 +3,6 @@ import type { PageServerLoad } from '../../inspect/[endpoint]/$types';
 
 export const load: PageServerLoad = async ({ cookies }) => {
 	console.log('Logout called');
-	cookies.delete('token', { path: '/' });
-	redirect(301, '/');
+	cookies.delete('token', { path: '.' });
+	throw redirect(301, '/');
 };

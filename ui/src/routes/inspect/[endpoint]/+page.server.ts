@@ -7,7 +7,7 @@ export const csr = true;
 
 export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 	const endpoint = params.endpoint;
-	const token = cookies.get('token')
+	const token = cookies.get('token');
 
 	const fetchEndpointHistory = async () => {
 		const res = await fetch(`${PUBLIC_BASE_URL}/endpoint/history/${endpoint}`).catch((err) => {
@@ -17,7 +17,7 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				redirect(301, '/auth/logout');
+				throw redirect(301, '/auth/logout');
 			}
 			error(res.status, { message: await res.text() });
 		}
@@ -38,9 +38,9 @@ export const load: PageServerLoad = async ({ fetch, params, cookies }) => {
 
 		if (!res.ok) {
 			if (res.status == 401) {
-				redirect(301, '/auth/logout');
+				throw redirect(301, '/auth/logout');
 			} else if (res.status == 404) {
-				redirect(301, '/onboarding');
+				throw redirect(301, '/onboarding');
 			} else if (res.status === 403) {
 				error(res.status, { message: await res.text() });
 			}

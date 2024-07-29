@@ -21,11 +21,11 @@ export async function GET({ url, fetch, cookies }: RequestEvent) {
 			// TODO: Fetch expiry from response
 			httpOnly: true,
 			secure: process.env.NODE_ENV === 'production',
-			domain: process.env.NODE_ENV === 'production' ? `.${process.env.DOMAIN}` : "",
+			domain: process.env.NODE_ENV === 'production' ? `.${process.env.DOMAIN}` : '',
 			maxAge: 1000 * 60 * 60 * 24 * 365 * 10, // 10 years
 		});
 
-		redirect(301, '/onboarding');
+		throw redirect(301, '/onboarding');
 	} else {
 		error(401);
 	}
