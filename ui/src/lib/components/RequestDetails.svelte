@@ -79,58 +79,58 @@
 			<DetailsTable title="Form" data={request.form_data} />
 		</div>
 	{/if}
-</div>
-<!-- File attachments -->
-<!-- TODO: Add file attachments -->
+	<!-- File attachments -->
+	<!-- TODO: Add file attachments -->
 
-<!-- <DetailsTable title="Form" data={request.query_params} /> -->
-<hr class="mt-4 mb-2" />
+	<!-- <DetailsTable title="Form" data={request.query_params} /> -->
+	<hr />
 
-<!-- Payload -->
-<div class="mb-6 border py-2 px-4 rounded-md bg-gray-100">
-	<div class="flex justify-between mb-1">
-		<h4 class="font-medium text-md">Payload</h4>
+	<!-- Payload -->
+	<div class="mb-6 border px-4 rounded-md bg-gray-100 py-4">
+		<div class="flex justify-between mb-1">
+			<h4 class="font-medium text-md">Payload</h4>
 
-		{#if request.content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
-			<div class="inline-flex justify-center items-center gap-2">
-				<span class="inline-flex place-items-center gap-1">
-					<Checkbox id="terms" bind:checked class="border-gray-500" />
-					<label
-						for="terms"
-						class="text-sm font-light leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+			{#if request.content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
+				<div class="inline-flex justify-center items-center gap-2">
+					<span class="inline-flex place-items-center gap-1">
+						<Checkbox id="terms" bind:checked class="border-gray-500" />
+						<label
+							for="terms"
+							class="text-sm font-light leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+						>
+							Format
+						</label>
+					</span>
+
+					<button on:click={() => copy(content)} class="bg-gray-100 w-fit px-2 py-0">
+						{#if !copied}
+							<p class="font-light underline text-sm leading-none">Copy</p>
+						{:else}
+							<p class="font-light underline text-sm leading-none">Copied</p>
+						{/if}
+					</button>
+				</div>
+			{/if}
+		</div>
+
+		{#if content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
+			{#if checked}
+				<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
+						class="font-mono text-sm">{prettyContent}</code
 					>
-						Format
-					</label>
-				</span>
+		</pre>
+			{:else}
+				<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
+						class="font-mono text-sm">{content}</code
+					>
+		</pre>
+			{/if}
+		{:else}
+			<hr class="my-2" />
 
-				<button on:click={() => copy(content)} class="bg-gray-100 w-fit px-2 py-0">
-					{#if !copied}
-						<p class="font-light underline text-sm leading-none">Copy</p>
-					{:else}
-						<p class="font-light underline text-sm leading-none">Copied</p>
-					{/if}
-				</button>
+			<div class="w-full flex flex-col place-items-center align-middle justify-center min-h-6">
+				<p class="font-light text-xs py-2">(empty)</p>
 			</div>
 		{/if}
 	</div>
-
-	{#if content && !(request.content_type.startsWith('multipart/form-data') || request.content_type.startsWith('application/x-www-form-urlencoded'))}
-		{#if checked}
-			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
-					class="font-mono text-sm">{prettyContent}</code
-				>
-		</pre>
-		{:else}
-			<pre class="bg-gray-50 border rounded p-4 shadow-sm overflow-x-scroll"><code
-					class="font-mono text-sm">{content}</code
-				>
-		</pre>
-		{/if}
-	{:else}
-		<hr class="my-2" />
-
-		<div class="w-full flex flex-col place-items-center align-middle justify-center min-h-6">
-			<p class="font-light text-xs py-2">(empty)</p>
-		</div>
-	{/if}
 </div>
