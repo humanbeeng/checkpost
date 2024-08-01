@@ -1,4 +1,5 @@
 <script lang="ts" type="module">
+	import { invalidateAll } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
@@ -35,6 +36,11 @@
 
 	const selectRequest = (requestuuid: string) => {
 		selectedRequest = $endpointHistory?.requests?.find((r) => r.uuid == requestuuid);
+	};
+
+	const reconnect = () => {
+		invalidateAll();
+		connectSocket();
 	};
 
 	const connectSocket = () => {
@@ -88,7 +94,7 @@
 				{#if websocketOnline === 'offline'}
 					<Button
 						class="h-7 w-auto p-2 bg-red-100 text-red-600 hover:bg-red-200"
-						on:click={connectSocket}
+						on:click={reconnect}
 					>
 						<span class="flex gap-1 place-items-center">
 							<Reload class="size-3" />Reconnect
