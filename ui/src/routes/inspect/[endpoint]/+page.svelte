@@ -73,7 +73,7 @@
 	});
 </script>
 
-<body class="bg-gray-50 flex overflow-hidden">
+<body class="bg-gray-50 flex w-screen">
 	<!-- Sidebar -->
 	<div
 		class="min-w-64 max-w-64 border-r border-gray-300 bg-gray-200 flex flex-col justify-between h-screen"
@@ -156,7 +156,7 @@
 	</div>
 
 	<!-- Main section -->
-	<div class="flex-1 overflow-y-auto w-screen">
+	<div class="flex-1 overflow-y-auto h-screen">
 		<!-- Header -->
 		{#if selectedRequest}
 			<div
