@@ -144,8 +144,10 @@ func (m *WSManager) AddConn(endpoint string, conn *websocket.Conn) error {
 		m.endpointSessions[endpoint] = &s
 	} else {
 		// TODO: Plan based limit
-		if len(sessions.sessionsMap) > 5 {
-			slog.Warn("Number of sessions limit exceeded 5", "endpoint", endpoint)
+		if len(sessions.sessionsMap) >= 5 {
+			slog.Warn("Number of sessions limit exceeded 5. Closing connection.", "endpoint", endpoint)
+			conn.WriteJSON(WSMessage{Code: 409, Message: "too many connections"})
+			conn.Close()
 			return nil
 		}
 
