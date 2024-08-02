@@ -48,4 +48,5 @@ export type EndpointHistory = {
 export type WSMessage = {
 	payload: Request;
 	code: number;
+	message: string;
 };
