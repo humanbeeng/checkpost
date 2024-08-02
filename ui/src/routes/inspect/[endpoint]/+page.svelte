@@ -3,6 +3,7 @@
 	import { page } from '$app/stores';
 	import { PUBLIC_WEBSOCKET_URL } from '$env/static/public';
 	import logo from '$lib/assets/logo-black.svg';
+	import { Toaster } from '$lib/components/ui/sonner';
 	import * as DropdownMenu from '$lib/components/ui/dropdown-menu';
 	import HistoryItem from '@/components/HistoryItem.svelte';
 	import MethodBadge from '@/components/MethodBadge.svelte';
@@ -17,13 +18,14 @@
 	import { onMount } from 'svelte';
 
 	import { Exit, Reload } from 'svelte-radix';
+	import { toast } from 'svelte-sonner';
 
 	export let data;
 
 	const user = data.user;
 	const endpoint = $page.params.endpoint;
 	let selectedRequest: Request | undefined;
-	let websocketOnline: 'connecting' | 'offline' | 'online' = 'connecting';
+	let websocketOnline: 'connecting' | 'offline' | 'online' | 'error' = 'connecting';
 
 	$endpointHistory = data.endpointHistory;
 	if ($endpointHistory == null) {
@@ -50,6 +52,7 @@
 		// Connection opened
 		socket.addEventListener('open', () => {
 			console.log('Websocket connection established');
+			toast.success('Connection established');
 			websocketOnline = 'online';
 		});
 
@@ -58,8 +61,12 @@
 			const message = JSON.parse(event.data) as WSMessage;
 			if (message.code == 200) {
 				$endpointHistory.requests = [message.payload, ...($endpointHistory.requests ?? [])];
+			} else if (message.code == 409) {
+				websocketOnline = 'error';
+				toast.error('Too many active listeners for this endpoint');
 			} else {
-				// TODO: Handle error
+				websocketOnline = 'error';
+				toast.error('Something went wrong');
 			}
 		});
 
@@ -70,7 +77,8 @@
 
 		socket.addEventListener('error', () => {
 			console.log('Websocket connection error');
-			websocketOnline = 'offline';
+			websocketOnline = 'error';
+			toast.error('Unable to establish connection to the server');
 		});
 	};
 
@@ -202,4 +210,5 @@
 			{/if}
 		</div>
 	</div>
+	<Toaster richColors class="" />
 </body>

@@ -2,7 +2,7 @@
 	import { Badge } from '$lib/components/ui/badge/index.js';
 	import { Dot, DotFilled } from 'svelte-radix';
 
-	export let state: 'connecting' | 'online' | 'offline' = 'connecting';
+	export let state: 'connecting' | 'online' | 'offline' | 'error' = 'connecting';
 </script>
 
 {#if state === 'online'}
@@ -32,6 +32,16 @@
 		<span class="flex place-items-center">
 			<Dot />
 			<p class="pr-2">Connecting...</p>
+		</span>
+	</Badge>
+{:else if state === 'error'}
+	<Badge
+		variant="outline"
+		class="bg-red-100 text-red-600 py-1 max-h-6 dark:bg-red-900/20  dark:text-red-400 px-0"
+	>
+		<span class="flex place-items-center">
+			<Dot />
+			<p class="pr-2">Error</p>
 		</span>
 	</Badge>
 {/if}
