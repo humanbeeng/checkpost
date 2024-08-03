@@ -17,7 +17,14 @@
 		</span>
 	</Badge>
 {:else}
-	<Badge variant="outline" class="bg-red-100 text-red-600 dark:bg-red-900/20  dark:text-red-400"
-		>{response_code}</Badge
-	>
+	<Badge variant="outline" class="bg-red-100 text-red-600 dark:bg-red-900/20  dark:text-red-400">
+		<span class="flex gap-1">
+			<p>
+				{response_code}
+			</p>
+			{#if response_code == 413}
+				<p>Content too large</p>
+			{/if}
+		</span>
+	</Badge>
 {/if}

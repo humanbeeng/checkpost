@@ -188,52 +188,6 @@ func (s *EndpointService) StoreRequestDetails(ctx context.Context, hookReq HookR
 
 	slog.InfoContext(ctx, "Storing request details", "endpoint", endpoint, "path", hookReq.Path)
 
-	var expiresAt pgtype.Timestamptz
-	switch endpointRecord.Plan {
-	case db.PlanFree:
-		{
-
-			// Checking if request body exceeds 10KB
-			if hookReq.ContentSize > 10_000 {
-				return db.Request{}, &EndpointError{
-					Code:    http.StatusRequestEntityTooLarge,
-					Message: "Content size limit exceeded",
-				}
-			}
-
-			expiresAt = pgtype.Timestamptz{
-				// Use time.Duration for arithmetic operations on time.
-				Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
-				InfinityModifier: pgtype.Finite,
-				Valid:            true,
-			}
-		}
-	case db.PlanPro, db.PlanBasic:
-		{
-			// Checking if request body exceeds 512KB
-			if hookReq.ContentSize > 512_000 {
-				return db.Request{}, &EndpointError{
-					Code:    http.StatusRequestEntityTooLarge,
-					Message: "Content size limit exceeded",
-				}
-			}
-			expiresAt = pgtype.Timestamptz{
-				Time:             time.Now(),
-				InfinityModifier: pgtype.Infinity,
-				Valid:            true,
-			}
-		}
-	default:
-		{
-			return db.Request{}, &EndpointError{
-				Code:    http.StatusBadRequest,
-				Message: "Invalid user plan",
-			}
-		}
-	}
-
-	userId := endpointRecord.UserID
-
 	queryBytes, err := json.Marshal(hookReq.QueryParams)
 	if err != nil {
 		slog.Error("unable to marshal query params", "err", err)
@@ -252,22 +206,70 @@ func (s *EndpointService) StoreRequestDetails(ctx context.Context, hookReq HookR
 		}
 	}
 
+	var expiresAt pgtype.Timestamptz
+	var content pgtype.Text
+	var responseCode int
+	switch endpointRecord.Plan {
+	case db.PlanFree:
+		{
+
+			// Checking if request body exceeds 10KB
+			if hookReq.ContentSize > 10_000 {
+				slog.Warn("Received content that exceeds limit", "plan", endpointRecord.Plan, "received_size", hookReq.ContentSize, "limit", 10_000)
+				content = pgtype.Text{Valid: true, String: ""}
+				responseCode = http.StatusRequestEntityTooLarge
+			} else {
+				content = pgtype.Text{Valid: true, String: hookReq.Content}
+				responseCode = http.StatusOK
+			}
+
+			expiresAt = pgtype.Timestamptz{
+				// Use time.Duration for arithmetic operations on time.
+				Time:             time.Now().Add(time.Hour * time.Duration(DefaultExpiryHours)),
+				InfinityModifier: pgtype.Finite,
+				Valid:            true,
+			}
+		}
+	case db.PlanPro, db.PlanBasic:
+		{
+			// Checking if request body exceeds 512KB
+			if hookReq.ContentSize > 512_000 {
+				slog.Warn("Received content that exceeds limit", "plan", endpointRecord.Plan, "received_size", hookReq.ContentSize, "limit", 512_000)
+
+				content = pgtype.Text{Valid: true, String: ""}
+				responseCode = http.StatusRequestEntityTooLarge
+			} else {
+				content = pgtype.Text{Valid: true, String: hookReq.Content}
+				responseCode = http.StatusOK
+			}
+		}
+	default:
+		{
+			return db.Request{}, &EndpointError{
+				Code:    http.StatusBadRequest,
+				Message: "Invalid user plan",
+			}
+		}
+	}
+
+	userId := endpointRecord.UserID
+
+	slog.Info("Request code", "code", responseCode)
 	requestParams := db.CreateNewRequestParams{
 		UserID:      userId,
 		EndpointID:  endpointRecord.ID,
 		Method:      db.HttpMethod(strings.ToLower(hookReq.Method)),
-		Content:     pgtype.Text{String: hookReq.Content, Valid: true},
+		Content:     content,
 		ContentType: hookReq.ContentType,
 		Path:        hookReq.Path,
 		Uuid:        hookReq.UUID,
 
 		// TODO: Fetch response from configured response
-		ResponseCode: pgtype.Int4{Int32: http.StatusOK, Valid: true},
+		ResponseCode: pgtype.Int4{Int32: int32(responseCode), Valid: true},
 		QueryParams:  queryBytes,
 		Headers:      headerBytes,
 		SourceIp:     hookReq.SourceIp,
 
-		// TODO: Add request body limiting
 		ContentSize: int32(hookReq.ContentSize),
 		ExpiresAt:   expiresAt,
 	}
