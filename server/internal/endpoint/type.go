@@ -57,4 +57,5 @@ type Endpoint struct {
 type WSMessage struct {
 	Code    int             `json:"code"`
 	Payload json.RawMessage `json:"payload"`
+	Message string          `json:"message"`
 }
